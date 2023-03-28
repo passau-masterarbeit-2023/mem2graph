@@ -4,7 +4,7 @@ use crate::graph_data::heap_dump_data::HeapDumpData;
 mod params;
 mod tests;
 mod graph_data;
-
+mod utils;
 
 
 fn main() {
