@@ -1,16 +1,15 @@
-use petgraph::graph::DiGraph;
+use petgraph::graph::{DiGraph, Node, Edge};
 
 pub mod heap_dump_data;
 
 use super::graph_data::heap_dump_data::HeapDumpData;
-// use crate::graph_data::graph_structures::*;
-// use crate::graph_data::mem_utils::*;
+use crate::graph_structs;
+use crate::utils::*;
 
-// pub struct GraphData {
-//     params: ProgramParams,
-//     graph: DiGraph<Node>,
-//     heap_dump_data: Option<HeapDumpData>,
-// }
+pub struct GraphData {
+    graph: DiGraph<graph_structs::Node, graph_structs::Edge>,
+    heap_dump_data: Option<HeapDumpData>,
+}
 
 // impl GraphData {
 //     // Init

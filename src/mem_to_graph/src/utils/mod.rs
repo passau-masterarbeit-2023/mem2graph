@@ -33,6 +33,7 @@ pub fn is_pointer(data: &[u8], min_addr: u64, max_addr: u64, endianness: Endiann
     }
 }
 
+// TODO: implement
 // fn create_node_from_bytes(block: &[u8], addr: usize, min_addr: usize, max_addr: usize, endianness: Endianness) -> Node {
 //     if let Some(potential_ptr) = is_pointer(block, min_addr, max_addr, endianness) {
 //         Node::Pointer(PointerNode::new(addr, potential_ptr))
@@ -42,3 +43,21 @@ pub fn is_pointer(data: &[u8], min_addr: u64, max_addr: u64, endianness: Endiann
 // }
 
 
+// def create_node_from_bytes(block: bytes, addr: int, min_addr: int, max_addr: int, endianness: str) -> Node:
+//     """
+//     Get the node from the data.
+//     NOTE: Remember that all addresses are relative to the heap, and converted to absolute addresses as int.
+//     """
+//     potential_ptr = is_pointer(block, min_addr, max_addr, endianness)
+//     if potential_ptr is not None:
+//         node = PointerNode(
+//             addr,
+//             potential_ptr
+//         )
+//     else: # this is a data block
+//         node = ValueNode(
+//             addr,
+//             block
+//         )
+    
+//     return node

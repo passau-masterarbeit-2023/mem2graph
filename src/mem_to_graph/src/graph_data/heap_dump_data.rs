@@ -46,11 +46,11 @@ impl HeapDumpData {
     }
 
     pub fn addr_to_index_wrapper(&self, addr: u64) -> usize {
-        (addr - self.min_addr) as usize / self.block_size
+        crate::utils::addr_to_index(addr, self.min_addr, self.block_size)
     }
 
     pub fn index_to_addr_wrapper(&self, index: usize) -> u64 {
-        self.min_addr + (index * self.block_size) as u64
+        crate::utils::index_to_addr(index, self.min_addr, self.block_size)
     }
 
     fn get_json_data(json_file_path: &PathBuf) -> Value {

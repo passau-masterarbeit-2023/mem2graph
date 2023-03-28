@@ -1,7 +1,7 @@
 // reference tests from tests/ directory
 #[cfg(test)]
 mod utils;
-
+mod graph_structs;
 
 // setup() function is called before each test
 pub fn setup() {
