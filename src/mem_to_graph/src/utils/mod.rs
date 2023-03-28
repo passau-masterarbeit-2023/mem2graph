@@ -1,5 +1,6 @@
 use std::convert::TryInto;
-//use graph_structures::{Node, PointerNode, ValueNode};
+
+use crate::graph_structs::{Node, PointerNode, ValueNode, BasePointerNode, BaseValueNode};
 
 
 pub fn addr_to_index(addr: u64, min_addr: u64, block_size: usize) -> usize {
@@ -10,8 +11,30 @@ pub fn index_to_addr(index: usize, min_addr: u64, block_size: usize) -> u64 {
     (index * block_size) as u64 + min_addr
 }
 
-pub fn hex_str_to_addr(hex_str: &str) -> Result<u64, std::num::ParseIntError> {
-    u64::from_str_radix(hex_str, 16)
+// convert a hex string to an address represented as a u64
+// WARN: necessary to specify the string endianness for the conversion
+// WARN: Due to little endian needing to have a fixed length of 16 characters, 
+//       the hex string will be padded with 0s to the right if it is less than 16 characters
+// NOTE: always returns a big endian address as a u64
+pub fn hex_str_to_addr(hex_str: &str, endianness: Endianness) -> Result<u64, std::num::ParseIntError> {
+    match endianness {
+        Endianness::Big => Ok(u64::from_str_radix(hex_str, 16)?),
+        Endianness::Little => {
+            //assert_eq(hex_str.len(), 16, "Little endian hex string ({}) must be 16 characters long", hex_str);
+            // append 0s to the right if the hex string is less than 16 characters
+            let mut padded_hex_str = hex_str.to_string();
+            while padded_hex_str.len() < 16 {
+                padded_hex_str.push('0');
+            }
+            let addr = u64::from_str_radix(padded_hex_str.as_str(), 16)?;
+            //log::debug!("Little endian padded hex string {}", padded_hex_str);
+            Ok(addr.swap_bytes())
+        },
+    }
+}
+
+pub fn hex_str_to_block_bytes(hex_str: &str, endianness: Endianness) -> [u8; 8] {
+    hex_str_to_addr(hex_str, endianness).unwrap().to_be_bytes()
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -33,31 +56,33 @@ pub fn is_pointer(data: &[u8], min_addr: u64, max_addr: u64, endianness: Endiann
     }
 }
 
-// TODO: implement
-// fn create_node_from_bytes(block: &[u8], addr: usize, min_addr: usize, max_addr: usize, endianness: Endianness) -> Node {
-//     if let Some(potential_ptr) = is_pointer(block, min_addr, max_addr, endianness) {
-//         Node::Pointer(PointerNode::new(addr, potential_ptr))
-//     } else {
-//         Node::Value(ValueNode::new(addr, block.to_vec()))
-//     }
-// }
+pub fn create_node_from_bytes(
+    block: &[u8], 
+    addr: u64, 
+    min_addr: u64, 
+    max_addr: u64, 
+    endianness: Endianness
+) -> Node {
+    if let Some(potential_ptr) = is_pointer(block, min_addr, max_addr, endianness) {
+        Node::PointerNode(
+            PointerNode::BasePointerNode(
+                BasePointerNode {
+                    addr,
+                    points_to: potential_ptr,
+                    color: "".to_string(),
+                }
+            )
+        )
+    } else {
+        Node::ValueNode(
+            ValueNode::BaseValueNode(
+                BaseValueNode {
+                    addr,
+                    value: block.to_vec(),
+                    color: "".to_string(),
+                }
+            )
+        )
+    }
+}
 
-
-// def create_node_from_bytes(block: bytes, addr: int, min_addr: int, max_addr: int, endianness: str) -> Node:
-//     """
-//     Get the node from the data.
-//     NOTE: Remember that all addresses are relative to the heap, and converted to absolute addresses as int.
-//     """
-//     potential_ptr = is_pointer(block, min_addr, max_addr, endianness)
-//     if potential_ptr is not None:
-//         node = PointerNode(
-//             addr,
-//             potential_ptr
-//         )
-//     else: # this is a data block
-//         node = ValueNode(
-//             addr,
-//             block
-//         )
-    
-//     return node
