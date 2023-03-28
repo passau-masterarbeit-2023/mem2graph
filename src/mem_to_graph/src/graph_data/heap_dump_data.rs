@@ -33,7 +33,7 @@ impl HeapDumpData {
 
         let blocks = HeapDumpData::generate_blocks_from_heap_dump(&heap_dump_raw_file_path, block_size);
         let json_data = HeapDumpData::get_json_data(&cloned_path);
-        let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len());
+        let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len(), block_size);
 
         HeapDumpData {
             block_size,
@@ -70,10 +70,10 @@ impl HeapDumpData {
             .collect()
     }
 
-    fn get_min_max_addr(json_data: &Value, nb_blocks: usize) -> (u64, u64) {
+    fn get_min_max_addr(json_data: &Value, nb_blocks: usize, block_size: usize) -> (u64, u64) {
         let min_addr_str = json_data["HEAP_START"].as_str().unwrap();
         let min_addr = u64::from_str_radix(min_addr_str.trim_start_matches("0x"), 16).unwrap();
-        let max_addr = min_addr + (nb_blocks as u64) * (crate::params::BLOCK_BYTE_SIZE as u64);
+        let max_addr = min_addr + (nb_blocks as u64) * (block_size as u64);
         (min_addr, max_addr)
     }
 }
@@ -137,7 +137,8 @@ mod tests {
         let json_data = HeapDumpData::get_json_data(
             &cloned_path,
         );
-        let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len());
+        let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(
+            &json_data, blocks.len(), BLOCK_BYTE_SIZE);
 
         assert!(min_addr < max_addr);
     }
