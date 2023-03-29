@@ -21,27 +21,74 @@ pub enum Node {
 }
 
 impl Node {
+    /// Check whether a node is important or not.
     pub fn is_important(&self) -> bool {
-        is_important_node(&self)
+        match self {
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::KeyNode(_) => true,
+                    _ => false,
+                }
+            }
+            Node::PointerNode(pointer_node) => {
+                match pointer_node {
+                    PointerNode::SessionStateNode(_) => true,
+                    PointerNode::SshStructNode(_) => true,
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
     }
-}
 
-pub fn is_important_node(node: &Node) -> bool {
-    match node {
-        Node::ValueNode(value_node) => {
-            match value_node {
-                ValueNode::KeyNode(_) => true,
-                _ => false,
+    /// NOTE: If you forget to match a new Node variant, this function will panic.
+    pub fn get_address(&self) -> u64 {
+        match self {
+            Node::DataStructureNode(data_structure_node) => {
+                data_structure_node.addr
             }
-        }
-        Node::PointerNode(pointer_node) => {
-            match pointer_node {
-                PointerNode::SessionStateNode(_) => true,
-                PointerNode::SshStructNode(_) => true,
-                _ => false,
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::BaseValueNode(base_value_node) => {
+                        base_value_node.addr
+                    }
+                    ValueNode::KeyNode(key_node) => {
+                        key_node.addr
+                    }
+                }
             }
+            Node::PointerNode(pointer_node) => {
+                match pointer_node {
+                    PointerNode::BasePointerNode(base_pointer_node) => {
+                        base_pointer_node.addr
+                    }
+                    PointerNode::SessionStateNode(session_state_node) => {
+                        session_state_node.addr
+                    }
+                    PointerNode::SshStructNode(ssh_struct_node) => {
+                        ssh_struct_node.addr
+                    }
+                }
+            }
+            _ => panic!("Node.get_address() has not matched a Node variant. Please add a new match arm for the new Node variant."),
         }
-        _ => false,
+    }
+
+
+    /// Check if a node is a pointer node
+    pub fn is_pointer(&self) -> bool {
+        match self {
+            Node::PointerNode(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Check if a node is a value node
+    pub fn is_value(&self) -> bool {
+        match self {
+            Node::ValueNode(_) => true,
+            _ => false,
+        }
     }
 }
 

@@ -67,6 +67,7 @@ fn create_test_structs() -> Vec<Node> {
 
 #[test]
 fn test_hierarchy() {
+    crate::tests::setup();
     let nodes = create_test_structs();
 
     let mut counter_data_structure_nodes = 0;
@@ -111,6 +112,7 @@ fn test_hierarchy() {
 
 #[test]
 fn test_important_nodes() {
+    crate::tests::setup();
     // test with Vec<Node>
     let nodes = create_test_structs();
 
@@ -119,7 +121,7 @@ fn test_important_nodes() {
         // if node.is_important() {
         //     counter_importants += 1;
         // }
-        if is_important_node(&node) {
+        if node.is_important() {
             counter_importants += 1;
         }
     }

@@ -1,7 +1,7 @@
-use hex::decode;
 use lazy_static::lazy_static;
 
 use crate::utils::*;
+use crate::graph_structs::*;
 
 #[test]
 fn test_addr_to_index() {
@@ -47,6 +47,7 @@ macro_rules! unwrap_to_string {
 
 #[test]
 fn test_hex_str_to_addr() {
+    crate::tests::setup();
     // 16 hex chars = 4 * 16 bits = 64 bits
     assert_eq!(hex_str_to_addr("0000000000000000", Endianness::Big).unwrap(), 0);
     assert_eq!(hex_str_to_addr("00000300", Endianness::Big).unwrap(), 768);
@@ -95,6 +96,7 @@ lazy_static! {
 
 #[test]
 fn test_hex_str_to_block_bytes() {
+    crate::tests::setup();
     // big endian
     let test_cases = vec![
         // (hex_str, expected_value)
@@ -137,6 +139,7 @@ fn test_hex_str_to_block_bytes() {
 
 #[test]
 fn test_is_pointer() {
+    crate::tests::setup();
     let min_addr: u64 = *TEST_MIN_ADDR; // HEAP_START
     let max_addr: u64 = *TEST_MAX_ADDR; // HEAP_START + HEAP_SIZE
 
@@ -152,7 +155,7 @@ fn test_is_pointer() {
     for (hex_str, expected_value) in test_cases {
         // use helper function to convert hex string to big endian bytes
         let data: [u8; 8] = hex_str_to_block_bytes(hex_str, Endianness::Little);
-        let result = is_pointer(&data, min_addr, max_addr, Endianness::Big);
+        let result = convert_block_to_pointer_if_possible(&data, min_addr, max_addr, Endianness::Big);
 
         assert!(
             // check if expected value is in range when it is not None
@@ -174,22 +177,41 @@ fn test_is_pointer() {
     }
 }
 
-// #[test]
-// fn test_create_node_from_bytes() {
-//     // vector
-//     let vector_block_of_8_bytes = decode(&*TEST_PTR_1_VALUE_STR.as_str()).unwrap();
-//     let node = create_node_from_bytes(
-//         &vector_block_of_8_bytes, 0, 0, 1, Endianness::Little
-//     );
-//     match node {
-//         Node::ValueNode(value_node) => {
-//             match value_node {
-//                 ValueNode::BaseValueNode(base_value_node) => {
-//                     assert_eq!(base_value_node.value, bytes);
-//                 }
-//                 _ => panic!("Expected a BaseValueNode"),
-//             }
-//         }
-//         _ => panic!("Expected a ValueNode"),
-//     }
-// }
+#[test]
+fn test_create_node_from_bytes() {
+    // pointer 1 test
+    let pointer_block_of_8_bytes = hex_str_to_block_bytes(&*TEST_PTR_1_VALUE_STR.as_str(), Endianness::Little);
+    let mut node = create_node_from_bytes(
+        &pointer_block_of_8_bytes, 
+        *TEST_PTR_1_ADDR, 
+        *TEST_MIN_ADDR, 
+        *TEST_MAX_ADDR, 
+        Endianness::Big
+    );
+    assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
+    assert!(node.is_pointer());
+
+    // value node
+    let value_block_of_8_bytes = hex_str_to_block_bytes("a3341294ab2bd410", Endianness::Little);
+    node = create_node_from_bytes(
+        &value_block_of_8_bytes, 
+        *TEST_PTR_1_ADDR, 
+        *TEST_MIN_ADDR, 
+        *TEST_MAX_ADDR, 
+        Endianness::Big
+    );
+    assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
+    assert!(node.is_value());
+
+    // test with a real pointer but wrong endianness
+    let pointer_block_of_8_bytes = hex_str_to_block_bytes(&*TEST_PTR_1_VALUE_STR.as_str(), Endianness::Big);
+    node = create_node_from_bytes(
+        &pointer_block_of_8_bytes, 
+        *TEST_PTR_1_ADDR, 
+        *TEST_MIN_ADDR, 
+        *TEST_MAX_ADDR, 
+        Endianness::Big
+    );
+    assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
+    assert!(node.is_value());
+}

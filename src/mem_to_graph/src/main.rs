@@ -1,6 +1,6 @@
 use crate::graph_data::heap_dump_data::HeapDumpData;
 
-// modules
+// link modules
 mod params;
 mod tests;
 mod graph_data;
