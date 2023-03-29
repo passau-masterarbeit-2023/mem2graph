@@ -3,11 +3,13 @@ use std::path::{PathBuf};
 use dotenv::dotenv;
 use std::sync::Once;
 
+use crate::utils::Endianness;
+
 pub const DEBUG: bool = false;
 
 pub const XXD_LINE_BLOCK_BYTE_SIZE: u64 = 16;
 pub const BLOCK_BYTE_SIZE: usize = 8; // 64-bit, ex: C0 03 7B 09 2A 56 00 00
-pub const PTR_ENDIANNESS: &str = "little";
+pub const PTR_ENDIANNESS: Endianness = Endianness::Little;
 
 
 /// Initialize logger. 
@@ -47,9 +49,12 @@ lazy_static! {
     };
     
     pub static ref TEST_HEAP_DUMP_FILE_PATH: PathBuf = {
-        let mut test_heap_dump_raw_file_path = std::env::var("TEST_HEAP_DUMP_RAW_FILE_PATH")
+        let test_heap_dump_raw_file_path = std::env::var("TEST_HEAP_DUMP_RAW_FILE_PATH")
             .expect("TEST_HEAP_DUMP_RAW_FILE_PATH environment variable must be set").to_string();
-        test_heap_dump_raw_file_path = test_heap_dump_raw_file_path.replace("-heap.raw", ".json");
         PathBuf::from(REPO_DIR.clone() + &test_heap_dump_raw_file_path)
+    };
+
+    pub static ref TEST_HEAP_JSON_FILE_PATH: PathBuf = {
+        crate::utils::heap_dump_path_to_json_path(&TEST_HEAP_DUMP_FILE_PATH)
     };
 }

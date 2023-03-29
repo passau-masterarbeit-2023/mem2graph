@@ -12,7 +12,7 @@ fn create_test_structs() -> Vec<Node> {
 
     let base_value_node = ValueNode::BaseValueNode(BaseValueNode {
             addr: 0,
-            value: vec![0, 1, 2, 3],
+            value: [0, 1, 2, 3, 4, 5, 6, 7],
             color: "grey".to_string(),
         }
     );
@@ -37,16 +37,16 @@ fn create_test_structs() -> Vec<Node> {
 
     let key_data = KeyData {
         name: "key1".to_string(),
-        key: vec![0, 1, 2, 3],
-        addr: vec![0, 1, 2, 3],
+        key: [0, 1, 2, 3, 4, 5, 6, 7],
+        addr: [0, 1, 2, 3, 4, 5, 6, 7],
         len: 4,
         real_len: 4,
     };
 
     let key_node = ValueNode::KeyNode(KeyNode {
         addr: 0,
-        value: vec![0, 1, 2, 3],
-        key: vec![0, 1, 2, 3],
+        value: [0, 1, 2, 3, 4, 5, 6, 7],
+        key: [0, 1, 2, 3, 4, 5, 6, 7],
         key_data,
         color: "green".to_string(),
     });
@@ -62,6 +62,16 @@ fn create_test_structs() -> Vec<Node> {
     ];
 
     nodes
+}
+
+#[test]
+fn test_node_display() {
+    crate::tests::setup();
+    let nodes = create_test_structs();
+
+    for node in nodes {
+        println!("{}", node);
+    }
 }
 
 

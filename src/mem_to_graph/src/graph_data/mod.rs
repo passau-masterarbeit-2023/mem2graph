@@ -1,14 +1,85 @@
-use petgraph::graph::{DiGraph, Node, Edge};
+use petgraph::graph::{DiGraph};
+use std::path::{PathBuf};
 
 pub mod heap_dump_data;
 
-use super::graph_data::heap_dump_data::HeapDumpData;
+use heap_dump_data::HeapDumpData;
 use crate::graph_structs;
+use crate::params::BLOCK_BYTE_SIZE;
 use crate::utils::*;
 
+/// This struct contains the graph data
+/// linked to a given heap dump file.
 pub struct GraphData {
     graph: DiGraph<graph_structs::Node, graph_structs::Edge>,
-    heap_dump_data: Option<HeapDumpData>,
+    heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
+}
+
+impl GraphData {
+
+    /// Initialize the graph data from a raw heap dump file.
+    fn new(&self, heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> GraphData {
+        // Get the heap dump data
+        self.heap_dump_data = Some(
+            HeapDumpData::new(
+                heap_dump_raw_file_path,
+                pointer_byte_size,
+            )
+        );
+
+        self.data_structure_step(pointer_byte_size);
+        self.pointer_step();
+        return *self;
+    }
+
+    // constructor for testing purposes
+    fn new_test(&self, nodes: Vec<graph_structs::Node>, edges: Vec<graph_structs::Edge>) -> GraphData {
+        self.heap_dump_data = None;
+
+        self.graph = DiGraph::new();
+        for node in nodes {
+            self.add_node_wrapper(&node);
+        }
+        for edge in edges {
+            self.add_edge_wrapper(&edge);
+        }
+        return *self;
+    }
+
+    // wrappers
+    // def __create_node_from_bytes_wrapper(self, data: bytes, addr: int):
+    // if self.heap_dump_data is None:
+    //     raise ValueError("heap_dump_data is None")
+    // return create_node_from_bytes(data, addr, self.heap_dump_data.min_addr, self.heap_dump_data.max_addr, self.params.PTR_ENDIANNESS)
+
+    // def __create_node_from_bytes_wrapper_index(self, data: bytes, block_index: int):
+    //     if self.heap_dump_data is None:
+    //         raise ValueError("heap_dump_data is None")
+    //     addr = self.heap_dump_data.index_to_addr_wrapper(block_index)
+    //     return self.__create_node_from_bytes_wrapper(data, addr)
+
+    fn create_node_from_bytes_wrapper(
+        &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64
+    ) -> graph_structs::Node {
+        if self.heap_dump_data.is_none() {
+            panic!("heap_dump_data is None");
+        }
+        return create_node_from_bytes(
+            data,
+            addr,
+            self.heap_dump_data.unwrap().min_addr,
+            self.heap_dump_data.unwrap().max_addr
+        );
+    }
+    
+    /// Wrapper for create_node_from_bytes_wrapper using a block index instead of an address.
+    fn create_node_from_bytes_wrapper_index(
+        &self, data: &[u8; BLOCK_BYTE_SIZE], block_index: usize
+    ) -> graph_structs::Node {
+        let addr = self.heap_dump_data.unwrap().index_to_addr_wrapper(block_index);
+        return self.create_node_from_bytes_wrapper(data, addr);
+    }
+
 }
 
 // impl GraphData {

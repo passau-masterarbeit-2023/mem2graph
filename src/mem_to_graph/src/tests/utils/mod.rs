@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 
 use crate::utils::*;
 use crate::graph_structs::*;
+use crate::params::TEST_HEAP_DUMP_FILE_PATH;
 
 #[test]
 fn test_addr_to_index() {
@@ -185,8 +186,7 @@ fn test_create_node_from_bytes() {
         &pointer_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
-        *TEST_MAX_ADDR, 
-        Endianness::Big
+        *TEST_MAX_ADDR,
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     assert!(node.is_pointer());
@@ -198,7 +198,6 @@ fn test_create_node_from_bytes() {
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR, 
-        Endianness::Big
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     assert!(node.is_value());
@@ -210,8 +209,13 @@ fn test_create_node_from_bytes() {
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR, 
-        Endianness::Big
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     assert!(node.is_value());
+}
+
+#[test]
+fn test_heap_dump_path_to_json_path() {
+    let test_path = heap_dump_path_to_json_path(&TEST_HEAP_DUMP_FILE_PATH);
+    assert!(test_path.exists())
 }

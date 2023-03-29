@@ -1,7 +1,9 @@
 use serde_json::Value;
 use std::fs::File;
 use std::io::{BufReader, Read};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+
+use crate::utils;
 
 pub struct HeapDumpData {
     pub block_size: usize,
@@ -13,6 +15,10 @@ pub struct HeapDumpData {
 }
 
 impl HeapDumpData {
+
+    /// Constructor for HeapDumpData
+    /// It contains data for a given heap dump file, 
+    /// some of them are obtained from the associated json file
     pub fn new(
         heap_dump_raw_file_path: PathBuf,
         block_size: usize,
@@ -23,16 +29,10 @@ impl HeapDumpData {
         } else {
             log::info!(" 📋 heap dump raw file path: {:?}", heap_dump_raw_file_path);
         }
-        let mut cloned_path = heap_dump_raw_file_path.clone();
-        cloned_path.set_extension("json");
-        if !cloned_path.exists() {
-            log::error!("File doesn't exist: {:?}", cloned_path);
-        } else {
-            log::info!(" 📋 associated json file path: {:?}", cloned_path);
-        }        
 
+        let json_path = utils::heap_dump_path_to_json_path(&heap_dump_raw_file_path);
         let blocks = HeapDumpData::generate_blocks_from_heap_dump(&heap_dump_raw_file_path, block_size);
-        let json_data = HeapDumpData::get_json_data(&cloned_path);
+        let json_data = HeapDumpData::get_json_data(&json_path);
         let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len(), block_size);
 
         HeapDumpData {
@@ -53,12 +53,14 @@ impl HeapDumpData {
         crate::utils::index_to_addr(index, self.min_addr, self.block_size)
     }
 
+    /// load json file
     fn get_json_data(json_file_path: &PathBuf) -> Value {
         let file = File::open(json_file_path).unwrap();
         let reader = BufReader::new(file);
         serde_json::from_reader(reader).unwrap()
     }
 
+    /// load heap dump file and split it into blocks
     fn generate_blocks_from_heap_dump(heap_dump_raw_file_path: &PathBuf, block_size: usize) -> Vec<Vec<u8>> {
         let mut file = File::open(heap_dump_raw_file_path).unwrap();
         let mut heap_dump = Vec::new();
@@ -70,6 +72,7 @@ impl HeapDumpData {
             .collect()
     }
 
+    /// get min and max address from json file to a given heap dump
     fn get_min_max_addr(json_data: &Value, nb_blocks: usize, block_size: usize) -> (u64, u64) {
         let min_addr_str = json_data["HEAP_START"].as_str().unwrap();
         let min_addr = u64::from_str_radix(min_addr_str.trim_start_matches("0x"), 16).unwrap();
@@ -105,10 +108,9 @@ mod tests {
     #[test]
     fn test_get_json_data() {
         crate::tests::setup();
-        let mut cloned_path = TEST_HEAP_DUMP_FILE_PATH.clone();
-        cloned_path.set_extension("json");
+
         let json_data = HeapDumpData::get_json_data(
-            &cloned_path,
+            &crate::params::TEST_HEAP_JSON_FILE_PATH,
         );
 
         assert!(json_data.is_object());
@@ -131,11 +133,12 @@ mod tests {
     #[test]
     fn test_get_min_max_addr() {
         crate::tests::setup();
-        let mut cloned_path = TEST_HEAP_DUMP_FILE_PATH.clone();
-        let blocks = HeapDumpData::generate_blocks_from_heap_dump(&cloned_path, BLOCK_BYTE_SIZE);
-        cloned_path.set_extension("json");
+
+        let blocks = HeapDumpData::generate_blocks_from_heap_dump(
+            &crate::params::TEST_HEAP_DUMP_FILE_PATH, BLOCK_BYTE_SIZE
+        );
         let json_data = HeapDumpData::get_json_data(
-            &cloned_path,
+            &crate::params::TEST_HEAP_JSON_FILE_PATH
         );
         let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(
             &json_data, blocks.len(), BLOCK_BYTE_SIZE);

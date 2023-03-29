@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::path::PathBuf;
 
 use crate::graph_structs::{Node, PointerNode, ValueNode, BasePointerNode, BaseValueNode};
 
@@ -66,16 +67,16 @@ pub fn convert_block_to_pointer_if_possible(data: &[u8], min_addr: u64, max_addr
 }
 
 /// create a node from a block of bytes, following the specified endianness
-/// NOTE: remember that our heap dump vectors are in little endian
+/// NOTE: no need to provide endianess for the pointer conversion directly, 
+/// it uses the global pointer endianness
 pub fn create_node_from_bytes(
-    block: &[u8], 
-    addr: u64, 
-    min_addr: u64, 
-    max_addr: u64, 
-    endianness: Endianness
+    block: &[u8; crate::params::BLOCK_BYTE_SIZE],
+    addr: u64,
+    min_addr: u64,
+    max_addr: u64,
 ) -> Node {
     let potential_ptr = convert_block_to_pointer_if_possible(
-        block, min_addr, max_addr, endianness
+        block, min_addr, max_addr, crate::params::PTR_ENDIANNESS
     );
     if potential_ptr.is_some() {
         Node::PointerNode(
@@ -92,10 +93,25 @@ pub fn create_node_from_bytes(
             ValueNode::BaseValueNode(
                 BaseValueNode {
                     addr,
-                    value: block.to_vec(),
+                    value: *block,
                     color: "".to_string(),
                 }
             )
         )
     }
+}
+
+/// Convert a path to a heap dump file to a path to a associated json file
+pub fn heap_dump_path_to_json_path(heap_dump_raw_file_path: &PathBuf) -> PathBuf {
+    let original_heap_path_str = heap_dump_raw_file_path.to_str().unwrap().to_string();
+    let json_path = PathBuf::from(
+        original_heap_path_str.replace("-heap.raw", ".json")
+    );
+
+    if !json_path.exists() {
+        log::error!("File doesn't exist: {:?}", json_path);
+    } else {
+        log::info!(" 📋 associated json file path: {:?}", json_path);
+    }
+    return json_path;
 }

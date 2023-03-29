@@ -1,5 +1,7 @@
 use serde_derive::{Serialize, Deserialize};
 
+use crate::params::BLOCK_BYTE_SIZE;
+
 # [derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PointerNode{
     BasePointerNode(BasePointerNode),
@@ -105,7 +107,7 @@ pub struct DataStructureNode {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BaseValueNode {
     pub addr: u64,
-    pub value: Vec<u8>,
+    pub value: [u8; BLOCK_BYTE_SIZE],
     pub color: String,
 }
 
@@ -130,11 +132,12 @@ pub struct SshStructNode {
     pub color: String,
 }
 
+// Key data from JSON file
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyData {
     pub name: String,
-    pub key: Vec<u8>,
-    pub addr: Vec<u8>,
+    pub key: [u8; BLOCK_BYTE_SIZE],
+    pub addr: [u8; BLOCK_BYTE_SIZE],
     pub len: usize,
     pub real_len: usize,
 }
@@ -142,23 +145,91 @@ pub struct KeyData {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyNode {
     pub addr: u64,
-    pub value: Vec<u8>,
-    pub key: Vec<u8>,
-    pub key_data: KeyData,
+    pub value: [u8; BLOCK_BYTE_SIZE], // first block of key
+    pub key: [u8; BLOCK_BYTE_SIZE], // found in heap dump, full key (not just the first block)
+    pub key_data: KeyData, // found in JSON file
     pub color: String,
 }
 
-pub enum Edge {
-    DataStructure,
-    Pointer,
+pub struct Edge {
+    pub from: Node,
+    pub to: Node,
+    pub edge_type: EdgeType,
+    pub weight: usize, // Number of edge pointers between the two nodes, default is 1 for a DataStructure edge.
+}
+
+pub enum EdgeType {
+    DataStructureEdge,
+    PointerEdge,
 }
 
 
-impl std::fmt::Display for Edge {
+impl std::fmt::Display for EdgeType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Edge::DataStructure => write!(f, "dts"),
-            Edge::Pointer => write!(f, "ptr"),
+            EdgeType::DataStructureEdge => write!(f, "dts"),
+            EdgeType::PointerEdge => write!(f, "ptr"),
         }
     }
 }
+
+impl std::fmt::Display for Edge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f, "{} -> {} [label=\"{}\", weight={}]", 
+            self.from.get_address(), self.to.get_address(), self.edge_type, self.weight
+        )
+    }
+}
+
+impl std::fmt::Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::DataStructureNode(data_structure_node) => {
+                write!(
+                    f, "DTN: {} [VNs: {}, PNs: {}]", 
+                    data_structure_node.addr, data_structure_node.nb_value_nodes, data_structure_node.nb_pointer_nodes
+                )
+            }
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::BaseValueNode(base_value_node) => {
+                        write!(
+                            f, "VN: {} [value=\"{}\"]", 
+                            base_value_node.addr, hex::encode(&base_value_node.value)
+                        )
+                    }
+                    ValueNode::KeyNode(key_node) => {
+                        write!(
+                            f, "KN: {} [found_key=\"{}\", json_key=\"{}\"]", 
+                            key_node.addr, hex::encode(&key_node.key), hex::encode(&key_node.key_data.key) 
+                        )
+                    }
+                }
+            }
+            Node::PointerNode(pointer_node) => {
+                match pointer_node {
+                    PointerNode::BasePointerNode(base_pointer_node) => {
+                        write!(
+                            f, "PN: {} [label=\"{}\"]", 
+                            base_pointer_node.addr, base_pointer_node.points_to
+                        )
+                    }
+                    PointerNode::SessionStateNode(session_state_node) => {
+                        write!(
+                            f, "SSN: {} [label=\"{}\",]", 
+                            session_state_node.addr, session_state_node.points_to
+                        )
+                    }
+                    PointerNode::SshStructNode(ssh_struct_node) => {
+                        write!(
+                            f, "SSHN: {} [label=\"{}\"]", 
+                            ssh_struct_node.addr, ssh_struct_node.points_to
+                        )
+                    }
+                }
+            }
+        }
+    } 
+}
+
