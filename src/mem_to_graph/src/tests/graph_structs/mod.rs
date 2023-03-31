@@ -6,33 +6,27 @@ fn create_test_structs() -> Vec<Node> {
         byte_size: 8,
         nb_pointer_nodes: 0,
         nb_value_nodes: 0,
-        color: "blue".to_string(),
-        style: "".to_string(),
     });
 
     let base_value_node = ValueNode::BaseValueNode(BaseValueNode {
-            addr: 0,
+            addr: 1,
             value: [0, 1, 2, 3, 4, 5, 6, 7],
-            color: "grey".to_string(),
         }
     );
 
     let base_pointer_node = PointerNode::BasePointerNode(BasePointerNode {
-        addr: 0,
+        addr: 2,
         points_to: 8,
-        color: "orange".to_string(),
     });
 
     let session_state_node = PointerNode::SessionStateNode(SessionStateNode {
-        addr: 0,
+        addr: 3,
         points_to: 16,
-        color: "red".to_string(),
     });
 
     let ssh_struct_node = PointerNode::SshStructNode(SshStructNode {
-        addr: 0,
+        addr: 4,
         points_to: 24,
-        color: "purple".to_string(),
     });
 
     let key_data = KeyData {
@@ -44,11 +38,10 @@ fn create_test_structs() -> Vec<Node> {
     };
 
     let key_node = ValueNode::KeyNode(KeyNode {
-        addr: 0,
+        addr: 5,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
         key: [0, 1, 2, 3, 4, 5, 6, 7],
         key_data,
-        color: "green".to_string(),
     });
 
     let nodes: Vec<Node> = vec![
@@ -136,4 +129,36 @@ fn test_important_nodes() {
         }
     }
     assert_eq!(counter_importants, 3);
+}
+
+#[test]
+fn test_is_pointer() {
+    crate::tests::setup();
+
+    // test with Vec<Node>
+    let nodes = create_test_structs();
+
+    let mut counter_pointers = 0;
+    for node in nodes {
+        if node.is_pointer() {
+            counter_pointers += 1;
+        }
+    }
+    assert_eq!(counter_pointers, 3);
+}
+
+#[test]
+fn test_is_value() {
+    crate::tests::setup();
+
+    // test with Vec<Node>
+    let nodes = create_test_structs();
+
+    let mut counter_values = 0;
+    for node in nodes {
+        if node.is_value() {
+            counter_values += 1;
+        }
+    }
+    assert_eq!(counter_values, 2);
 }

@@ -74,9 +74,10 @@ pub fn create_node_from_bytes(
     addr: u64,
     min_addr: u64,
     max_addr: u64,
+    endianness: Option<Endianness>
 ) -> Node {
     let potential_ptr = convert_block_to_pointer_if_possible(
-        block, min_addr, max_addr, crate::params::PTR_ENDIANNESS
+        block, min_addr, max_addr, endianness.unwrap_or(crate::params::PTR_ENDIANNESS)
     );
     if potential_ptr.is_some() {
         Node::PointerNode(
@@ -84,7 +85,6 @@ pub fn create_node_from_bytes(
                 BasePointerNode {
                     addr,
                     points_to: potential_ptr.unwrap(),
-                    color: "".to_string(),
                 }
             )
         )
@@ -94,7 +94,6 @@ pub fn create_node_from_bytes(
                 BaseValueNode {
                     addr,
                     value: *block,
-                    color: "".to_string(),
                 }
             )
         )

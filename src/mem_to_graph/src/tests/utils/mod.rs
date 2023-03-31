@@ -187,8 +187,10 @@ fn test_create_node_from_bytes() {
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR,
+        Some(Endianness::Big), // Big since the block comes from hex_str_to_block_bytes()
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
+    log::info!("{} should be PN node: {:?}", hex::encode(pointer_block_of_8_bytes), node);
     assert!(node.is_pointer());
 
     // value node
@@ -198,6 +200,7 @@ fn test_create_node_from_bytes() {
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR, 
+        Some(Endianness::Big), // Big since the block comes from hex_str_to_block_bytes()
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     assert!(node.is_value());
@@ -209,6 +212,7 @@ fn test_create_node_from_bytes() {
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR, 
+        Some(Endianness::Big), // Big since the block comes from hex_str_to_block_bytes()
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     assert!(node.is_value());

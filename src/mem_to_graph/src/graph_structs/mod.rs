@@ -100,36 +100,30 @@ pub struct DataStructureNode {
     pub byte_size: usize,
     pub nb_pointer_nodes: usize,
     pub nb_value_nodes: usize,
-    pub color: String,
-    pub style: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BaseValueNode {
     pub addr: u64,
     pub value: [u8; BLOCK_BYTE_SIZE],
-    pub color: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BasePointerNode {
     pub addr: u64,
     pub points_to: u64,
-    pub color: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionStateNode {
     pub addr: u64,
     pub points_to: u64,
-    pub color: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SshStructNode {
     pub addr: u64,
     pub points_to: u64,
-    pub color: String,
 }
 
 // Key data from JSON file
@@ -148,12 +142,13 @@ pub struct KeyNode {
     pub value: [u8; BLOCK_BYTE_SIZE], // first block of key
     pub key: [u8; BLOCK_BYTE_SIZE], // found in heap dump, full key (not just the first block)
     pub key_data: KeyData, // found in JSON file
-    pub color: String,
 }
 
+pub const DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT: usize = 1;
+
 pub struct Edge {
-    pub from: Node,
-    pub to: Node,
+    pub from: u64,
+    pub to: u64,
     pub edge_type: EdgeType,
     pub weight: usize, // Number of edge pointers between the two nodes, default is 1 for a DataStructure edge.
 }
@@ -177,7 +172,7 @@ impl std::fmt::Display for Edge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f, "{} -> {} [label=\"{}\", weight={}]", 
-            self.from.get_address(), self.to.get_address(), self.edge_type, self.weight
+            self.from, self.to, self.edge_type, self.weight
         )
     }
 }
