@@ -218,6 +218,9 @@ mod tests {
 
         // display graph
         log::info!("first version of test graph: \n{}", Dot::new(&graph));
+        // TODO: improve the display of the graph
+        // to do so, wrap the addresses (u64) in a struct that implements Display
+        // and use the addr_to_nodes map to get the type of the node
 
         // print the type of all nodes in the map
         for (addr, node) in &addr_to_nodes {
