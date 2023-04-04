@@ -11,7 +11,8 @@ static INIT: Once = Once::new();
 /// otherwise, the logger will not be initialized
 fn log_order_warning() {
     INIT.call_once(|| {
-        log::info!(" 🚧 The order of the logs is not guaranteed. This is because the tests are run in parallel.")
+        log::info!(" 🚧 The order of the logs is not guaranteed. This is because the tests are run in parallel.");
+        log::info!(" 🚧 Using 'print' or 'println' won't work because the output is captured by the test runner.");
     });
 }
 

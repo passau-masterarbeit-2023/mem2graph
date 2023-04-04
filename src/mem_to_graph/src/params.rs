@@ -15,7 +15,7 @@ pub const PTR_ENDIANNESS: Endianness = Endianness::Little;
 /// Initialize logger. 
 /// WARN: Must be called before any logging is done.
 fn init_logger() {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or(LOGGER_MODE.as_str()));
 
     log::info!(" 🚀 starting mem to graph converter");
 }
@@ -33,6 +33,17 @@ pub fn init() {
 
 // Get the path to files for the program, using the environment variables.
 lazy_static! {
+    static ref LOGGER_MODE: String = {
+        let logger_mode = std::env::var("LOGGER_MODE");
+        match logger_mode {
+            Ok(mode) => mode,
+            Err(_) => {
+                println!("LOGGER_MODE environment variable not set. Defaulting to 'info'.");
+                return "info".to_string();
+            },
+        }
+    };
+
     static ref HOME_DIR: String = std::env::var("HOME")
         .expect("HOME environment variable must be set");
 

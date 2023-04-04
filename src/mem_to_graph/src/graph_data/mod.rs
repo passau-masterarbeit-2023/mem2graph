@@ -1,3 +1,4 @@
+use env_logger::fmt;
 use petgraph::graphmap::DiGraphMap;
 use petgraph::stable_graph::DefaultIx;
 use std::path::{PathBuf};
@@ -12,12 +13,14 @@ use crate::utils::*;
 
 /// This struct contains the graph data
 /// linked to a given heap dump file.
-pub struct GraphData {
-    graph: DiGraphMap<u64, graph_structs::Edge>,
+pub struct GraphData<'a> {
+    graph: DiGraphMap<u64, graph_structs::Edge<'a>>,
+    addr_to_node: HashMap<u64, graph_structs::Node>,
+
     heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
 }
 
-impl GraphData {
+impl<'a> GraphData<'a> {
 
     // /// Initialize the graph data from a raw heap dump file.
     // fn new(&self, heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> GraphData {
@@ -33,6 +36,17 @@ impl GraphData {
     //     self.pointer_step();
     //     return *self;
     // }
+
+    /// Constructor for an empty GraphData
+    fn new_empty() -> Self {
+        Self {
+            graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
+            addr_to_node: HashMap::new(),
+            heap_dump_data: None,
+        }
+    }
+
+
 
     // /// constructor for testing purposes
     // fn new_test(&self, nodes: Vec<graph_structs::Node>, edges: Vec<graph_structs::Edge>) -> GraphData {
@@ -102,8 +116,26 @@ impl GraphData {
     //     // TODO: add node to the map
     // }
 
-
 }
+
+/// custom dot format for the graph
+impl std::fmt::Display for GraphData<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "digraph {{")?;
+        // TODO match node and call its associated display function
+        for addr in self.graph.nodes() {
+            let node = self.addr_to_node.get(&addr).unwrap();
+            // call the display function of the node
+            write!(f, "{}", node)?;
+        }
+        for (_, _, edge) in self.graph.all_edges() {
+            writeln!(f, "{}", edge)?;
+        }
+        writeln!(f, "}}")?;
+        Ok(())
+    }
+}
+
 
 // NOTE: tests must be in the same module as the code they are testing
 // for them to have access to the private functions
@@ -129,14 +161,11 @@ mod tests {
     };
 
     #[test]
-    fn test_petgraph() {
+    fn test_petgraph_digraphmap() {
         crate::tests::setup();
         
-        // create a DiGraph
-        let mut graph = DiGraphMap::<u64, graph_structs::Edge>::new();
-
-        // create dictionary of addresses to nodes
-        let mut addr_to_nodes: HashMap<u64, Node> = HashMap::new();
+        // create empty GraphData
+        let mut graph_data = GraphData::new_empty();
 
         // create test nodes
         let data_structure_node = Node::DataStructureNode(DataStructureNode {
@@ -162,70 +191,98 @@ mod tests {
         );
 
         // add nodes as addresses
-        let data_structure_node_index = graph.add_node(
+        let data_structure_node_index = graph_data.graph.add_node(
             data_structure_node.get_address()
         );
-        let base_value_node_index = graph.add_node(
+        let base_value_node_index = graph_data.graph.add_node(
             base_value_node.get_address()
         );
-        let base_pointer_node_index = graph.add_node(
+        let base_pointer_node_index = graph_data.graph.add_node(
             base_pointer_node.get_address()
         );
 
-        assert_eq!(graph.node_count(), 3);
+        assert_eq!(graph_data.graph.node_count(), 3);
         assert_eq!(data_structure_node_index, data_structure_node.get_address());
         assert_eq!(base_value_node_index, base_value_node.get_address());
         assert_eq!(base_pointer_node_index, base_pointer_node.get_address());
 
         // add nodes to dictionary
-        addr_to_nodes.insert(
+        graph_data.addr_to_node.insert(
             data_structure_node.get_address(),
             data_structure_node // move
         );
-        addr_to_nodes.insert(
+        graph_data.addr_to_node.insert(
             base_value_node.get_address(),
             base_value_node // move
         );
-        addr_to_nodes.insert(
+        graph_data.addr_to_node.insert(
             base_pointer_node.get_address(),
             base_pointer_node // move
         );
 
         // create test edges
+        // WARN: the references to the nodes have been moved inside the dictionary
+        //     so we need to get them back from the dictionary (using the address as key)
         let data_structure_edge_1 = Edge {
-            from: data_structure_node_index,
-            to: base_value_node_index,
+            from: &graph_data.addr_to_node.get(&data_structure_node_index).unwrap(),
+            to: &graph_data.addr_to_node.get(&base_value_node_index).unwrap(),
             weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
             edge_type: EdgeType::DataStructureEdge,
         };
         let pointer_edge = Edge {
-            from: base_pointer_node_index,
-            to: base_value_node_index,
+            from: &graph_data.addr_to_node.get(&base_pointer_node_index).unwrap(),
+            to: &graph_data.addr_to_node.get(&base_value_node_index).unwrap(),
             weight: 1,
             edge_type: EdgeType::PointerEdge,
         };
         let data_structure_edge_2 = Edge {
-            from: data_structure_node_index,
-            to: base_pointer_node_index,
+            from: &graph_data.addr_to_node.get(&data_structure_node_index).unwrap(),
+            to: &graph_data.addr_to_node.get(&base_pointer_node_index).unwrap(),
             weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
             edge_type: EdgeType::DataStructureEdge,
         };
 
-        // add edges
-        graph.add_edge(data_structure_edge_1.from, data_structure_edge_1.to, data_structure_edge_1);
-        graph.add_edge(pointer_edge.from, pointer_edge.to, pointer_edge);
-        graph.add_edge(data_structure_edge_2.from, data_structure_edge_2.to, data_structure_edge_2);
-
-        // display graph
-        log::info!("first version of test graph: \n{}", Dot::new(&graph));
-        // TODO: improve the display of the graph
-        // to do so, wrap the addresses (u64) in a struct that implements Display
-        // and use the addr_to_nodes map to get the type of the node
+        // add edges (u64 to u64, with Edge as data (weight)))
+        graph_data.graph.add_edge(
+            data_structure_edge_1.from.get_address(), 
+            data_structure_edge_1.to.get_address(), 
+            data_structure_edge_1
+        );
+        graph_data.graph.add_edge(
+            pointer_edge.from.get_address(), 
+            pointer_edge.to.get_address(), 
+            pointer_edge
+        );
+        graph_data.graph.add_edge(
+            data_structure_edge_2.from.get_address(), 
+            data_structure_edge_2.to.get_address(), 
+            data_structure_edge_2
+        );
 
         // print the type of all nodes in the map
-        for (addr, node) in &addr_to_nodes {
+        for (addr, node) in &graph_data.addr_to_node {
             log::info!("node at address {} is of type {:?}", addr, node);
         }
 
+        // display graph
+        log::info!("first version of test graph: \n{}", Dot::new(&graph_data.graph));
+        log::info!("custom formatter: \n{}", graph_data);
     }
+
+
+    // #[test]
+    // fn test_graphdata_display() {
+    //     crate::tests::setup();
+
+    //     use std::collections::HashMap;
+
+    //     let mut custom_labels = HashMap::new();
+    //     custom_labels.insert(1, "DataStructureNode");
+    //     custom_labels.insert(2, "BaseValueNode");
+    //     custom_labels.insert(3, "BasePointerNode");
+
+
+
+    // }
+
 }

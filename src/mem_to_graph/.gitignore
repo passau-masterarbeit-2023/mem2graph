@@ -1,2 +1,4 @@
 # rust
 target/
+
+.env

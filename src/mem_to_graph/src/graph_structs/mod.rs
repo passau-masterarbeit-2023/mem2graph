@@ -1,21 +1,23 @@
 use serde_derive::{Serialize, Deserialize};
+use std::collections::HashMap;
 
 use crate::params::BLOCK_BYTE_SIZE;
 
-# [derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PointerNode{
     BasePointerNode(BasePointerNode),
     SessionStateNode(SessionStateNode),
     SshStructNode(SshStructNode),
 }
 
-# [derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ValueNode{
     BaseValueNode(BaseValueNode),
     KeyNode(KeyNode),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Node {
     DataStructureNode(DataStructureNode),
     ValueNode(ValueNode),
@@ -76,6 +78,55 @@ impl Node {
         }
     }
 
+    /// returns the address of the node and its type annotation
+    fn str_addr_and_type(&self) -> String {
+        match self {
+            Node::DataStructureNode(data_structure_node) => {
+                format!(
+                    "DTN({:#x})",
+                    data_structure_node.addr,
+                )
+            }
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::BaseValueNode(base_value_node) => {
+                        format!(
+                            "VN({:#x})",
+                            base_value_node.addr,
+                        )
+                    }
+                    ValueNode::KeyNode(key_node) => {
+                        format!(
+                            "KN_{}({:#x})", 
+                            key_node.key_data.name, key_node.addr
+                        )
+                    }
+                }
+            }
+            Node::PointerNode(pointer_node) => {
+                match pointer_node {
+                    PointerNode::BasePointerNode(base_pointer_node) => {
+                        format!(
+                            "PN({:#x})",
+                            base_pointer_node.addr,
+                        )
+                    }
+                    PointerNode::SessionStateNode(session_state_node) => {
+                        format!(
+                            "SSN({:#x})", 
+                            session_state_node.addr
+                        )
+                    }
+                    PointerNode::SshStructNode(ssh_struct_node) => {
+                        format!(
+                            "SSHN({:#x})", 
+                            ssh_struct_node.addr
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     /// Check if a node is a pointer node
     pub fn is_pointer(&self) -> bool {
@@ -90,6 +141,58 @@ impl Node {
         match self {
             Node::ValueNode(_) => true,
             _ => false,
+        }
+    }
+}
+
+    /// return a formatted string of the node, for debugging purposes
+impl std::fmt::Debug for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::DataStructureNode(data_structure_node) => {
+                write!(
+                    f, "DTN: {} [VNs: {}, PNs: {}]", 
+                    data_structure_node.addr, data_structure_node.nb_value_nodes, data_structure_node.nb_pointer_nodes
+                )
+            }
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::BaseValueNode(base_value_node) => {
+                        write!(
+                            f, "VN: {} [value=\"{}\"]", 
+                            base_value_node.addr, hex::encode(&base_value_node.value)
+                        )
+                    }
+                    ValueNode::KeyNode(key_node) => {
+                        write!(
+                            f, "KN: {} [found_key=\"{}\", json_key=\"{}\"]", 
+                            key_node.addr, hex::encode(&key_node.key), hex::encode(&key_node.key_data.key) 
+                        )
+                    }
+                }
+            }
+            Node::PointerNode(pointer_node) => {
+                match pointer_node {
+                    PointerNode::BasePointerNode(base_pointer_node) => {
+                        write!(
+                            f, "PN: {} [label=\"{}\"]", 
+                            base_pointer_node.addr, base_pointer_node.points_to
+                        )
+                    }
+                    PointerNode::SessionStateNode(session_state_node) => {
+                        write!(
+                            f, "SSN: {} [label=\"{}\",]", 
+                            session_state_node.addr, session_state_node.points_to
+                        )
+                    }
+                    PointerNode::SshStructNode(ssh_struct_node) => {
+                        write!(
+                            f, "SSHN: {} [label=\"{}\"]", 
+                            ssh_struct_node.addr, ssh_struct_node.points_to
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -146,9 +249,9 @@ pub struct KeyNode {
 
 pub const DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT: usize = 1;
 
-pub struct Edge {
-    pub from: u64,
-    pub to: u64,
+pub struct Edge<'a> {
+    pub from: &'a Node,
+    pub to: &'a Node,
     pub edge_type: EdgeType,
     pub weight: usize, // Number of edge pointers between the two nodes, default is 1 for a DataStructure edge.
 }
@@ -168,11 +271,11 @@ impl std::fmt::Display for EdgeType {
     }
 }
 
-impl std::fmt::Display for Edge {
+impl std::fmt::Display for Edge<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
-            f, "{} -> {} [label=\"{}\", weight={}]", 
-            self.from, self.to, self.edge_type, self.weight
+            f, "    {:?} -> {:?} [label=\"{}\", weight={}]",
+            self.from.str_addr_and_type(), self.to.str_addr_and_type(), self.edge_type, self.weight
         )
     }
 }
@@ -182,22 +285,19 @@ impl std::fmt::Display for Node {
         match self {
             Node::DataStructureNode(data_structure_node) => {
                 write!(
-                    f, "DTN: {} [VNs: {}, PNs: {}]", 
-                    data_structure_node.addr, data_structure_node.nb_value_nodes, data_structure_node.nb_pointer_nodes
+                    f, "    {:?} [color=blue];\n", 
+                    self.str_addr_and_type(),
                 )
             }
             Node::ValueNode(value_node) => {
                 match value_node {
                     ValueNode::BaseValueNode(base_value_node) => {
-                        write!(
-                            f, "VN: {} [value=\"{}\"]", 
-                            base_value_node.addr, hex::encode(&base_value_node.value)
-                        )
+                        Ok(()) // Do not print base value nodes
                     }
                     ValueNode::KeyNode(key_node) => {
                         write!(
-                            f, "KN: {} [found_key=\"{}\", json_key=\"{}\"]", 
-                            key_node.addr, hex::encode(&key_node.key), hex::encode(&key_node.key_data.key) 
+                            f, "    {:?} [color=green, style=filled];\n", 
+                            self.str_addr_and_type(),
                         )
                     }
                 }
@@ -206,20 +306,20 @@ impl std::fmt::Display for Node {
                 match pointer_node {
                     PointerNode::BasePointerNode(base_pointer_node) => {
                         write!(
-                            f, "PN: {} [label=\"{}\"]", 
-                            base_pointer_node.addr, base_pointer_node.points_to
+                            f, "    {:?} [color=orange];\n",
+                            self.str_addr_and_type(),
                         )
                     }
                     PointerNode::SessionStateNode(session_state_node) => {
                         write!(
-                            f, "SSN: {} [label=\"{}\",]", 
-                            session_state_node.addr, session_state_node.points_to
+                            f, "    {:?} [color=red];\n", 
+                            self.str_addr_and_type(),
                         )
                     }
                     PointerNode::SshStructNode(ssh_struct_node) => {
                         write!(
-                            f, "SSHN: {} [label=\"{}\"]", 
-                            ssh_struct_node.addr, ssh_struct_node.points_to
+                            f, "    {:?} [color=purple];\n", 
+                            self.str_addr_and_type(),
                         )
                     }
                 }

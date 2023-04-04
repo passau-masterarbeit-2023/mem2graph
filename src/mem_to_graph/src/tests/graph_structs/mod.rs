@@ -162,3 +162,15 @@ fn test_is_value() {
     }
     assert_eq!(counter_values, 2);
 }
+
+#[test]
+fn test_debug() {
+    crate::tests::setup();
+
+    // test with Vec<Node>
+    let nodes = create_test_structs();
+
+    for node in nodes {
+        log::debug!("testin the debug fmt for node {:?}", node);
+    }
+}
