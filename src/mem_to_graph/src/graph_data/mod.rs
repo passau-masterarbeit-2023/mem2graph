@@ -1,6 +1,4 @@
-use env_logger::fmt;
 use petgraph::graphmap::DiGraphMap;
-use petgraph::stable_graph::DefaultIx;
 use std::path::{PathBuf};
 use std::collections::HashMap;
 
@@ -9,7 +7,15 @@ pub mod heap_dump_data;
 use heap_dump_data::HeapDumpData;
 use crate::graph_structs;
 use crate::params::BLOCK_BYTE_SIZE;
-use crate::utils::*;
+use crate::utils;
+
+/// macro for getting the heap_dump_data field unwrapped
+macro_rules! heap_dump_data_ref {
+    ($self:expr) => {{
+        assert!(!$self.heap_dump_data.is_none(), "heap_dump_data is None");
+        $self.heap_dump_data.as_ref().unwrap()
+    }};
+}
 
 /// This struct contains the graph data
 /// linked to a given heap dump file.
@@ -18,24 +24,28 @@ pub struct GraphData<'a> {
     addr_to_node: HashMap<u64, graph_structs::Node>,
 
     heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
+    
 }
 
 impl<'a> GraphData<'a> {
 
-    // /// Initialize the graph data from a raw heap dump file.
-    // fn new(&self, heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> GraphData {
-    //     // Get the heap dump data
-    //     self.heap_dump_data = Some(
-    //         HeapDumpData::new(
-    //             heap_dump_raw_file_path,
-    //             pointer_byte_size,
-    //         )
-    //     );
+    /// Initialize the graph data from a raw heap dump file.
+    fn new(heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> Self {
+        let mut instance = Self {
+            graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
+            addr_to_node: HashMap::new(),
+            heap_dump_data: Some(
+                HeapDumpData::new(
+                    heap_dump_raw_file_path,
+                    pointer_byte_size,
+                )
+            ),
+        };
 
-    //     self.data_structure_step(pointer_byte_size);
-    //     self.pointer_step();
-    //     return *self;
-    // }
+        // instance.data_structure_step(pointer_byte_size);
+        // instance.pointer_step();
+        instance
+    }
 
     /// Constructor for an empty GraphData
     fn new_empty() -> Self {
@@ -47,74 +57,47 @@ impl<'a> GraphData<'a> {
     }
 
 
-
-    // /// constructor for testing purposes
-    // fn new_test(&self, nodes: Vec<graph_structs::Node>, edges: Vec<graph_structs::Edge>) -> GraphData {
-    //     self.heap_dump_data = None;
-
-    //     self.graph = DiGraphMap::new();
-    //     for node in nodes {
-    //         self.add_node_wrapper(&node);
-    //     }
-    //     for edge in edges {
-    //         self.add_edge_wrapper(&edge);
-    //     }
-    //     return *self;
-    // }
-
-    // fn create_node_from_bytes_wrapper(
-    //     &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64
-    // ) -> graph_structs::Node {
-    //     if self.heap_dump_data.is_none() {
-    //         panic!("heap_dump_data is None");
-    //     }
-    //     return create_node_from_bytes(
-    //         data,
-    //         addr,
-    //         self.heap_dump_data.unwrap().min_addr,
-    //         self.heap_dump_data.unwrap().max_addr
-    //     );
-    // }
+    fn create_node_from_bytes_wrapper(
+        &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64
+    ) -> graph_structs::Node {
+        let heap_dump_data_ref = heap_dump_data_ref!(self);
+        return utils::create_node_from_bytes(
+            data,
+            addr,
+            heap_dump_data_ref.min_addr,
+            heap_dump_data_ref.max_addr,
+            None,   
+        );
+    }
     
-    // /// Wrapper for create_node_from_bytes_wrapper using a block index instead of an address.
-    // fn create_node_from_bytes_wrapper_index(
-    //     &self, data: &[u8; BLOCK_BYTE_SIZE], block_index: usize
-    // ) -> graph_structs::Node {
-    //     let addr = self.heap_dump_data.unwrap().index_to_addr_wrapper(block_index);
-    //     return self.create_node_from_bytes_wrapper(data, addr);
-    // }
+    /// Wrapper for create_node_from_bytes_wrapper using a block index instead of an address.
+    fn create_node_from_bytes_wrapper_index(
+        &self, data: &[u8; BLOCK_BYTE_SIZE], block_index: usize
+    ) -> graph_structs::Node {
+        let heap_dump_data_ref = heap_dump_data_ref!(self);
+        let addr = heap_dump_data_ref.index_to_addr_wrapper(block_index);
+        return self.create_node_from_bytes_wrapper(data, addr);
+    }
 
-    // // def add_node_wrapper(self, node: Node):
-    // //     """
-    // //     Wrapper for add_node. Add a node with its color to the graph.
-    // //     """
-    // //     if isinstance(node, Filled):
-    // //         self.graph.add_node(node.addr, node=node, style="filled", color=node.color)
-    // //     else:
-    // //         self.graph.add_node(node.addr, node=node, color=node.color)
+    /// add node to the map & to the map
+    /// NOTE: the node is moved to the map
+    fn add_node_wrapper(&mut self, node: graph_structs::Node) -> u64 {
+        let node_addr = node.get_address();
+        self.addr_to_node.insert(node_addr, node); // move the node
+        self.graph.add_node(self.addr_to_node.get(&node_addr).unwrap().get_address());
+        node_addr
+    }
 
-    // fn add_node_wrapper(&self, node: &graph_structs::Node) -> u64 {
-    //     self.graph.add_node(node.get_address())
-    //     // TODO: add node to the map
-    // }
-
-    // // def add_edge_wrapper(self, node_start: Node, node_end: Node, weight: int = 1):
-    // //     """
-    // //     Wrapper for add_edge. Add an edge to the graph.
-    // //     """
-    // //     # get the type of the edge
-    // //     edge_type: Edge
-    // //     if isinstance(node_start, PointerNode):
-    // //         edge_type = Edge.POINTER
-    // //     elif isinstance(node_start, DataStructureNode):
-    // //         edge_type = Edge.DATA_STRUCTURE
-    // //     else:
-    // //         raise ValueError("Unknown node type: %s" % node_start)
-
-    // fn add_edge_wrapper(&self, edge: &graph_structs::Edge) {
-    //     self.graph.add_edge(edge.from, edge.to, *edge);
-    //     // TODO: add node to the map
-    // }
+    /// Add an edge to the graph.
+    /// NOTE: the edge is moved to the graph
+    fn add_edge_wrapper(&mut self, edge: graph_structs::Edge<'a>) {
+        self.graph.add_edge(
+            edge.from.get_address(), 
+            edge.to.get_address(), 
+            edge
+        );
+    }
+    
 
 }
 
@@ -141,13 +124,11 @@ impl std::fmt::Display for GraphData<'_> {
 // for them to have access to the private functions
 #[cfg(test)]
 mod tests {
+    use log;
     use petgraph::dot::Dot;
 
     use super::*;
-    use crate::params::{
-        BLOCK_BYTE_SIZE, 
-        TEST_HEAP_DUMP_FILE_PATH
-    };
+    use crate::params::{self, TEST_HEAP_DUMP_FILE_PATH, PTR_ENDIANNESS};
     use crate::graph_structs::{
         Node, 
         ValueNode, 
@@ -159,6 +140,8 @@ mod tests {
         EdgeType,
         DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
     };
+    use crate::tests::*;
+    use crate::utils::create_node_from_bytes;
 
     #[test]
     fn test_petgraph_digraphmap() {
@@ -269,20 +252,52 @@ mod tests {
         log::info!("custom formatter: \n{}", graph_data);
     }
 
+    #[test]
+    fn test_wrapper() {
+        crate::tests::setup();
+        
+        // create empty GraphData
+        let mut graph_data = GraphData::new(
+            params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
+            params::BLOCK_BYTE_SIZE
+        );
+        let heap_dump_data_ref = heap_dump_data_ref!(graph_data);
 
-    // #[test]
-    // fn test_graphdata_display() {
-    //     crate::tests::setup();
+        // test with a pointer
+        let data_ptr: [u8; BLOCK_BYTE_SIZE] = *TEST_PTR_1_VALUE_BYTES;
+        let addr_ptr: u64 = *TEST_PTR_1_ADDR;
 
-    //     use std::collections::HashMap;
+        let pointer_node_1 = create_node_from_bytes(
+            &data_ptr, addr_ptr, heap_dump_data_ref.min_addr, heap_dump_data_ref.max_addr, None
+        );
 
-    //     let mut custom_labels = HashMap::new();
-    //     custom_labels.insert(1, "DataStructureNode");
-    //     custom_labels.insert(2, "BaseValueNode");
-    //     custom_labels.insert(3, "BasePointerNode");
+        let pointer_node_1_from_wrapper = graph_data.create_node_from_bytes_wrapper(
+            &data_ptr, addr_ptr
+        );
+        log::info!("pointer node 1: {:?}", pointer_node_1);
+        log::info!("pointer node 1 from wrapper: {:?}", pointer_node_1_from_wrapper);
+        
+        // assert_eq!(pointer_node_1.get_address(), addr_ptr);
+    
+        // // compare the two nodes
+        // assert_eq!(pointer_node_1, pointer_node_1_from_wrapper);
 
 
+        // // the node type should be a pointer node
+        // match pointer_node_1_from_wrapper {
+        //     Node::PointerNode(pointer_node) => {
+        //         // the pointer node type should be a base pointer node
+        //         match pointer_node {
+        //             PointerNode::BasePointerNode(base_pointer_node) => {
+        //                 // the base pointer node should point to the address of the value node
+        //                 assert_eq!(base_pointer_node.points_to, *TEST_PTR_1_ADDR);
+        //             },
+        //             _ => panic!("pointer node should be a base pointer node"),
+        //         }
+        //     },
+        //     _ => panic!("node should be a pointer node"),
+        // }
 
-    // }
+    }
 
 }

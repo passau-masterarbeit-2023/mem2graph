@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 
+use crate::tests::*;
 use crate::utils::*;
 use crate::graph_structs::*;
 use crate::params::TEST_HEAP_DUMP_FILE_PATH;
@@ -66,34 +67,7 @@ fn test_hex_str_to_addr() {
     assert_eq!(hex_str_to_addr("0004000000000000", Endianness::Little).unwrap(), 1024);
 }
 
-lazy_static! {
-    // all data comes from: /Training/Training/scp/V_7_8_P1/16/1010-1644391327-heap.raw
-    // and its associated json file
-    // WARN: Beware of Endianness, not the same between addr indexes and addr values
-    // xxd example:
-    //      00000300:20947e968b55000040947e968b550000.~..U..@.~..U..
-    // here, "00000300" is in big endian, but "20947e968b550000" is in little endian
-    // NOTE: 00000300 is the index of the 8 bytes (32 bits) block containing the pointer 20947e968b550000
-    // NOTE: 00000308 is the index of the 8 bytes (32 bits) block containing the pointer 40947e968b550000
-    // NOTE: pointer representation is in little endian, and ends with 00 00
-    
-    // WARN: HEAP_START is in big endian!!!
-    // test range: [620_599_085_909 ... 620_599_085_909 + 282_624 = 620_599_368_533]
-    // Big endian HEAP_START range [94_058_013_691_904 ]
-    // 94_058_013_692_960 not in range
-    // 19291223004192 not in range
-    
-    static ref TEST_MIN_ADDR: u64 = hex_str_to_addr("558b967e9000", Endianness::Big).unwrap(); // HEAP_START
-    static ref TEST_MAX_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00045000", Endianness::Big).unwrap(); // HEAP_START + HEAP_SIZE
-    
-    static ref TEST_PTR_1_VALUE_STR: String = "20947e968b550000".to_string();
-    static ref TEST_PTR_1_VALUE: u64 = hex_str_to_addr(&*TEST_PTR_1_VALUE_STR.as_str(), Endianness::Little).unwrap();
-    static ref TEST_PTR_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000300", Endianness::Big).unwrap();
-    
-    static ref TEST_PTR_2_VALUE_STR: String = "40947e968b550000".to_string();
-    static ref TEST_PTR_2_VALUE: u64 = hex_str_to_addr(&*TEST_PTR_2_VALUE_STR.as_str(), Endianness::Little).unwrap();
-    static ref TEST_PTR_2_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000308", Endianness::Big).unwrap();
-}
+
 
 #[test]
 fn test_hex_str_to_block_bytes() {
@@ -220,6 +194,6 @@ fn test_create_node_from_bytes() {
 
 #[test]
 fn test_heap_dump_path_to_json_path() {
-    let test_path = heap_dump_path_to_json_path(&TEST_HEAP_DUMP_FILE_PATH);
+    let test_path = heap_dump_path_to_json_path(&*TEST_HEAP_DUMP_FILE_PATH);
     assert!(test_path.exists())
 }
