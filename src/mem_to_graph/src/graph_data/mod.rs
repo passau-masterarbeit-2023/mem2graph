@@ -1,19 +1,19 @@
 use petgraph::graphmap::DiGraphMap;
 use std::path::{PathBuf};
 use std::collections::HashMap;
+use log;
 
 pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
-use crate::graph_structs;
-use crate::params::BLOCK_BYTE_SIZE;
+use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT};
+use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS};
 use crate::utils;
 
 /// macro for getting the heap_dump_data field unwrapped
-macro_rules! heap_dump_data_ref {
+macro_rules! check_heap_dump {
     ($self:expr) => {{
         assert!(!$self.heap_dump_data.is_none(), "heap_dump_data is None");
-        $self.heap_dump_data.as_ref().unwrap()
     }};
 }
 
@@ -60,12 +60,12 @@ impl<'a> GraphData<'a> {
     fn create_node_from_bytes_wrapper(
         &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64
     ) -> graph_structs::Node {
-        let heap_dump_data_ref = heap_dump_data_ref!(self);
+        check_heap_dump!(self);
         return utils::create_node_from_bytes(
             data,
             addr,
-            heap_dump_data_ref.min_addr,
-            heap_dump_data_ref.max_addr,
+            self.heap_dump_data.as_ref().unwrap().min_addr,
+            self.heap_dump_data.as_ref().unwrap().max_addr,
         );
     }
     
@@ -73,8 +73,8 @@ impl<'a> GraphData<'a> {
     fn create_node_from_bytes_wrapper_index(
         &self, data: &[u8; BLOCK_BYTE_SIZE], block_index: usize
     ) -> graph_structs::Node {
-        let heap_dump_data_ref = heap_dump_data_ref!(self);
-        let addr = heap_dump_data_ref.index_to_addr_wrapper(block_index);
+        check_heap_dump!(self);
+        let addr = self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(block_index);
         return self.create_node_from_bytes_wrapper(data, addr);
     }
 
@@ -96,7 +96,135 @@ impl<'a> GraphData<'a> {
             edge
         );
     }
+
+    /// get the malloc header (number of byte allocated + 1)
+    fn __get_memalloc_header(&self, data: &[u8; BLOCK_BYTE_SIZE]) -> usize {
+        utils::block_bytes_to_addr(data, MALLOC_HEADER_ENDIANNESS) as usize
+    }
+
+    /////////////////////////////////////////////////////////////
+    /// Step 1: data structure step
     
+    /// Pass null blocks.
+    fn pass_null_blocks(&self, index: usize) -> usize {
+        check_heap_dump!(self);
+        let mut tmp_index = index;
+        while 
+            (tmp_index < self.heap_dump_data.as_ref().unwrap().blocks.len()) && // check if index is in bounds
+            (self.heap_dump_data.as_ref().unwrap().blocks[tmp_index] == [0u8; BLOCK_BYTE_SIZE])
+        {
+            tmp_index += 1;
+        }
+        return tmp_index
+    }
+
+    /// Parse all data structures step. Don't follow pointers yet.
+    fn __data_structure_step(&mut self, pointer_byte_size: usize) {
+        check_heap_dump!(self);
+        
+        // generate data structures and iterate over them
+        let mut block_index = 0;
+        while block_index < self.heap_dump_data.as_ref().unwrap().blocks.len() {
+            block_index = self.pass_null_blocks(block_index);
+
+            // get the data structure
+            let data_structure_block_size = self.__parse_datastructure(block_index);
+
+            // update the block index by leaping over the data structure
+            block_index += data_structure_block_size + 1;
+        }
+
+    }
+
+    /// Parse the data structure from a given block and populate the graph.
+    /// WARN: We don't follow the pointers in the data structure. This is done in a second step.
+    /// :return: The number of blocks in the data structure.
+    /// If the data structure is not valid, return 0, since there no data structure to leap over.
+    fn __parse_datastructure(&mut self, start_block_index: usize) -> usize {
+        check_heap_dump!(self);
+
+        // precondition: the block at startBlockIndex is not the last block of the heap dump or after
+        if start_block_index >= (self.heap_dump_data.as_ref().unwrap().blocks.len() - 1) {
+            return 0; // this is not a data structure, no need to leap over it
+        }
+
+        // get the size of the data structure from malloc header
+        // NOTE: the size given by malloc header is the size of the data structure + 1
+        let datastructure_size = self.__get_memalloc_header(&self.heap_dump_data.as_ref().unwrap().blocks[start_block_index]) - 1;
+
+        // check if nb_blocks_in_datastructure is an integer
+        let tmp_nb_blocks_in_datastructure = datastructure_size / BLOCK_BYTE_SIZE;
+        if tmp_nb_blocks_in_datastructure % 1 != 0 {
+            log::debug!("tmp_nb_blocks_in_datastructure: {}", tmp_nb_blocks_in_datastructure);
+            log::debug!("The data structure size is not a multiple of the block size, at block index: {}", start_block_index);
+            return 0 // this is not a data structure, no need to leap over it
+        }
+
+        // get the number of blocks in the data structure as an integer
+        let nb_blocks_in_datastructure = tmp_nb_blocks_in_datastructure;
+
+        // check if the data structure is complete, i.e. if the data structure is still unclosed after at the end of the heap dump
+        if (start_block_index + nb_blocks_in_datastructure) >= self.heap_dump_data.as_ref().unwrap().blocks.len() {
+            log::debug!("The data structure is not complete, at block index: {}", start_block_index);
+            return 0
+        }
+    
+        // check that the data structure is not empty, i.e. that it contains at least one block
+        // It cannot also be composed of only one block, since the first block is the malloc header,
+        // and a data structure cannot be only the malloc header.
+        if nb_blocks_in_datastructure < 2 {
+            log::debug!(
+                "The data structure is too small ({} blocks), at block index: {}",
+                    nb_blocks_in_datastructure, start_block_index
+                );
+            return 0
+        }
+        
+        // add the data structure node to the graph (as an address)
+        let current_datastructure_addr = self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(start_block_index);
+
+        let mut count_pointer_nodes = 0;
+        let mut count_value_nodes = 0;
+        let mut children_node_addrs: Vec<u64> = Vec::new();
+        for block_index in (start_block_index + 1)..(start_block_index  + nb_blocks_in_datastructure as usize) {
+            let node = self.create_node_from_bytes_wrapper_index(&self.heap_dump_data.as_ref().unwrap().blocks[block_index], block_index);
+            children_node_addrs.push(node.get_address());
+            
+            // stats
+            if node.is_pointer() {
+                count_pointer_nodes += 1;
+            } else {
+                count_value_nodes += 1;
+            }
+
+            self.add_node_wrapper(node); // WARN: move the node to the graph, do last
+        }
+                
+        
+        // create the data structure node with the correct number of pointer and value nodes
+        let datastructure_node = Node::DataStructureNode(DataStructureNode {
+            addr: current_datastructure_addr,
+            byte_size: datastructure_size,
+            nb_pointer_nodes: count_pointer_nodes,
+            nb_value_nodes: count_value_nodes,
+        });
+        self.add_node_wrapper(datastructure_node);
+        let datastructure_node_ref: &graph_structs::Node = self.addr_to_node.get(&current_datastructure_addr).unwrap();
+
+        // add all the edges to the graph
+        for child_node_addr in children_node_addrs {
+            let child_node = self.addr_to_node.get(&child_node_addr).unwrap();
+
+            self.add_edge_wrapper(Edge {
+                from: datastructure_node_ref,
+                to: child_node,
+                weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
+                edge_type: EdgeType::DataStructureEdge,
+            });
+        }
+        
+        return nb_blocks_in_datastructure
+    }
 
 }
 
@@ -259,14 +387,14 @@ mod tests {
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE
         );
-        let heap_dump_data_ref = heap_dump_data_ref!(graph_data);
+        check_heap_dump!(graph_data);
 
         // pointer node
         let pointer_node_1 = create_node_from_bytes(
             &*TEST_PTR_1_VALUE_BYTES, 
             *TEST_PTR_1_ADDR, 
-            heap_dump_data_ref.min_addr, 
-            heap_dump_data_ref.max_addr,
+            graph_data.heap_dump_data.as_ref().unwrap().min_addr, 
+            graph_data.heap_dump_data.as_ref().unwrap().max_addr,
         );
 
         let pointer_node_1_from_wrapper = graph_data.create_node_from_bytes_wrapper(
@@ -280,8 +408,8 @@ mod tests {
         let value_node_1 = create_node_from_bytes(
             &*TEST_VAL_1_VALUE_BYTES, 
             *TEST_VAL_1_ADDR, 
-            heap_dump_data_ref.min_addr, 
-            heap_dump_data_ref.max_addr,
+            graph_data.heap_dump_data.as_ref().unwrap().min_addr, 
+            graph_data.heap_dump_data.as_ref().unwrap().max_addr,
         );
         let value_node_1_from_wrapper = graph_data.create_node_from_bytes_wrapper(
             &*TEST_VAL_1_VALUE_BYTES, *TEST_VAL_1_ADDR

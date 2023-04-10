@@ -12,7 +12,7 @@ pub const BLOCK_BYTE_SIZE: usize = 8; // 64-bit, ex: C0 03 7B 09 2A 56 00 00
 
 /// WARN: SHOULD BE USED ONLY FOR NODE CONSTRUCTION (see utils::convert_block_to_pointer_if_possible)
 pub const PTR_ENDIANNESS: Endianness = Endianness::Little;
-
+pub const MALLOC_HEADER_ENDIANNESS: Endianness = Endianness::Little;
 
 /// Initialize logger. 
 /// WARN: Must be called before any logging is done.

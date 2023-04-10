@@ -4,10 +4,11 @@ use std::io::{BufReader, Read};
 use std::path::PathBuf;
 
 use crate::utils;
+use crate::params::BLOCK_BYTE_SIZE;
 
 pub struct HeapDumpData {
     pub block_size: usize,
-    pub blocks: Vec<Vec<u8>>,
+    pub blocks: Vec<[u8; BLOCK_BYTE_SIZE]>,
     pub heap_dump_raw_file_path: PathBuf,
     pub min_addr: u64,
     pub max_addr: u64,
@@ -61,15 +62,18 @@ impl HeapDumpData {
     }
 
     /// load heap dump file and split it into blocks
-    fn generate_blocks_from_heap_dump(heap_dump_raw_file_path: &PathBuf, block_size: usize) -> Vec<Vec<u8>> {
+    fn generate_blocks_from_heap_dump(heap_dump_raw_file_path: &PathBuf, block_size: usize) -> Vec<[u8; BLOCK_BYTE_SIZE]> {
         let mut file = File::open(heap_dump_raw_file_path).unwrap();
         let mut heap_dump = Vec::new();
         file.read_to_end(&mut heap_dump).unwrap();
 
-        heap_dump
-            .chunks(block_size)
-            .map(|chunk| chunk.to_vec())
-            .collect()
+        let mut blocks = Vec::new();
+        for chunk in heap_dump.chunks(block_size) {
+            let mut block = [0u8; BLOCK_BYTE_SIZE];
+            block[..chunk.len()].copy_from_slice(chunk);
+            blocks.push(block);
+        }
+        blocks
     }
 
     /// get min and max address from json file to a given heap dump

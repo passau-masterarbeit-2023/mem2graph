@@ -172,3 +172,24 @@ fn test_heap_dump_path_to_json_path() {
     let test_path = heap_dump_path_to_json_path(&*TEST_HEAP_DUMP_FILE_PATH);
     assert!(test_path.exists())
 }
+
+#[test]
+fn test_block_bytes_to_addr() {
+    let test_cases = vec![
+        // (hex_str, expected_value_big_endian, expected_value_little_endian)
+        ("0000000000000000", 0, 0),
+        ("0000000000000100", 256, 281474976710656),
+        ("0000000000000200", 512, 562949953421312),
+        ("0003000000000000", 844424930131968, 768),
+        ("0001020304050607", 283686952306183, 506097522914230500),
+    ];
+    for (hex_str, expected_value_big_endian, expected_value_little_endian) in test_cases {
+        let bytes_to_test = hex_str_to_block_bytes(hex_str);
+        let result = block_bytes_to_addr(&bytes_to_test, Endianness::Big);
+        assert_eq!(result, expected_value_big_endian);
+
+        let bytes_to_test = hex_str_to_block_bytes(hex_str);
+        let result = block_bytes_to_addr(&bytes_to_test, Endianness::Little);
+        assert_eq!(result, expected_value_little_endian);
+    }
+}

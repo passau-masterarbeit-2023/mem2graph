@@ -15,6 +15,19 @@ pub fn index_to_addr(index: usize, min_addr: u64, block_size: usize) -> u64 {
     (index * block_size) as u64 + min_addr
 }
 
+/// convert a block of bytes to a u64 address
+pub fn block_bytes_to_addr(block_bytes: &[u8; crate::params::BLOCK_BYTE_SIZE], endianness: Endianness) -> u64 {
+    let mut addr = 0u64;
+    for (i, byte) in block_bytes.iter().enumerate() {
+        match endianness {
+            Endianness::Big => addr += (*byte as u64) << (8 * (7 - i)),
+            Endianness::Little => addr += (*byte as u64) << (8 * i),
+        }
+    }
+    addr
+}
+
+
 /// convert a hex string to an address represented as a u64
 /// WARN: necessary to specify the string endianness for the conversion
 /// WARN: Due to little endian needing to have a fixed length of 16 characters, 
