@@ -37,11 +37,15 @@ pub fn hex_str_to_addr(hex_str: &str, endianness: Endianness) -> Result<u64, std
     }
 }
 
-/// convert a hex string to a block of bytes following the specified endianness
-/// NOTE: always returns a block of bytes in big endian
-/// NOTE: remember that our heap dump vectors are in little endian
-pub fn hex_str_to_block_bytes(hex_str: &str, endianness: Endianness) -> [u8; crate::params::BLOCK_BYTE_SIZE] {
-    hex_str_to_addr(hex_str, endianness).unwrap().to_be_bytes()
+/// convert a hex string to a block of bytes
+pub fn hex_str_to_block_bytes(hex_str: &str) -> [u8; crate::params::BLOCK_BYTE_SIZE] {
+    assert_eq!(hex_str.len(), crate::params::BLOCK_BYTE_SIZE * 2, "Hex string ({}) must be {} characters long", hex_str, crate::params::BLOCK_BYTE_SIZE * 2);
+    let mut padded_hex_str = hex_str.to_string();
+    let mut block_bytes = [0u8; crate::params::BLOCK_BYTE_SIZE];
+    for (i, byte) in padded_hex_str.as_bytes().chunks(2).enumerate() {
+        block_bytes[i] = u8::from_str_radix(std::str::from_utf8(byte).unwrap(), 16).unwrap();
+    }
+    block_bytes
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -52,13 +56,17 @@ pub enum Endianness {
 
 /// convert a block of bytes to a pointer if it is a valid pointer
 /// NOTE: A valid pointer is a pointer that is within the heap dump range
-/// NOTE: remember that our heap dump vectors are in little endian
-pub fn convert_block_to_pointer_if_possible(data: &[u8], min_addr: u64, max_addr: u64, endianness: Endianness) -> Option<u64> {
-    let potential_ptr_int = match endianness {
+/// NOTE: remember that our heap dump vectors are in the format given as a program argument
+pub fn convert_block_to_pointer_if_possible(data: &[u8], min_addr: u64, max_addr: u64) -> Option<u64> {
+    // WARN: THIS IS THE ONLY PLACE WHERE THE POINTER ENDIANNESS IS USED
+    
+
+    let potential_ptr_int = match crate::params::PTR_ENDIANNESS {
         Endianness::Big => u64::from_be_bytes(data.try_into().unwrap()),
         Endianness::Little => u64::from_le_bytes(data.try_into().unwrap()),
     };
 
+    // check if the potential pointer is within the heap dump range
     if potential_ptr_int >= min_addr && potential_ptr_int <= max_addr {
         Some(potential_ptr_int)
     } else {
@@ -74,10 +82,9 @@ pub fn create_node_from_bytes(
     addr: u64,
     min_addr: u64,
     max_addr: u64,
-    endianness: Option<Endianness>
 ) -> Node {
     let potential_ptr = convert_block_to_pointer_if_possible(
-        block, min_addr, max_addr, endianness.unwrap_or(crate::params::PTR_ENDIANNESS)
+        block, min_addr, max_addr
     );
     if potential_ptr.is_some() {
         Node::PointerNode(

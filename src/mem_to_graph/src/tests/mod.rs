@@ -44,18 +44,21 @@ lazy_static! {
     // 94_058_013_692_960 not in range
     // 19291223004192 not in range
     
-    pub static ref TEST_MIN_ADDR: u64 = hex_str_to_addr("558b967e9000", Endianness::Big).unwrap(); // HEAP_START
+    pub static ref TEST_MIN_ADDR: u64 = hex_str_to_addr("55a6d2356000", Endianness::Big).unwrap(); // HEAP_START
     pub static ref TEST_MAX_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00045000", Endianness::Big).unwrap(); // HEAP_START + HEAP_SIZE
 
-    pub static ref TEST_PTR_1_VALUE_STR: String = "20947e968b550000".to_string();
+    pub static ref TEST_PTR_1_VALUE_STR: String = "206435d2a6550000".to_string();
     pub static ref TEST_PTR_1_VALUE: u64 = hex_str_to_addr(&*TEST_PTR_1_VALUE_STR.as_str(), Endianness::Little).unwrap();
-    pub static ref TEST_PTR_1_VALUE_BYTES: [u8; BLOCK_BYTE_SIZE] = hex_str_to_block_bytes(
-        TEST_PTR_1_VALUE_STR.as_str(), 
-        Endianness::Big // NOTE: the bytes are in big endian, to simulate the raw memory extraction from the dump
-    );
+    pub static ref TEST_PTR_1_VALUE_BYTES: [u8; BLOCK_BYTE_SIZE] = hex_str_to_block_bytes(TEST_PTR_1_VALUE_STR.as_str());
     pub static ref TEST_PTR_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000300", Endianness::Big).unwrap();
     
-    pub static ref TEST_PTR_2_VALUE_STR: String = "40947e968b550000".to_string();
+    pub static ref TEST_PTR_2_VALUE_STR: String = "206435d2a6550000".to_string();
     pub static ref TEST_PTR_2_VALUE: u64 = hex_str_to_addr(&*TEST_PTR_2_VALUE_STR.as_str(), Endianness::Little).unwrap();
     pub static ref TEST_PTR_2_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000308", Endianness::Big).unwrap();
+    pub static ref TEST_PTR_2_VALUE_BYTES: [u8; BLOCK_BYTE_SIZE] = hex_str_to_block_bytes(TEST_PTR_2_VALUE_STR.as_str());
+
+    pub static ref TEST_VAL_1_VALUE_STR: String = "47e000340039ab01".to_string();
+    pub static ref TEST_VAL_1_VALUE: u64 = hex_str_to_addr(&*TEST_VAL_1_VALUE_STR.as_str(), Endianness::Little).unwrap();
+    pub static ref TEST_VAL_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000310", Endianness::Big).unwrap();
+    pub static ref TEST_VAL_1_VALUE_BYTES: [u8; BLOCK_BYTE_SIZE] = hex_str_to_block_bytes(TEST_VAL_1_VALUE_STR.as_str());
 }

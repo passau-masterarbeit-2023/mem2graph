@@ -66,7 +66,6 @@ impl<'a> GraphData<'a> {
             addr,
             heap_dump_data_ref.min_addr,
             heap_dump_data_ref.max_addr,
-            None,   
         );
     }
     
@@ -253,51 +252,58 @@ mod tests {
     }
 
     #[test]
-    fn test_wrapper() {
+    fn test_create_node_from_bytes_wrapper() {
         crate::tests::setup();
         
-        // create empty GraphData
         let mut graph_data = GraphData::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE
         );
         let heap_dump_data_ref = heap_dump_data_ref!(graph_data);
 
-        // test with a pointer
-        let data_ptr: [u8; BLOCK_BYTE_SIZE] = *TEST_PTR_1_VALUE_BYTES;
-        let addr_ptr: u64 = *TEST_PTR_1_ADDR;
-
+        // pointer node
         let pointer_node_1 = create_node_from_bytes(
-            &data_ptr, addr_ptr, heap_dump_data_ref.min_addr, heap_dump_data_ref.max_addr, None
+            &*TEST_PTR_1_VALUE_BYTES, 
+            *TEST_PTR_1_ADDR, 
+            heap_dump_data_ref.min_addr, 
+            heap_dump_data_ref.max_addr,
         );
 
         let pointer_node_1_from_wrapper = graph_data.create_node_from_bytes_wrapper(
-            &data_ptr, addr_ptr
+            &*TEST_PTR_1_VALUE_BYTES, *TEST_PTR_1_ADDR
         );
-        log::info!("pointer node 1: {:?}", pointer_node_1);
-        log::info!("pointer node 1 from wrapper: {:?}", pointer_node_1_from_wrapper);
+
+        assert_eq!(pointer_node_1.get_address(), *TEST_PTR_1_ADDR);
+        assert_eq!(pointer_node_1, pointer_node_1_from_wrapper);
+
+        // value node
+        let value_node_1 = create_node_from_bytes(
+            &*TEST_VAL_1_VALUE_BYTES, 
+            *TEST_VAL_1_ADDR, 
+            heap_dump_data_ref.min_addr, 
+            heap_dump_data_ref.max_addr,
+        );
+        let value_node_1_from_wrapper = graph_data.create_node_from_bytes_wrapper(
+            &*TEST_VAL_1_VALUE_BYTES, *TEST_VAL_1_ADDR
+        );
+
+        assert_eq!(value_node_1.get_address(), *TEST_VAL_1_ADDR);
+        assert_eq!(value_node_1, value_node_1_from_wrapper);
+    }
+
+    #[test]
+    fn test_create_node_from_bytes_wrapper_index() {
+        crate::tests::setup();
         
-        // assert_eq!(pointer_node_1.get_address(), addr_ptr);
-    
-        // // compare the two nodes
-        // assert_eq!(pointer_node_1, pointer_node_1_from_wrapper);
-
-
-        // // the node type should be a pointer node
-        // match pointer_node_1_from_wrapper {
-        //     Node::PointerNode(pointer_node) => {
-        //         // the pointer node type should be a base pointer node
-        //         match pointer_node {
-        //             PointerNode::BasePointerNode(base_pointer_node) => {
-        //                 // the base pointer node should point to the address of the value node
-        //                 assert_eq!(base_pointer_node.points_to, *TEST_PTR_1_ADDR);
-        //             },
-        //             _ => panic!("pointer node should be a base pointer node"),
-        //         }
-        //     },
-        //     _ => panic!("node should be a pointer node"),
-        // }
-
+        let graph_data = GraphData::new(
+            params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
+            params::BLOCK_BYTE_SIZE
+        );
+        let node = graph_data.create_node_from_bytes_wrapper_index(
+            &*TEST_PTR_1_VALUE_BYTES, 
+            (utils::hex_str_to_addr("00000300", utils::Endianness::Big).unwrap() / BLOCK_BYTE_SIZE as u64) as usize,
+        );
+        assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     }
 
 }

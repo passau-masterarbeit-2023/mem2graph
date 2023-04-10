@@ -121,9 +121,6 @@ fn test_important_nodes() {
 
     let mut counter_importants = 0;
     for node in nodes {
-        // if node.is_important() {
-        //     counter_importants += 1;
-        // }
         if node.is_important() {
             counter_importants += 1;
         }

@@ -75,40 +75,15 @@ fn test_hex_str_to_block_bytes() {
     // big endian
     let test_cases = vec![
         // (hex_str, expected_value)
-        ("0000000000000000", [0, 0, 0, 0, 0, 0, 0, 0], 0),
-        ("00000300", [0, 0, 0, 0, 0, 0, 3, 0], 768),
-        ("0000000000000400", [0, 0, 0, 0, 0, 0, 4, 0], 1024),
-        ("0004000000000000", [0, 4, 0, 0, 0, 0, 0, 0], 1125899906842624u64),
+        ("0000000000000000", [0, 0, 0, 0, 0, 0, 0, 0]),
+        ("0000000000000100", [0, 0, 0, 0, 0, 0, 1, 0]),
+        ("0000000000000200", [0, 0, 0, 0, 0, 0, 2, 0]),
+        ("0003000000000000", [0, 3, 0, 0, 0, 0, 0, 0]),
+        ("0001020304050607", [0, 1, 2, 3, 4, 5, 6, 7]),
     ];
-    for (hex_str, expected_value, decimal) in test_cases {
-        let bytes = hex_str_to_block_bytes(hex_str, Endianness::Big);
-        assert_eq!(bytes, expected_value);
-
-        let bytes_as_u64 = u64::from_be_bytes(bytes);
-        assert_eq!(bytes_as_u64, decimal);
-
-        let expected_value_as_u64 = u64::from_be_bytes(expected_value);
-        assert_eq!(expected_value_as_u64, decimal);
-    }
-
-    // little endian
-    let test_cases = vec![
-        // (hex_str, expected_value)
-        ("0000000000000000", [0, 0, 0, 0, 0, 0, 0, 0], 0),
-        ("00030000", [0, 0, 0, 0, 0, 0, 3, 0], 768),
-        ("0004000000000000", [0, 0, 0, 0, 0, 0, 4, 0], 1024),
-        ("0000000000000400", [0, 4, 0, 0, 0, 0, 0, 0], 1125899906842624u64),
-    ];
-    for (hex_str, expected_value, decimal) in test_cases {
-        let bytes = hex_str_to_block_bytes(hex_str, Endianness::Little);
-        assert_eq!(bytes, expected_value);
-
-        // note: the result of hex_str_to_block_bytes should always be in big endian 
-        let bytes_as_u64 = u64::from_be_bytes(bytes);
-        assert_eq!(bytes_as_u64, decimal);
-
-        let expected_value_as_u64 = u64::from_be_bytes(expected_value);
-        assert_eq!(expected_value_as_u64, decimal);
+    for (hex_str, expected_value) in test_cases {
+        let bytes_to_test = hex_str_to_block_bytes(hex_str);
+        assert_eq!(bytes_to_test, expected_value);
     }
 }
 
@@ -129,8 +104,8 @@ fn test_is_pointer() {
 
     for (hex_str, expected_value) in test_cases {
         // use helper function to convert hex string to big endian bytes
-        let data: [u8; 8] = hex_str_to_block_bytes(hex_str, Endianness::Little);
-        let result = convert_block_to_pointer_if_possible(&data, min_addr, max_addr, Endianness::Big);
+        let data: [u8; 8] = hex_str_to_block_bytes(hex_str);
+        let result = convert_block_to_pointer_if_possible(&data, min_addr, max_addr);
 
         assert!(
             // check if expected value is in range when it is not None
@@ -155,41 +130,41 @@ fn test_is_pointer() {
 #[test]
 fn test_create_node_from_bytes() {
     // pointer 1 test
-    let pointer_block_of_8_bytes = hex_str_to_block_bytes(&*TEST_PTR_1_VALUE_STR.as_str(), Endianness::Little);
+    let pointer_block_of_8_bytes = hex_str_to_block_bytes(&*TEST_PTR_1_VALUE_STR.as_str());
     let mut node = create_node_from_bytes(
         &pointer_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR,
-        Some(Endianness::Big), // Big since the block comes from hex_str_to_block_bytes()
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
-    log::info!("{} should be PN node: {:?}", hex::encode(pointer_block_of_8_bytes), node);
+    log::debug!("node1: {:?}, data: {:?}", node, pointer_block_of_8_bytes);
     assert!(node.is_pointer());
+    //assert_eq!(node.get_pointer_value(), *TEST_PTR_1_VALUE);
 
     // value node
-    let value_block_of_8_bytes = hex_str_to_block_bytes("a3341294ab2bd410", Endianness::Little);
+    let value_block_of_8_bytes = hex_str_to_block_bytes("a3341294ab2bd410");
     node = create_node_from_bytes(
         &value_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR, 
-        Some(Endianness::Big), // Big since the block comes from hex_str_to_block_bytes()
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     assert!(node.is_value());
 
     // test with a real pointer but wrong endianness
-    let pointer_block_of_8_bytes = hex_str_to_block_bytes(&*TEST_PTR_1_VALUE_STR.as_str(), Endianness::Big);
+    // 
+    let pointer_block_of_8_bytes = hex_str_to_block_bytes(&*TEST_PTR_1_VALUE_STR.as_str());
     node = create_node_from_bytes(
         &pointer_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR, 
-        Some(Endianness::Big), // Big since the block comes from hex_str_to_block_bytes()
     );
+    log::debug!("node2: {:?}, data: {:?}", node, pointer_block_of_8_bytes);
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
-    assert!(node.is_value());
+    assert!(node.is_pointer());
 }
 
 #[test]
