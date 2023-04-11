@@ -43,8 +43,8 @@ impl GraphData {
             ),
         };
 
-        // instance.data_structure_step(pointer_byte_size);
-        // instance.pointer_step();
+        instance.data_structure_step();
+        instance.pointer_step();
         instance
     }
 
@@ -100,7 +100,7 @@ impl GraphData {
     }
 
     /// get the malloc header (number of byte allocated + 1)
-    fn __get_memalloc_header(&self, data: &[u8; BLOCK_BYTE_SIZE]) -> usize {
+    fn get_memalloc_header(&self, data: &[u8; BLOCK_BYTE_SIZE]) -> usize {
         utils::block_bytes_to_addr(data, MALLOC_HEADER_ENDIANNESS) as usize
     }
 
@@ -121,7 +121,7 @@ impl GraphData {
     }
 
     /// Parse all data structures step. Don't follow pointers yet.
-    fn __data_structure_step(&mut self) {
+    fn data_structure_step(&mut self) {
         check_heap_dump!(self);
         
         // generate data structures and iterate over them
@@ -152,7 +152,7 @@ impl GraphData {
 
         // get the size of the data structure from malloc header
         // NOTE: the size given by malloc header is the size of the data structure + 1
-        let datastructure_size = self.__get_memalloc_header(&self.heap_dump_data.as_ref().unwrap().blocks[start_block_index]) - 1;
+        let datastructure_size = self.get_memalloc_header(&self.heap_dump_data.as_ref().unwrap().blocks[start_block_index]) - 1;
 
         // check if nb_blocks_in_datastructure is an integer
         let tmp_nb_blocks_in_datastructure = datastructure_size / BLOCK_BYTE_SIZE;
@@ -225,6 +225,74 @@ impl GraphData {
         return nb_blocks_in_datastructure
     }
 
+    /// Parse a pointer node. Follow it until it point to a node that is not a pointer, and add the edge 
+    /// weightened by the number of intermediate pointer nodes.
+    /// TODO: testing needed, correction needed
+    fn parse_pointer(&mut self, node_addr: u64) {
+        let node = self.addr_to_node.get(&node_addr).unwrap();
+
+        // check if the pointer points to a node in the graph
+        let mut current_pointer_node: &Node = node;
+        let mut weight = 1;
+        while current_pointer_node.is_pointer() {
+            let pointed_node = self.addr_to_node.get(&current_pointer_node.points_to().unwrap());
+            if pointed_node.is_some() {
+                weight += 1;
+
+                // next iteration
+                current_pointer_node = pointed_node.unwrap();
+            } else {
+                // get the node from the dictionary, and add the edge
+
+                self.add_edge_wrapper(Edge {
+                    from: node.get_address(),
+                    to: pointed_node.unwrap().get_address(),
+                    weight: weight,
+                    edge_type: EdgeType::DataStructureEdge,
+                });
+
+                // no more iterations
+                break
+            }
+        }
+    }
+
+    /// Parse all pointers step.
+    fn pointer_step(&mut self) {
+        // get all pointer nodes
+        let all_pointer_addr: Vec<u64> = self.get_all_ptr_node_addrs();
+
+        for pointer_addr in all_pointer_addr {
+            self.parse_pointer(pointer_addr);
+            let potential_ptr_node = self.addr_to_node.get(&pointer_addr);
+            match potential_ptr_node {
+                Some(node) => {
+                    if node.is_pointer() {
+                        self.parse_pointer(pointer_addr);
+                        log::debug!("pointer node: {}", pointer_addr);
+                    }
+                },
+                None => {
+                    log::debug!("pointer node not found: {}", pointer_addr);
+                }
+                
+            }
+        }
+    }
+
+    fn get_all_ptr_node_addrs(&self) -> Vec<u64> {
+        let mut all_addr: Vec<u64> = Vec::new();
+        for (addr, node) in self.addr_to_node.iter() {
+            match node {
+                Node::PointerNode(_) => {
+                    all_addr.push(*addr);
+                },
+                _ => {}
+            }
+        }
+        return all_addr
+    }
+
 }
 
 /// custom dot format for the graph
@@ -244,7 +312,7 @@ impl std::fmt::Display for GraphData {
         for (from_addr, to_addr, edge) in self.graph.edge_references() {
             let from = self.addr_to_node.get(&from_addr).unwrap();
             let to = self.addr_to_node.get(&to_addr).unwrap();
-            writeln!(f, "{} -> {} [label=\"{}\" weight={}]", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight)?;
+            writeln!(f, "    \"{}\" -> \"{}\" [label=\"{}\" weight={}]", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight)?;
         }
 
         writeln!(f, "}}")?;

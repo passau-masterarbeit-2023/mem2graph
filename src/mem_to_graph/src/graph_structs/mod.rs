@@ -142,6 +142,25 @@ impl Node {
             _ => false,
         }
     }
+
+    pub fn points_to(&self) -> Option<u64> {
+        match self {
+            Node::PointerNode(pointer_node) => {
+                match pointer_node {
+                    PointerNode::BasePointerNode(base_pointer_node) => {
+                        Some(base_pointer_node.points_to)
+                    }
+                    PointerNode::SessionStateNode(session_state_node) => {
+                        Some(session_state_node.points_to)
+                    }
+                    PointerNode::SshStructNode(ssh_struct_node) => {
+                        Some(ssh_struct_node.points_to)
+                    }
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
     /// return a formatted string of the node, for debugging purposes
@@ -150,7 +169,7 @@ impl std::fmt::Debug for Node {
         match self {
             Node::DataStructureNode(data_structure_node) => {
                 write!(
-                    f, "DTN: {} [VNs: {}, PNs: {}]", 
+                    f, "DTN: {} [VNs: {} PNs: {}]", 
                     data_structure_node.addr, data_structure_node.nb_value_nodes, data_structure_node.nb_pointer_nodes
                 )
             }
@@ -164,7 +183,7 @@ impl std::fmt::Debug for Node {
                     }
                     ValueNode::KeyNode(key_node) => {
                         write!(
-                            f, "KN: {} [found_key=\"{}\", json_key=\"{}\"]", 
+                            f, "KN: {} [found_key=\"{}\" json_key=\"{}\"]", 
                             key_node.addr, hex::encode(&key_node.key), hex::encode(&key_node.key_data.key) 
                         )
                     }
@@ -180,7 +199,7 @@ impl std::fmt::Debug for Node {
                     }
                     PointerNode::SessionStateNode(session_state_node) => {
                         write!(
-                            f, "SSN: {} [label=\"{}\",]", 
+                            f, "SSN: {} [label=\"{}\"]", 
                             session_state_node.addr, session_state_node.points_to
                         )
                     }
@@ -295,7 +314,7 @@ impl std::fmt::Display for Node {
                     }
                     ValueNode::KeyNode(key_node) => {
                         write!(
-                            f, "    {:?} [color=green, style=filled];\n", 
+                            f, "    {:?} [color=green, style=filled];", 
                             self.str_addr_and_type(),
                         )
                     }
@@ -305,19 +324,19 @@ impl std::fmt::Display for Node {
                 match pointer_node {
                     PointerNode::BasePointerNode(base_pointer_node) => {
                         write!(
-                            f, "    {:?} [color=orange];\n",
+                            f, "    {:?} [color=orange];",
                             self.str_addr_and_type(),
                         )
                     }
                     PointerNode::SessionStateNode(session_state_node) => {
                         write!(
-                            f, "    {:?} [color=red];\n", 
+                            f, "    {:?} [color=red];", 
                             self.str_addr_and_type(),
                         )
                     }
                     PointerNode::SshStructNode(ssh_struct_node) => {
                         write!(
-                            f, "    {:?} [color=purple];\n", 
+                            f, "    {:?} [color=purple];", 
                             self.str_addr_and_type(),
                         )
                     }
