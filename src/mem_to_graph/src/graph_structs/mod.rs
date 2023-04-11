@@ -1,5 +1,4 @@
 use serde_derive::{Serialize, Deserialize};
-use std::collections::HashMap;
 
 use crate::params::BLOCK_BYTE_SIZE;
 
@@ -79,7 +78,7 @@ impl Node {
     }
 
     /// returns the address of the node and its type annotation
-    fn str_addr_and_type(&self) -> String {
+    pub fn str_addr_and_type(&self) -> String {
         match self {
             Node::DataStructureNode(data_structure_node) => {
                 format!(
@@ -249,9 +248,9 @@ pub struct KeyNode {
 
 pub const DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT: usize = 1;
 
-pub struct Edge<'a> {
-    pub from: &'a Node,
-    pub to: &'a Node,
+pub struct Edge {
+    pub from: u64,
+    pub to: u64,
     pub edge_type: EdgeType,
     pub weight: usize, // Number of edge pointers between the two nodes, default is 1 for a DataStructure edge.
 }
@@ -271,11 +270,11 @@ impl std::fmt::Display for EdgeType {
     }
 }
 
-impl std::fmt::Display for Edge<'_> {
+impl std::fmt::Display for Edge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
-            f, "    {:?} -> {:?} [label=\"{}\", weight={}]",
-            self.from.str_addr_and_type(), self.to.str_addr_and_type(), self.edge_type, self.weight
+            f, "    {:?} -> {:?} [label=\"{}\" weight={}]",
+            self.from, self.to, self.edge_type, self.weight
         )
     }
 }
@@ -285,7 +284,7 @@ impl std::fmt::Display for Node {
         match self {
             Node::DataStructureNode(data_structure_node) => {
                 write!(
-                    f, "    {:?} [color=blue];\n", 
+                    f, "    {:?} [color=blue];", 
                     self.str_addr_and_type(),
                 )
             }

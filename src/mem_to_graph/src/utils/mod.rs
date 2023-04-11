@@ -53,7 +53,7 @@ pub fn hex_str_to_addr(hex_str: &str, endianness: Endianness) -> Result<u64, std
 /// convert a hex string to a block of bytes
 pub fn hex_str_to_block_bytes(hex_str: &str) -> [u8; crate::params::BLOCK_BYTE_SIZE] {
     assert_eq!(hex_str.len(), crate::params::BLOCK_BYTE_SIZE * 2, "Hex string ({}) must be {} characters long", hex_str, crate::params::BLOCK_BYTE_SIZE * 2);
-    let mut padded_hex_str = hex_str.to_string();
+    let padded_hex_str = hex_str.to_string();
     let mut block_bytes = [0u8; crate::params::BLOCK_BYTE_SIZE];
     for (i, byte) in padded_hex_str.as_bytes().chunks(2).enumerate() {
         block_bytes[i] = u8::from_str_radix(std::str::from_utf8(byte).unwrap(), 16).unwrap();

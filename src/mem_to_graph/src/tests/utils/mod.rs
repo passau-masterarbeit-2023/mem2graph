@@ -1,8 +1,5 @@
-use lazy_static::lazy_static;
-
 use crate::tests::*;
 use crate::utils::*;
-use crate::graph_structs::*;
 use crate::params::TEST_HEAP_DUMP_FILE_PATH;
 
 #[test]
@@ -181,6 +178,7 @@ fn test_block_bytes_to_addr() {
         ("0000000000000100", 256, 281474976710656),
         ("0000000000000200", 512, 562949953421312),
         ("0003000000000000", 844424930131968, 768),
+        ("0fffffffffffff0f", 1152921504606846700, 1152921504606846700),
         ("0001020304050607", 283686952306183, 506097522914230500),
     ];
     for (hex_str, expected_value_big_endian, expected_value_little_endian) in test_cases {

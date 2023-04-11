@@ -2,6 +2,7 @@ use petgraph::graphmap::DiGraphMap;
 use std::path::{PathBuf};
 use std::collections::HashMap;
 use log;
+use petgraph::visit::IntoEdgeReferences;
 
 pub mod heap_dump_data;
 
@@ -19,15 +20,15 @@ macro_rules! check_heap_dump {
 
 /// This struct contains the graph data
 /// linked to a given heap dump file.
-pub struct GraphData<'a> {
-    graph: DiGraphMap<u64, graph_structs::Edge<'a>>,
+pub struct GraphData {
+    graph: DiGraphMap<u64, graph_structs::Edge>,
     addr_to_node: HashMap<u64, graph_structs::Node>,
 
     heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
-    
 }
 
-impl<'a> GraphData<'a> {
+
+impl GraphData {
 
     /// Initialize the graph data from a raw heap dump file.
     fn new(heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> Self {
@@ -89,10 +90,11 @@ impl<'a> GraphData<'a> {
 
     /// Add an edge to the graph.
     /// NOTE: the edge is moved to the graph
-    fn add_edge_wrapper(&mut self, edge: graph_structs::Edge<'a>) {
+    /// WARN: the nodes must already be in the addr_to_node map
+    fn add_edge_wrapper(&mut self, edge: graph_structs::Edge) {
         self.graph.add_edge(
-            edge.from.get_address(), 
-            edge.to.get_address(), 
+            self.addr_to_node.get(&edge.from).unwrap().get_address(),
+            self.addr_to_node.get(&edge.to).unwrap().get_address(), 
             edge
         );
     }
@@ -119,7 +121,7 @@ impl<'a> GraphData<'a> {
     }
 
     /// Parse all data structures step. Don't follow pointers yet.
-    fn __data_structure_step(&mut self, pointer_byte_size: usize) {
+    fn __data_structure_step(&mut self) {
         check_heap_dump!(self);
         
         // generate data structures and iterate over them
@@ -128,7 +130,7 @@ impl<'a> GraphData<'a> {
             block_index = self.pass_null_blocks(block_index);
 
             // get the data structure
-            let data_structure_block_size = self.__parse_datastructure(block_index);
+            let data_structure_block_size = self.parse_datastructure(block_index);
 
             // update the block index by leaping over the data structure
             block_index += data_structure_block_size + 1;
@@ -140,7 +142,7 @@ impl<'a> GraphData<'a> {
     /// WARN: We don't follow the pointers in the data structure. This is done in a second step.
     /// :return: The number of blocks in the data structure.
     /// If the data structure is not valid, return 0, since there no data structure to leap over.
-    fn __parse_datastructure(&mut self, start_block_index: usize) -> usize {
+    fn parse_datastructure(&mut self, start_block_index: usize) -> usize {
         check_heap_dump!(self);
 
         // precondition: the block at startBlockIndex is not the last block of the heap dump or after
@@ -209,15 +211,12 @@ impl<'a> GraphData<'a> {
             nb_value_nodes: count_value_nodes,
         });
         self.add_node_wrapper(datastructure_node);
-        let datastructure_node_ref: &graph_structs::Node = self.addr_to_node.get(&current_datastructure_addr).unwrap();
-
+        
         // add all the edges to the graph
         for child_node_addr in children_node_addrs {
-            let child_node = self.addr_to_node.get(&child_node_addr).unwrap();
-
             self.add_edge_wrapper(Edge {
-                from: datastructure_node_ref,
-                to: child_node,
+                from: self.addr_to_node.get(&current_datastructure_addr).unwrap().get_address(),
+                to: child_node_addr,
                 weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
                 edge_type: EdgeType::DataStructureEdge,
             });
@@ -229,22 +228,30 @@ impl<'a> GraphData<'a> {
 }
 
 /// custom dot format for the graph
-impl std::fmt::Display for GraphData<'_> {
+impl std::fmt::Display for GraphData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "digraph {{")?;
         // TODO match node and call its associated display function
         for addr in self.graph.nodes() {
             let node = self.addr_to_node.get(&addr).unwrap();
             // call the display function of the node
-            write!(f, "{}", node)?;
+            writeln!(f, "{}", node)?;
         }
-        for (_, _, edge) in self.graph.all_edges() {
-            writeln!(f, "{}", edge)?;
+        
+        // since edge doesn't stores references but real addresses,
+        // we cannot write the Display function of Edge directly
+        // we need to do it here
+        for (from_addr, to_addr, edge) in self.graph.edge_references() {
+            let from = self.addr_to_node.get(&from_addr).unwrap();
+            let to = self.addr_to_node.get(&to_addr).unwrap();
+            writeln!(f, "{} -> {} [label=\"{}\" weight={}]", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight)?;
         }
+
         writeln!(f, "}}")?;
         Ok(())
     }
 }
+
 
 
 // NOTE: tests must be in the same module as the code they are testing
@@ -334,38 +341,38 @@ mod tests {
         // WARN: the references to the nodes have been moved inside the dictionary
         //     so we need to get them back from the dictionary (using the address as key)
         let data_structure_edge_1 = Edge {
-            from: &graph_data.addr_to_node.get(&data_structure_node_index).unwrap(),
-            to: &graph_data.addr_to_node.get(&base_value_node_index).unwrap(),
+            from: data_structure_node_index,
+            to: base_value_node_index,
             weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
             edge_type: EdgeType::DataStructureEdge,
         };
         let pointer_edge = Edge {
-            from: &graph_data.addr_to_node.get(&base_pointer_node_index).unwrap(),
-            to: &graph_data.addr_to_node.get(&base_value_node_index).unwrap(),
+            from: base_pointer_node_index,
+            to: base_value_node_index,
             weight: 1,
             edge_type: EdgeType::PointerEdge,
         };
         let data_structure_edge_2 = Edge {
-            from: &graph_data.addr_to_node.get(&data_structure_node_index).unwrap(),
-            to: &graph_data.addr_to_node.get(&base_pointer_node_index).unwrap(),
+            from: data_structure_node_index,
+            to: base_pointer_node_index,
             weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
             edge_type: EdgeType::DataStructureEdge,
         };
 
         // add edges (u64 to u64, with Edge as data (weight)))
         graph_data.graph.add_edge(
-            data_structure_edge_1.from.get_address(), 
-            data_structure_edge_1.to.get_address(), 
+            data_structure_edge_1.from, 
+            data_structure_edge_1.to, 
             data_structure_edge_1
         );
         graph_data.graph.add_edge(
-            pointer_edge.from.get_address(), 
-            pointer_edge.to.get_address(), 
+            pointer_edge.from, 
+            pointer_edge.to, 
             pointer_edge
         );
         graph_data.graph.add_edge(
-            data_structure_edge_2.from.get_address(), 
-            data_structure_edge_2.to.get_address(), 
+            data_structure_edge_2.from, 
+            data_structure_edge_2.to, 
             data_structure_edge_2
         );
 
@@ -383,7 +390,7 @@ mod tests {
     fn test_create_node_from_bytes_wrapper() {
         crate::tests::setup();
         
-        let mut graph_data = GraphData::new(
+        let graph_data = GraphData::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE
         );
