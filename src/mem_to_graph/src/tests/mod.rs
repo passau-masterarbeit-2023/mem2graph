@@ -2,6 +2,7 @@ use std::sync::Once;
 use lazy_static::lazy_static;
 
 use crate::{utils::{hex_str_to_addr, Endianness, hex_str_to_block_bytes}, params::BLOCK_BYTE_SIZE};
+use crate::params;
 
 // reference tests from tests/ directory
 #[cfg(test)]
@@ -61,4 +62,13 @@ lazy_static! {
     pub static ref TEST_VAL_1_VALUE: u64 = hex_str_to_addr(&*TEST_VAL_1_VALUE_STR.as_str(), Endianness::Little).unwrap();
     pub static ref TEST_VAL_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000310", Endianness::Big).unwrap();
     pub static ref TEST_VAL_1_VALUE_BYTES: [u8; BLOCK_BYTE_SIZE] = hex_str_to_block_bytes(TEST_VAL_1_VALUE_STR.as_str());
+
+    // data structure
+    // 00000290:00000000000000002100000000000000........!.......
+    // 000002a0:2f746d702f7373686400000000000000/tmp/sshd.......
+    pub static ref TEST_MALLOC_HEADER_1_DTS_STR: String = "2100000000000000".to_string();
+    pub static ref TEST_MALLOC_HEADER_1_DTS_SIZE: usize = hex_str_to_addr(&*TEST_MALLOC_HEADER_1_DTS_STR.as_str(), params::MALLOC_HEADER_ENDIANNESS).unwrap() as usize;
+    pub static ref TEST_MALLOC_HEADER_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000298", Endianness::Big).unwrap();
+    
+
 }

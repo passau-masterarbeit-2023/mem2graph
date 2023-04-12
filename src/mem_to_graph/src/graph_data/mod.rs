@@ -512,4 +512,30 @@ mod tests {
         assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     }
 
+    #[test]
+    fn test_dts_from_test_file() {
+        crate::tests::setup();
+        
+        let graph_data = GraphData::new(
+            params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
+            params::BLOCK_BYTE_SIZE
+        );
+        check_heap_dump!(graph_data);
+
+        // try to get the DTS from the test file, check its number of nodes and edges
+        let node = graph_data.addr_to_node.get(&*TEST_MALLOC_HEADER_1_ADDR).unwrap();
+        assert!(node.is_data_structure());
+        match node {
+            Node::DataStructureNode(dts) => {
+                assert_eq!(dts.addr, *TEST_MALLOC_HEADER_1_ADDR);
+                assert_eq!(dts.byte_size, *TEST_MALLOC_HEADER_1_DTS_SIZE);
+                assert_eq!(dts.nb_pointer_nodes, 2);
+                assert_eq!(dts.nb_value_nodes, 2);
+            },
+            _ => panic!("node is not a DTS"),
+        }
+            
+        
+    }
+
 }

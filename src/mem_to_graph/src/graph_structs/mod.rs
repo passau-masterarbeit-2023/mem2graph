@@ -143,6 +143,13 @@ impl Node {
         }
     }
 
+    pub fn is_data_structure(&self) -> bool {
+        match self {
+            Node::DataStructureNode(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn points_to(&self) -> Option<u64> {
         match self {
             Node::PointerNode(pointer_node) => {
