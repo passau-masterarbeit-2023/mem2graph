@@ -234,26 +234,27 @@ impl GraphData {
         // check if the pointer points to a node in the graph
         let mut current_pointer_node: &Node = node;
         let mut weight = 1;
-        while current_pointer_node.is_pointer() {
-            let pointed_node = self.addr_to_node.get(&current_pointer_node.points_to().unwrap());
-            if pointed_node.is_some() {
-                weight += 1;
+        let mut pointed_node: Option<&Node> = self.addr_to_node.get(&current_pointer_node.points_to().unwrap());
 
-                // next iteration
-                current_pointer_node = pointed_node.unwrap();
-            } else {
-                // get the node from the dictionary, and add the edge
+        // only for pointer to pointer regrouping
+        while current_pointer_node.is_pointer() && pointed_node.is_some() && pointed_node.unwrap().is_pointer() {
+            
+            weight += 1;
 
-                self.add_edge_wrapper(Edge {
-                    from: node.get_address(),
-                    to: pointed_node.unwrap().get_address(),
-                    weight: weight,
-                    edge_type: EdgeType::DataStructureEdge,
-                });
+            // next iteration
+            current_pointer_node = pointed_node.unwrap();
+            
+            pointed_node = self.addr_to_node.get(&current_pointer_node.points_to().unwrap());
+        }
 
-                // no more iterations
-                break
-            }
+        // add the edge if the node is valid
+        if pointed_node.is_some() {
+            self.add_edge_wrapper(Edge {
+                from: node.get_address(),
+                to: pointed_node.unwrap().get_address(),
+                weight: weight,
+                edge_type: EdgeType::PointerEdge,
+            });
         }
     }
 
@@ -264,6 +265,8 @@ impl GraphData {
 
         for pointer_addr in all_pointer_addr {
             self.parse_pointer(pointer_addr);
+
+            // Log
             let potential_ptr_node = self.addr_to_node.get(&pointer_addr);
             match potential_ptr_node {
                 Some(node) => {
