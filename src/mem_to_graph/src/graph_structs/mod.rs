@@ -308,7 +308,7 @@ impl std::fmt::Display for Edge {
 impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Node::DataStructureNode(data_structure_node) => {
+            Node::DataStructureNode(_) => {
                 write!(
                     f, "    {:?} [color=blue];", 
                     self.str_addr_and_type(),
@@ -316,10 +316,13 @@ impl std::fmt::Display for Node {
             }
             Node::ValueNode(value_node) => {
                 match value_node {
-                    ValueNode::BaseValueNode(base_value_node) => {
-                        Ok(()) // Do not print base value nodes
+                    ValueNode::BaseValueNode(_) => {
+                        write!(
+                            f, "    {:?} [color=grey];", 
+                            self.str_addr_and_type(),
+                        )
                     }
-                    ValueNode::KeyNode(key_node) => {
+                    ValueNode::KeyNode(_) => {
                         write!(
                             f, "    {:?} [color=green, style=filled];", 
                             self.str_addr_and_type(),
@@ -329,19 +332,19 @@ impl std::fmt::Display for Node {
             }
             Node::PointerNode(pointer_node) => {
                 match pointer_node {
-                    PointerNode::BasePointerNode(base_pointer_node) => {
+                    PointerNode::BasePointerNode(_) => {
                         write!(
                             f, "    {:?} [color=orange];",
                             self.str_addr_and_type(),
                         )
                     }
-                    PointerNode::SessionStateNode(session_state_node) => {
+                    PointerNode::SessionStateNode(_) => {
                         write!(
                             f, "    {:?} [color=red];", 
                             self.str_addr_and_type(),
                         )
                     }
-                    PointerNode::SshStructNode(ssh_struct_node) => {
+                    PointerNode::SshStructNode(_) => {
                         write!(
                             f, "    {:?} [color=purple];", 
                             self.str_addr_and_type(),

@@ -265,21 +265,6 @@ impl GraphData {
 
         for pointer_addr in all_pointer_addr {
             self.parse_pointer(pointer_addr);
-
-            // Log
-            let potential_ptr_node = self.addr_to_node.get(&pointer_addr);
-            match potential_ptr_node {
-                Some(node) => {
-                    if node.is_pointer() {
-                        self.parse_pointer(pointer_addr);
-                        log::debug!("pointer node: {}", pointer_addr);
-                    }
-                },
-                None => {
-                    log::debug!("pointer node not found: {}", pointer_addr);
-                }
-                
-            }
         }
     }
 
@@ -515,12 +500,22 @@ mod tests {
     #[test]
     fn test_dts_from_test_file() {
         crate::tests::setup();
+
+        use std::path::Path;
+        use std::fs::File;
+        use std::io::Write;
         
         let graph_data = GraphData::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE
         );
         check_heap_dump!(graph_data);
+
+        // save the graph to a file as a dot file (graphviz)
+        let dot_file_name: String = format!("{}test_graph_from_{}.gv", &*TEST_GRAPH_DOT_DIR_PATH, &*TEST_HEAP_DUMP_FILE_NUMBER);
+        let dot_file_path = Path::new(dot_file_name.as_str());
+        let mut dot_file = File::create(dot_file_path).unwrap();
+        dot_file.write_all(format!("{}", graph_data).as_bytes()).unwrap(); // using the custom formatter
 
         // try to get the DTS from the test file, check its number of nodes and edges
         let node = graph_data.addr_to_node.get(&*TEST_MALLOC_HEADER_1_ADDR).unwrap();

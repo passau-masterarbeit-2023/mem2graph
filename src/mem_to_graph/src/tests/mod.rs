@@ -29,7 +29,7 @@ pub fn setup() {
 }
 
 lazy_static! {
-    // all data comes from: /Training/Training/scp/V_7_8_P1/16/1010-1644391327-heap.raw
+    // all data comes from: data/302-1644391327-heap.raw
     // and its associated json file
     // WARN: Beware of Endianness, not the same between addr indexes and addr values
     // xxd example:
@@ -69,6 +69,8 @@ lazy_static! {
     pub static ref TEST_MALLOC_HEADER_1_DTS_STR: String = "2100000000000000".to_string();
     pub static ref TEST_MALLOC_HEADER_1_DTS_SIZE: usize = hex_str_to_addr(&*TEST_MALLOC_HEADER_1_DTS_STR.as_str(), params::MALLOC_HEADER_ENDIANNESS).unwrap() as usize;
     pub static ref TEST_MALLOC_HEADER_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000298", Endianness::Big).unwrap();
-    
+
+    pub static ref TEST_GRAPH_DOT_DIR_PATH: String = "tests/".to_string();
+    pub static ref TEST_HEAP_DUMP_FILE_NUMBER: String = "302-1644391327".to_string(); // 302-1644391327-heap.raw
 
 }
