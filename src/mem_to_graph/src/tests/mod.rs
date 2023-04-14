@@ -70,7 +70,7 @@ lazy_static! {
     pub static ref TEST_MALLOC_HEADER_1_DTS_SIZE: usize = hex_str_to_addr(&*TEST_MALLOC_HEADER_1_DTS_STR.as_str(), params::MALLOC_HEADER_ENDIANNESS).unwrap() as usize;
     pub static ref TEST_MALLOC_HEADER_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000298", Endianness::Big).unwrap();
 
-    pub static ref TEST_GRAPH_DOT_DIR_PATH: String = "tests/".to_string();
+    pub static ref TEST_GRAPH_DOT_DIR_PATH: String = "graphs/graphs/".to_string();
     pub static ref TEST_HEAP_DUMP_FILE_NUMBER: String = "302-1644391327".to_string(); // 302-1644391327-heap.raw
 
 }

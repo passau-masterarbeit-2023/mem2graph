@@ -1,9 +1,9 @@
 import sys
 import os
 
-INPUT_DIR = "tests/graphs"
-VN_CLEANED_DIR = "tests/graphs_no_vn"
-GRAPH_VIZ_DIR = "tests/graph_viz"
+INPUT_DIR = "graphs/graphs"
+VN_CLEANED_DIR = "graphs/graphs_no_vn"
+GRAPH_VIZ_DIR = "graphs/graph_viz"
 
 def graphs_to_clean():
     """

@@ -70,4 +70,16 @@ lazy_static! {
     pub static ref TEST_HEAP_JSON_FILE_PATH: PathBuf = {
         crate::utils::heap_dump_path_to_json_path(&TEST_HEAP_DUMP_FILE_PATH)
     };
+
+    pub static ref COMPRESS_POINTER_CHAINS: bool = {
+        let compress_pointer_chains = std::env::var("COMPRESS_POINTER_CHAINS");
+        match compress_pointer_chains {
+            Ok(mode) => mode == "true",
+            Err(_) => {
+                println!("COMPRESS_POINTER_CHAINS environment variable not set. Defaulting to 'false'.");
+                return false;
+            },
+        }
+    };
+
 }
