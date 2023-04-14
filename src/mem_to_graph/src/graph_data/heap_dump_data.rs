@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 
 use crate::graph_structs::KeyData;
-use crate::utils;
+use crate::utils::{self, hex_str_to_addr, Endianness, json_value_to_addr, json_value_to_usize};
 use crate::params::BLOCK_BYTE_SIZE;
 
 pub struct HeapDumpData {
@@ -16,6 +16,10 @@ pub struct HeapDumpData {
     pub max_addr: u64,
     pub json_data: Value,
     pub addr_to_key_data: HashMap<u64, KeyData>,
+
+    // special addresses
+    pub addr_ssh_struct: u64,
+    pub addr_session_state: u64,
 }
 
 impl HeapDumpData {
@@ -40,6 +44,9 @@ impl HeapDumpData {
         let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len(), block_size);
         let addr_to_key_data = generate_key_data_from_json(&json_data);
 
+        // special addresses
+        let addr_ssh_struct = json_value_to_addr(&json_data[&"SSH_STRUCT_ADDR"]);
+        let addr_session_state = json_value_to_addr(&json_data[&"SESSION_STATE_ADDR"]);
 
         HeapDumpData {
             block_size,
@@ -49,6 +56,8 @@ impl HeapDumpData {
             max_addr,
             json_data,
             addr_to_key_data,
+            addr_ssh_struct,
+            addr_session_state,
         }
     }
 
@@ -84,8 +93,7 @@ impl HeapDumpData {
 
     /// get min and max address from json file to a given heap dump
     fn get_min_max_addr(json_data: &Value, nb_blocks: usize, block_size: usize) -> (u64, u64) {
-        let min_addr_str = json_data["HEAP_START"].as_str().unwrap();
-        let min_addr = u64::from_str_radix(min_addr_str.trim_start_matches("0x"), 16).unwrap();
+        let min_addr = json_value_to_addr(&json_data["HEAP_START"]);
         let max_addr = min_addr + (nb_blocks as u64) * (block_size as u64);
         (min_addr, max_addr)
     }
@@ -104,18 +112,12 @@ fn generate_key_data_from_json(
 
     for (key, value) in json_data.as_object().unwrap().iter() {
         if key.starts_with("KEY_") && key.len() == 5 {
-            let real_key_addr_str = json_data[&(key.to_owned() + "_ADDR")].as_str().unwrap();
-            let real_key_addr = u64::from_str_radix(real_key_addr_str.trim_start_matches("0x"), 16).unwrap();
+            let real_key_addr = json_value_to_addr(&json_data[(key.to_owned() + "_ADDR")]);
             let key_hex = json_data[key].as_str().unwrap();
             let key_bytes = hex::decode(key_hex).unwrap();
 
-            let key_size_str = json_data[&(key.to_owned() + "_LEN")].as_str().unwrap();
-            let key_size = usize::from_str_radix(&key_size_str, 10).unwrap();
-
-            let real_key_len_str = json_data[&(key.to_owned() + "_REAL_LEN")].as_str().unwrap();
-            let real_key_len = usize::from_str_radix(&real_key_len_str, 10).unwrap();
-            log::debug!("key len: {}", key_size);
-            
+            let key_size = json_value_to_usize(&json_data[&(key.to_owned() + "_LEN")]);
+            let real_key_len = json_value_to_usize(&json_data[&(key.to_owned() + "_REAL_LEN")]);
 
             let key_data = KeyData {
                 name: key.clone(),
@@ -166,9 +168,9 @@ mod tests {
 
         assert!(json_data.is_object());
         assert!(json_data["HEAP_START"].is_string());
-        let heap_start = u64::from_str_radix(json_data["HEAP_START"].as_str().unwrap(), 16).unwrap();
+        let heap_start = json_value_to_addr(&json_data["HEAP_START"]);
         let test_heap_addr = "55a6d2356000";
-        let test_heap_addr_converted = u64::from_str_radix(test_heap_addr, 16).unwrap();
+        let test_heap_addr_converted = hex_str_to_addr(test_heap_addr, Endianness::Big).unwrap();
         assert!(heap_start == test_heap_addr_converted);
     }
 

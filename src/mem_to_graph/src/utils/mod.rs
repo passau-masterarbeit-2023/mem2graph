@@ -1,6 +1,8 @@
 use std::convert::TryInto;
 use std::path::PathBuf;
 
+use serde_json::Value;
+
 use crate::graph_structs::{Node, PointerNode, ValueNode, BasePointerNode, BaseValueNode};
 
 /// convert an address to an index
@@ -27,6 +29,18 @@ pub fn block_bytes_to_addr(block_bytes: &[u8; crate::params::BLOCK_BYTE_SIZE], e
     addr
 }
 
+/// convert a json value to an address represented as a u64 (intended from a hex string)
+/// WARN: all addresses in the json file are big endian
+pub fn json_value_to_addr(json_value: &Value) -> u64 {
+    let addr_str = json_value.as_str().unwrap();
+    hex_str_to_addr(addr_str, Endianness::Big).unwrap()
+}
+
+/// convert a json value to a usize (intented from a decimal string)
+pub fn json_value_to_usize(json_value: &Value) -> usize {
+    let int_str = json_value.as_str().unwrap();
+    u64::from_str_radix(int_str, 10).unwrap() as usize
+}
 
 /// convert a hex string to an address represented as a u64
 /// WARN: necessary to specify the string endianness for the conversion

@@ -2,6 +2,8 @@ use crate::tests::*;
 use crate::utils::*;
 use crate::params::TEST_HEAP_DUMP_FILE_PATH;
 
+use serde_json::json;
+
 #[test]
 fn test_addr_to_index() {
     crate::tests::setup();
@@ -126,6 +128,7 @@ fn test_is_pointer() {
 
 #[test]
 fn test_create_node_from_bytes() {
+    crate::tests::setup();
     // pointer 1 test
     let pointer_block_of_8_bytes = hex_str_to_block_bytes(&*TEST_PTR_1_VALUE_STR.as_str());
     let mut node = create_node_from_bytes(
@@ -166,12 +169,14 @@ fn test_create_node_from_bytes() {
 
 #[test]
 fn test_heap_dump_path_to_json_path() {
+    crate::tests::setup();
     let test_path = heap_dump_path_to_json_path(&*TEST_HEAP_DUMP_FILE_PATH);
     assert!(test_path.exists())
 }
 
 #[test]
 fn test_block_bytes_to_addr() {
+    crate::tests::setup();
     let test_cases = vec![
         // (hex_str, expected_value_big_endian, expected_value_little_endian)
         // WARN: online convertors tend to make mistakes when working on huge numbers
@@ -192,4 +197,16 @@ fn test_block_bytes_to_addr() {
         let result = block_bytes_to_addr(&bytes_to_test, Endianness::Little);
         assert_eq!(result, expected_value_little_endian);
     }
+}
+
+#[test]
+fn test_json_value_to_addr() {
+    crate::tests::setup();
+    
+    let json_value = json!("12345678");
+
+    let expected_addr: u64 = 0x12345678;
+    let actual_addr = json_value_to_addr(&json_value);
+
+    assert_eq!(actual_addr, expected_addr, "The address should be equal to the expected value");
 }
