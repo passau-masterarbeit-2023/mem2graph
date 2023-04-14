@@ -31,7 +31,7 @@ fn create_test_structs() -> Vec<Node> {
 
     let key_data = KeyData {
         name: "key1".to_string(),
-        key: [0, 1, 2, 3, 4, 5, 6, 7],
+        key: vec![0, 1, 2, 3, 4, 5, 6, 7],
         addr: [0, 1, 2, 3, 4, 5, 6, 7],
         len: 4,
         real_len: 4,
@@ -40,7 +40,7 @@ fn create_test_structs() -> Vec<Node> {
     let key_node = ValueNode::KeyNode(KeyNode {
         addr: 5,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
-        key: [0, 1, 2, 3, 4, 5, 6, 7],
+        key: vec![0, 1, 2, 3, 4, 5, 6, 7],
         key_data,
     });
 

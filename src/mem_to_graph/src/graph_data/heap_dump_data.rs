@@ -2,7 +2,9 @@ use serde_json::Value;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::PathBuf;
+use std::collections::HashMap;
 
+use crate::graph_structs::KeyData;
 use crate::utils;
 use crate::params::BLOCK_BYTE_SIZE;
 
@@ -13,6 +15,7 @@ pub struct HeapDumpData {
     pub min_addr: u64,
     pub max_addr: u64,
     pub json_data: Value,
+    pub addr_to_key_data: HashMap<u64, KeyData>,
 }
 
 impl HeapDumpData {
@@ -35,6 +38,8 @@ impl HeapDumpData {
         let blocks = HeapDumpData::generate_blocks_from_heap_dump(&heap_dump_raw_file_path, block_size);
         let json_data = HeapDumpData::get_json_data(&json_path);
         let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len(), block_size);
+        let addr_to_key_data = generate_key_data_from_json(&json_data);
+
 
         HeapDumpData {
             block_size,
@@ -43,6 +48,7 @@ impl HeapDumpData {
             min_addr,
             max_addr,
             json_data,
+            addr_to_key_data,
         }
     }
 
@@ -83,9 +89,50 @@ impl HeapDumpData {
         let max_addr = min_addr + (nb_blocks as u64) * (block_size as u64);
         (min_addr, max_addr)
     }
+
+
+
+
 }
 
+/// Generate a dictionary of key data from the JSON file.
+/// dict keys are addresses of the keys (first block of the key)
+fn generate_key_data_from_json( 
+    json_data: &Value,
+) -> HashMap<u64, KeyData> {
+    let mut addr_key_pairs: HashMap<u64, KeyData> = HashMap::new();
 
+    for (key, value) in json_data.as_object().unwrap().iter() {
+        if key.starts_with("KEY_") && key.len() == 5 {
+            let real_key_addr_str = json_data[&(key.to_owned() + "_ADDR")].as_str().unwrap();
+            let real_key_addr = u64::from_str_radix(real_key_addr_str.trim_start_matches("0x"), 16).unwrap();
+            let key_hex = json_data[key].as_str().unwrap();
+            let key_bytes = hex::decode(key_hex).unwrap();
+
+            let key_size_str = json_data[&(key.to_owned() + "_LEN")].as_str().unwrap();
+            let key_size = usize::from_str_radix(&key_size_str, 10).unwrap();
+
+            let real_key_len_str = json_data[&(key.to_owned() + "_REAL_LEN")].as_str().unwrap();
+            let real_key_len = usize::from_str_radix(&real_key_len_str, 10).unwrap();
+            log::debug!("key len: {}", key_size);
+            
+
+            let key_data = KeyData {
+                name: key.clone(),
+                key: key_bytes,
+                addr: real_key_addr.to_be_bytes(),
+                len: key_size,
+                real_len: real_key_len,
+            };
+
+            addr_key_pairs.insert(real_key_addr, key_data);
+        }
+    }
+
+    log::debug!("Number of keys in JSON: {}", addr_key_pairs.len());
+
+    addr_key_pairs
+}
 
 // NOTE: tests must be in the same module as the code they are testing
 // for them to have access to the private functions
@@ -160,5 +207,21 @@ mod tests {
         let addr_back = heap_dump_data.index_to_addr_wrapper(index);
 
         assert_eq!(addr, addr_back);
+    }
+
+    #[test]
+    fn test_generate_key_data_from_json() {
+        crate::tests::setup();
+        
+        let json_data = HeapDumpData::get_json_data(
+            &*crate::params::TEST_HEAP_JSON_FILE_PATH
+        );
+        let addr_to_key_data = generate_key_data_from_json(&json_data);
+
+        assert_eq!(addr_to_key_data.len(), 6); // 6 keys, from A to F
+
+        // test key F
+        assert!(addr_to_key_data.get(&*crate::tests::TEST_KEY_F_ADDR).is_some());
+        assert!(addr_to_key_data.get(&*crate::tests::TEST_KEY_F_ADDR).unwrap().key == *crate::tests::TEST_KEY_F_BYTES);
     }
 }

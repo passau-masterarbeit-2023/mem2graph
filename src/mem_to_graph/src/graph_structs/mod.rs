@@ -258,7 +258,7 @@ pub struct SshStructNode {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyData {
     pub name: String,
-    pub key: [u8; BLOCK_BYTE_SIZE],
+    pub key: Vec<u8>,
     pub addr: [u8; BLOCK_BYTE_SIZE],
     pub len: usize,
     pub real_len: usize,
@@ -268,7 +268,7 @@ pub struct KeyData {
 pub struct KeyNode {
     pub addr: u64,
     pub value: [u8; BLOCK_BYTE_SIZE], // first block of key
-    pub key: [u8; BLOCK_BYTE_SIZE], // found in heap dump, full key (not just the first block)
+    pub key: Vec<u8>, // found in heap dump, full key (not just the first block)
     pub key_data: KeyData, // found in JSON file
 }
 
