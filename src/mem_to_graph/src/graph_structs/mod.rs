@@ -248,10 +248,34 @@ pub struct SessionStateNode {
     pub points_to: u64,
 }
 
+impl SessionStateNode {
+    /// build a new SessionStateNode from an old one
+    /// WARN: the old node must be a PointerNode
+    pub fn new(old_node: &Node) -> Self {
+        assert!(old_node.is_pointer());
+        Self {
+            addr: old_node.get_address(),
+            points_to: old_node.points_to().unwrap(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SshStructNode {
     pub addr: u64,
     pub points_to: u64,
+}
+
+impl SshStructNode {
+    /// build a new SshStructNode from an old one
+    /// WARN: the old node must be a PointerNode
+    pub fn new(old_node: &Node) -> Self {
+        assert!(old_node.is_pointer());
+        Self {
+            addr: old_node.get_address(),
+            points_to: old_node.points_to().unwrap(),
+        }
+    }
 }
 
 // Key data from JSON file

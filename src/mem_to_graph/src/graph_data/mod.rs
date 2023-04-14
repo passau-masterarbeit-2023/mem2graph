@@ -21,17 +21,17 @@ macro_rules! check_heap_dump {
 /// This struct contains the graph data
 /// linked to a given heap dump file.
 pub struct GraphData {
-    graph: DiGraphMap<u64, graph_structs::Edge>,
-    addr_to_node: HashMap<u64, graph_structs::Node>,
+    pub graph: DiGraphMap<u64, graph_structs::Edge>,
+    pub addr_to_node: HashMap<u64, graph_structs::Node>,
 
-    heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
+    pub heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
 }
 
 
 impl GraphData {
 
     /// Initialize the graph data from a raw heap dump file.
-    fn new(heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> Self {
+    pub fn new(heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> Self {
         let mut instance = Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
