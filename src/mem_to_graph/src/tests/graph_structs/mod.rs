@@ -9,10 +9,9 @@ fn create_test_structs() -> Vec<Node> {
     });
 
     let base_value_node = ValueNode::BaseValueNode(BaseValueNode {
-            addr: 1,
-            value: [0, 1, 2, 3, 4, 5, 6, 7],
-        }
-    );
+        addr: 1,
+        value: [0, 1, 2, 3, 4, 5, 6, 7],
+    });
 
     let base_pointer_node = PointerNode::BasePointerNode(BasePointerNode {
         addr: 2,
@@ -30,15 +29,15 @@ fn create_test_structs() -> Vec<Node> {
     });
 
     let key_data = KeyData {
+        addr: 5,
         name: "key1".to_string(),
         key: vec![0, 1, 2, 3, 4, 5, 6, 7],
-        addr: [0, 1, 2, 3, 4, 5, 6, 7],
         len: 4,
         real_len: 4,
     };
 
     let key_node = ValueNode::KeyNode(KeyNode {
-        addr: 5,
+        addr: 6,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
         key: vec![0, 1, 2, 3, 4, 5, 6, 7],
         key_data,

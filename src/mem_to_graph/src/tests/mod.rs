@@ -77,5 +77,7 @@ lazy_static! {
     pub static ref TEST_KEY_F_ADDR_STR: String = "55a6d2364240".to_string();
     pub static ref TEST_KEY_F_ADDR: u64 = hex_str_to_addr(&*TEST_KEY_F_ADDR_STR.as_str(), Endianness::Big).unwrap();
     pub static ref TEST_KEY_F_BYTES: Vec<u8> = hex::decode("0368f2c029ff3c35355688214e0237d7").unwrap();
+    pub static ref TEST_KEY_F_NAME: String = "KEY_F".to_string();
+    pub static ref TEST_KEY_F_LEN: usize = TEST_KEY_F_BYTES.len();
 
 }

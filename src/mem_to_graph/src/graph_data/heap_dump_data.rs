@@ -122,7 +122,7 @@ fn generate_key_data_from_json(
             let key_data = KeyData {
                 name: key.clone(),
                 key: key_bytes,
-                addr: real_key_addr.to_be_bytes(),
+                addr: real_key_addr,
                 len: key_size,
                 real_len: real_key_len,
             };

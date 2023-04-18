@@ -168,6 +168,22 @@ impl Node {
             _ => None,
         }
     }
+
+    pub fn get_value(&self) -> Option<[u8; BLOCK_BYTE_SIZE]> {
+        match self {
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::BaseValueNode(base_value_node) => {
+                        Some(base_value_node.value.clone())
+                    }
+                    ValueNode::KeyNode(key_node) => {
+                        Some(key_node.value.clone())
+                    }
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
     /// return a formatted string of the node, for debugging purposes
@@ -283,7 +299,7 @@ impl SshStructNode {
 pub struct KeyData {
     pub name: String,
     pub key: Vec<u8>,
-    pub addr: [u8; BLOCK_BYTE_SIZE],
+    pub addr: u64,
     pub len: usize,
     pub real_len: usize,
 }
