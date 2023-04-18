@@ -2,6 +2,7 @@ use std::convert::TryInto;
 use std::path::PathBuf;
 
 use serde_json::Value;
+use crate::params::PTR_ENDIANNESS;
 
 use crate::graph_structs::{Node, PointerNode, ValueNode, BasePointerNode, BaseValueNode};
 
@@ -88,7 +89,7 @@ pub fn convert_block_to_pointer_if_possible(data: &[u8], min_addr: u64, max_addr
     // WARN: THIS IS THE ONLY PLACE WHERE THE POINTER ENDIANNESS IS USED
     
 
-    let potential_ptr_int = match crate::params::PTR_ENDIANNESS {
+    let potential_ptr_int = match PTR_ENDIANNESS {
         Endianness::Big => u64::from_be_bytes(data.try_into().unwrap()),
         Endianness::Little => u64::from_le_bytes(data.try_into().unwrap()),
     };

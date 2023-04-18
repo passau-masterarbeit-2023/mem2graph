@@ -320,7 +320,7 @@ mod tests {
     use petgraph::dot::Dot;
 
     use super::*;
-    use crate::params::{self, TEST_HEAP_DUMP_FILE_PATH, PTR_ENDIANNESS};
+    use crate::params::{self};
     use crate::graph_structs::{
         Node, 
         ValueNode, 
@@ -517,21 +517,7 @@ mod tests {
         let dot_file_name: String = format!("{}test_graph_from_{}.gv", &*TEST_GRAPH_DOT_DIR_PATH, &*TEST_HEAP_DUMP_FILE_NUMBER);
         let dot_file_path = Path::new(dot_file_name.as_str());
         let mut dot_file = File::create(dot_file_path).unwrap();
-        dot_file.write_all(format!("{}", graph_data).as_bytes()).unwrap(); // using the custom formatter
-
-        // // try to get the DTS from the test file, check its number of nodes and edges
-        // let node = graph_data.addr_to_node.get(&*TEST_MALLOC_HEADER_1_ADDR).unwrap();
-        // assert!(node.is_data_structure());
-        // match node {
-        //     Node::DataStructureNode(dts) => {
-        //         assert_eq!(dts.addr, *TEST_MALLOC_HEADER_1_ADDR);
-        //         assert_eq!(dts.byte_size, *TEST_MALLOC_HEADER_1_DTS_SIZE);
-        //         assert_eq!(dts.nb_pointer_nodes, 2);
-        //         assert_eq!(dts.nb_value_nodes, 2);
-        //     },
-        //     _ => panic!("node is not a DTS"),
-        // }
-            
+        dot_file.write_all(format!("{}", graph_data).as_bytes()).unwrap(); // using the custom formatter            
         
     }
 

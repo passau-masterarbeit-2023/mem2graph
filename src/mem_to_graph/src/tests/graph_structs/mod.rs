@@ -103,7 +103,6 @@ fn test_hierarchy() {
                     }
                 }
             }
-            _ => panic!("Expected a Node enum"),
         }
     }
     assert_eq!(counter_data_structure_nodes, 1);

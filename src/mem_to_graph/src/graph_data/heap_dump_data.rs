@@ -110,17 +110,17 @@ fn generate_key_data_from_json(
 ) -> HashMap<u64, KeyData> {
     let mut addr_key_pairs: HashMap<u64, KeyData> = HashMap::new();
 
-    for (key, value) in json_data.as_object().unwrap().iter() {
-        if key.starts_with("KEY_") && key.len() == 5 {
-            let real_key_addr = json_value_to_addr(&json_data[(key.to_owned() + "_ADDR")]);
-            let key_hex = json_data[key].as_str().unwrap();
+    for (json_key, json_value) in json_data.as_object().unwrap().iter() {
+        if json_key.starts_with("KEY_") && json_key.len() == 5 {
+            let real_key_addr = json_value_to_addr(&json_data[(json_key.to_owned() + "_ADDR")]);
+            let key_hex = json_value.as_str().unwrap();
             let key_bytes = hex::decode(key_hex).unwrap();
 
-            let key_size = json_value_to_usize(&json_data[&(key.to_owned() + "_LEN")]);
-            let real_key_len = json_value_to_usize(&json_data[&(key.to_owned() + "_REAL_LEN")]);
+            let key_size = json_value_to_usize(&json_data[&(json_key.to_owned() + "_LEN")]);
+            let real_key_len = json_value_to_usize(&json_data[&(json_key.to_owned() + "_REAL_LEN")]);
 
             let key_data = KeyData {
-                name: key.clone(),
+                name: json_key.clone(),
                 key: key_bytes,
                 addr: real_key_addr,
                 len: key_size,

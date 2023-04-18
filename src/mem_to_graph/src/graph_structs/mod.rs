@@ -73,7 +73,6 @@ impl Node {
                     }
                 }
             }
-            _ => panic!("Node.get_address() has not matched a Node variant. Please add a new match arm for the new Node variant."),
         }
     }
 
@@ -139,13 +138,6 @@ impl Node {
     pub fn is_value(&self) -> bool {
         match self {
             Node::ValueNode(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_data_structure(&self) -> bool {
-        match self {
-            Node::DataStructureNode(_) => true,
             _ => false,
         }
     }

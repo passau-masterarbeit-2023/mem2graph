@@ -114,25 +114,13 @@ impl GraphAnnotate {
 
 #[cfg(test)]
 mod tests {
-
-    use log;
-    use petgraph::dot::Dot;
-
     use super::*;
-    use crate::params::{self, TEST_HEAP_DUMP_FILE_PATH, PTR_ENDIANNESS};
+    use crate::params::{self};
     use crate::graph_structs::{
         Node, 
         ValueNode, 
         PointerNode, 
-        BaseValueNode, 
-        BasePointerNode, 
-        DataStructureNode,
-        Edge,
-        EdgeType,
-        DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
     };
-    use crate::tests::*;
-    use crate::utils::create_node_from_bytes;
 
     #[test]
     fn test_annotation() {
