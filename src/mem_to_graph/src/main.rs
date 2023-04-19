@@ -6,6 +6,7 @@ mod graph_data;
 mod graph_structs;
 mod utils;
 mod graph_annotate;
+mod graph_embedding;
 
 fn main() {
     crate::params::init();

@@ -23,6 +23,7 @@ macro_rules! check_heap_dump {
 pub struct GraphData {
     pub graph: DiGraphMap<u64, graph_structs::Edge>,
     pub addr_to_node: HashMap<u64, graph_structs::Node>,
+    pub unannotated_value_node_addrs: Vec<u64>, // list of the addresses of the nodes that are values (and potental keys)
 
     pub heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
 }
@@ -35,6 +36,7 @@ impl GraphData {
         let mut instance = Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
+            unannotated_value_node_addrs: Vec::new(),
             heap_dump_data: Some(
                 HeapDumpData::new(
                     heap_dump_raw_file_path,
@@ -53,6 +55,7 @@ impl GraphData {
         Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
+            unannotated_value_node_addrs: Vec::new(),
             heap_dump_data: None,
         }
     }
@@ -82,6 +85,11 @@ impl GraphData {
     /// add node to the map & to the map
     /// NOTE: the node is moved to the map
     fn add_node_wrapper(&mut self, node: graph_structs::Node) -> u64 {
+        // keep addr of all the value nodes
+        if node.is_value() {
+            self.unannotated_value_node_addrs.push(node.get_address());
+        }
+
         let node_addr = node.get_address();
         self.addr_to_node.insert(node_addr, node); // move the node
         self.graph.add_node(self.addr_to_node.get(&node_addr).unwrap().get_address());
@@ -500,7 +508,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dts_from_test_file() {
+    fn test_graph_from_test_file() {
         crate::tests::setup();
 
         use std::path::Path;
@@ -517,8 +525,10 @@ mod tests {
         let dot_file_name: String = format!("{}test_graph_from_{}.gv", &*TEST_GRAPH_DOT_DIR_PATH, &*TEST_HEAP_DUMP_FILE_NUMBER);
         let dot_file_path = Path::new(dot_file_name.as_str());
         let mut dot_file = File::create(dot_file_path).unwrap();
-        dot_file.write_all(format!("{}", graph_data).as_bytes()).unwrap(); // using the custom formatter            
-        
+        dot_file.write_all(format!("{}", graph_data).as_bytes()).unwrap(); // using the custom formatter
+
+        // check that the value node addresses are kept
+        assert!(graph_data.unannotated_value_node_addrs.len() > 0);
     }
 
 }

@@ -2,7 +2,7 @@ use crate::{graph_data::GraphData, graph_structs::{PointerNode, SshStructNode, N
 use std::path::{PathBuf};
 
 pub struct GraphAnnotate {
-    graph_data: GraphData,
+    pub graph_data: GraphData,
 }
 
 impl GraphAnnotate {

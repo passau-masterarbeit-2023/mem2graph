@@ -142,6 +142,18 @@ impl Node {
         }
     }
 
+    pub fn is_key(&self) -> bool {
+        match self {
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::KeyNode(_) => true,
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
     pub fn points_to(&self) -> Option<u64> {
         match self {
             Node::PointerNode(pointer_node) => {
