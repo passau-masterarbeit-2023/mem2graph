@@ -188,6 +188,22 @@ impl Node {
             _ => None,
         }
     }
+
+    pub fn get_dtn_addr(&self) -> Option<u64> {
+        match self {
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::BaseValueNode(base_value_node) => {
+                        Some(base_value_node.dtn_addr)
+                    }
+                    ValueNode::KeyNode(key_node) => {
+                        Some(key_node.dtn_addr)
+                    }
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
     /// return a formatted string of the node, for debugging purposes
@@ -254,6 +270,7 @@ pub struct DataStructureNode {
 pub struct BaseValueNode {
     pub addr: u64,
     pub value: [u8; BLOCK_BYTE_SIZE],
+    pub dtn_addr: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -311,6 +328,7 @@ pub struct KeyData {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyNode {
     pub addr: u64,
+    pub dtn_addr: u64,
     pub value: [u8; BLOCK_BYTE_SIZE], // first block of key
     pub key: Vec<u8>, // found in heap dump, full key (not just the first block)
     pub key_data: KeyData, // found in JSON file

@@ -11,6 +11,7 @@ fn create_test_structs() -> Vec<Node> {
     let base_value_node = ValueNode::BaseValueNode(BaseValueNode {
         addr: 1,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
+        dtn_addr: 0,
     });
 
     let base_pointer_node = PointerNode::BasePointerNode(BasePointerNode {
@@ -38,6 +39,7 @@ fn create_test_structs() -> Vec<Node> {
 
     let key_node = ValueNode::KeyNode(KeyNode {
         addr: 6,
+        dtn_addr: 0,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
         key: vec![0, 1, 2, 3, 4, 5, 6, 7],
         key_data,

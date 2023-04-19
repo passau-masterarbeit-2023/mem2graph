@@ -108,6 +108,7 @@ pub fn convert_block_to_pointer_if_possible(data: &[u8], min_addr: u64, max_addr
 pub fn create_node_from_bytes(
     block: &[u8; crate::params::BLOCK_BYTE_SIZE],
     addr: u64,
+    dtn_addr: u64,
     min_addr: u64,
     max_addr: u64,
 ) -> Node {
@@ -129,6 +130,7 @@ pub fn create_node_from_bytes(
                 BaseValueNode {
                     addr,
                     value: *block,
+                    dtn_addr,
                 }
             )
         )

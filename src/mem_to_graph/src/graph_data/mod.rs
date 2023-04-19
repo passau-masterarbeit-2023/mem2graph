@@ -62,12 +62,13 @@ impl GraphData {
 
 
     fn create_node_from_bytes_wrapper(
-        &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64
+        &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64, dtn_addr: u64
     ) -> graph_structs::Node {
         check_heap_dump!(self);
         return utils::create_node_from_bytes(
             data,
             addr,
+            dtn_addr,
             self.heap_dump_data.as_ref().unwrap().min_addr,
             self.heap_dump_data.as_ref().unwrap().max_addr,
         );
@@ -75,11 +76,11 @@ impl GraphData {
     
     /// Wrapper for create_node_from_bytes_wrapper using a block index instead of an address.
     fn create_node_from_bytes_wrapper_index(
-        &self, data: &[u8; BLOCK_BYTE_SIZE], block_index: usize
+        &self, data: &[u8; BLOCK_BYTE_SIZE], block_index: usize, dtn_addr: u64
     ) -> graph_structs::Node {
         check_heap_dump!(self);
         let addr = self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(block_index);
-        return self.create_node_from_bytes_wrapper(data, addr);
+        return self.create_node_from_bytes_wrapper(data, addr, dtn_addr);
     }
 
     /// add node to the map & to the map
@@ -197,7 +198,11 @@ impl GraphData {
         let mut count_value_nodes = 0;
         let mut children_node_addrs: Vec<u64> = Vec::new();
         for block_index in (start_block_index + 1)..(start_block_index  + nb_blocks_in_datastructure as usize) {
-            let node = self.create_node_from_bytes_wrapper_index(&self.heap_dump_data.as_ref().unwrap().blocks[block_index], block_index);
+            let node = self.create_node_from_bytes_wrapper_index(
+                &self.heap_dump_data.as_ref().unwrap().blocks[block_index], 
+                block_index,
+                current_datastructure_addr
+            );
             children_node_addrs.push(node.get_address());
             
             // stats
@@ -362,6 +367,7 @@ mod tests {
                 BaseValueNode {
                     addr: 2,
                     value: [0, 1, 2, 3, 4, 5, 6, 7],
+                    dtn_addr: 1,
                 }
             )
         );
@@ -466,12 +472,13 @@ mod tests {
         let pointer_node_1 = create_node_from_bytes(
             &*TEST_PTR_1_VALUE_BYTES, 
             *TEST_PTR_1_ADDR, 
+            *TEST_MALLOC_HEADER_1_ADDR,
             graph_data.heap_dump_data.as_ref().unwrap().min_addr, 
             graph_data.heap_dump_data.as_ref().unwrap().max_addr,
         );
 
         let pointer_node_1_from_wrapper = graph_data.create_node_from_bytes_wrapper(
-            &*TEST_PTR_1_VALUE_BYTES, *TEST_PTR_1_ADDR
+            &*TEST_PTR_1_VALUE_BYTES, *TEST_PTR_1_ADDR, *TEST_MALLOC_HEADER_1_ADDR
         );
 
         assert_eq!(pointer_node_1.get_address(), *TEST_PTR_1_ADDR);
@@ -481,11 +488,12 @@ mod tests {
         let value_node_1 = create_node_from_bytes(
             &*TEST_VAL_1_VALUE_BYTES, 
             *TEST_VAL_1_ADDR, 
+            *TEST_MALLOC_HEADER_1_ADDR,
             graph_data.heap_dump_data.as_ref().unwrap().min_addr, 
             graph_data.heap_dump_data.as_ref().unwrap().max_addr,
         );
         let value_node_1_from_wrapper = graph_data.create_node_from_bytes_wrapper(
-            &*TEST_VAL_1_VALUE_BYTES, *TEST_VAL_1_ADDR
+            &*TEST_VAL_1_VALUE_BYTES, *TEST_VAL_1_ADDR, *TEST_MALLOC_HEADER_1_ADDR
         );
 
         assert_eq!(value_node_1.get_address(), *TEST_VAL_1_ADDR);
@@ -503,6 +511,7 @@ mod tests {
         let node = graph_data.create_node_from_bytes_wrapper_index(
             &*TEST_PTR_1_VALUE_BYTES, 
             (utils::hex_str_to_addr("00000300", utils::Endianness::Big).unwrap() / BLOCK_BYTE_SIZE as u64) as usize,
+            *TEST_MALLOC_HEADER_1_ADDR
         );
         assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     }

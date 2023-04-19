@@ -93,6 +93,7 @@ impl GraphAnnotate {
                     // replace the ValueNode with a KeyNode
                     let key_node = Node::ValueNode(ValueNode::KeyNode(KeyNode {
                         addr: *addr, // addr of first block of key
+                        dtn_addr: node.unwrap().get_dtn_addr().unwrap(), // dtn_addr of first block of key
                         value: node.unwrap().get_value().unwrap(), // first block value of key
                         key: aggregated_key, // found in heap dump, full key (not just the first block)
                         key_data: key_data.clone(), // found in heap dump, key data

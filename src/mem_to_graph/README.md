@@ -2,6 +2,8 @@
 
 ## program params
 
+### `COMPRESS_POINTER_CHAINS`
+
 ##### graph pointer to pointer compression
 
 `COMPRESS_POINTER_CHAINS`: bool. Activate or not the pointer compression. This actually means that chains of pointers (i.e. pointers that points to pointers) are compressed in a single edge, where the weight depends on the number of compressed PTR2PTR edges.
@@ -21,3 +23,27 @@ However, when the graph is compressed, all the graphs only have at most 1 pointe
 ![compressed graph](./graphs/keep_img/test_graph_from_302-1644391327_compressed_no_vn-sfdp.png)
 
 > For simplicity, we thus decide to overwrite any depth value to 1 if the graph compression is active.
+
+
+
+### `REMOVE_TRIVIAL_ZERO_SAMPLES`
+
+##### simplifying the workflow of data by removing the lines of trivial full-of-zeros samples
+
+When generating the samples for value nodes, it appears that most lines are as the following examples:
+
+```shell
+592,43,33,40,1,0,0,0,0,0,0,0,0
+592,45,33,40,1,0,0,0,0,0,0,0,0
+...
+32784,2435,0,4097,1,0,0,0,0,0,0,0,0
+32784,2436,0,4097,1,0,0,0,0,0,0,0,0
+...
+32784,761,0,4097,1,0,0,0,0,0,0,0,0
+32784,762,0,4097,1,0,0,0,0,0,0,0,0
+...
+```
+
+In order to limit the imbalancing of the dataset, and since these lines are just full of zeros, it is not very interesting to make our models take them as parameters for the training. So we have added a parameter to remove them directly at the moment we create them.
+
+These lines probably represents part of strings or text data or even arrays of values that do not need to be accessed directly.

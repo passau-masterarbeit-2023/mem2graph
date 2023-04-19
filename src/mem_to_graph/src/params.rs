@@ -79,4 +79,32 @@ lazy_static! {
         }
     };
 
+    pub static ref BASE_EMBEDDING_DEPTH: usize = {
+        let base_embedding_depth = std::env::var("BASE_EMBEDDING_DEPTH");
+        match base_embedding_depth {
+            Ok(depth) => depth.parse::<usize>().unwrap(),
+            Err(_) => {
+                println!("BASE_EMBEDDING_DEPTH environment variable not set. Defaulting to '1'.");
+                return 1;
+            },
+        }
+    };
+
+    pub static ref TEST_CSV_EMBEDDING_FILE_PATH: PathBuf = {
+        let test_csv_embedding_file_path = std::env::var("TEST_CSV_EMBEDDING_FILE_PATH")
+            .expect("TEST_CSV_EMBEDDING_FILE_PATH environment variable must be set").to_string();
+        PathBuf::from(&test_csv_embedding_file_path)
+    };
+
+    pub static ref REMOVE_TRIVIAL_ZERO_SAMPLES: bool = {
+        let remove_trivial_zero_samples = std::env::var("REMOVE_TRIVIAL_ZERO_SAMPLES");
+        match remove_trivial_zero_samples {
+            Ok(mode) => mode == "true",
+            Err(_) => {
+                println!("REMOVE_TRIVIAL_ZERO_SAMPLES environment variable not set. Defaulting to 'false'.");
+                return false;
+            },
+        }
+    };
+
 }

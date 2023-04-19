@@ -134,8 +134,9 @@ fn test_create_node_from_bytes() {
     let mut node = create_node_from_bytes(
         &pointer_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
+        *TEST_MALLOC_HEADER_1_ADDR,
         *TEST_MIN_ADDR, 
-        *TEST_MAX_ADDR,
+        *TEST_MAX_ADDR, 
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     log::debug!("node1: {:?}, data: {:?}", node, pointer_block_of_8_bytes);
@@ -147,6 +148,7 @@ fn test_create_node_from_bytes() {
     node = create_node_from_bytes(
         &value_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
+        *TEST_MALLOC_HEADER_1_ADDR,
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR, 
     );
@@ -159,6 +161,7 @@ fn test_create_node_from_bytes() {
     node = create_node_from_bytes(
         &pointer_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
+        *TEST_MALLOC_HEADER_1_ADDR,
         *TEST_MIN_ADDR, 
         *TEST_MAX_ADDR, 
     );
