@@ -146,8 +146,6 @@ pub fn heap_dump_path_to_json_path(heap_dump_raw_file_path: &PathBuf) -> PathBuf
 
     if !json_path.exists() {
         log::error!("File doesn't exist: {:?}", json_path);
-    } else {
-        log::info!(" 📋 associated json file path: {:?}", json_path);
     }
     return json_path;
 }

@@ -113,4 +113,10 @@ lazy_static! {
         PathBuf::from(&testing_data_dir_path)
     };
 
+    pub static ref SAMPLES_AND_LABELS_DATA_DIR_PATH: PathBuf = {
+        let samples_and_labels_data_dir_path = std::env::var("SAMPLES_AND_LABELS_DATA_DIR_PATH")
+            .expect("SAMPLES_AND_LABELS_DATA_DIR_PATH environment variable must be set").to_string();
+        PathBuf::from(&samples_and_labels_data_dir_path)
+    };
+
 }

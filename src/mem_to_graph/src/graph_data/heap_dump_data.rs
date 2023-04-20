@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 
 use crate::graph_structs::KeyData;
-use crate::utils::{self, hex_str_to_addr, Endianness, json_value_to_addr, json_value_to_usize};
+use crate::utils::{self, json_value_to_addr, json_value_to_usize};
 use crate::params::BLOCK_BYTE_SIZE;
 
 pub struct HeapDumpData {

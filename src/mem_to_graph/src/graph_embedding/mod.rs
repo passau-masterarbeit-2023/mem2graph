@@ -5,7 +5,6 @@ use crate::graph_annotate::GraphAnnotate;
 
 use std::path::PathBuf;
 use std::collections::HashSet;
-use csv;
 
 pub struct GraphEmbedding {
     graph_annotate: GraphAnnotate,
@@ -31,33 +30,7 @@ impl GraphEmbedding {
 
     fn save_samples_and_labels_to_csv(&self, csv_path: PathBuf) {
         let (samples, labels) = self.generate_samples_and_labels();
-
-        let mut csv_writer = csv::Writer::from_path(csv_path).unwrap();
-
-        // header of CSV
-        let mut header = Vec::new();
-        header.push("f_dtn_byte_size".to_string());
-        header.push("f_position_in_dtn".to_string());
-        header.push("f_dtn_ptrs".to_string());
-        header.push("f_dtn_vns".to_string());
-        // start at 1 since 0 is a ValueNode (so always [0, 0])
-        for i in 1..self.depth {
-            header.push(format!("f_dtns_ancestor_{}", i));
-            header.push(format!("f_ptrs_ancestor_{}", i));
-        }
-        header.push("label".to_string());
-        csv_writer.write_record(header).unwrap();
-
-        // save samples and labels to CSV
-        for (sample, label) in samples.iter().zip(labels.iter()) {
-            let mut row: Vec<String> = Vec::new();
-            row.extend(sample.iter().map(|value| value.to_string()));
-            row.push(label.to_string());
-    
-            csv_writer.write_record(&row).unwrap();
-        }
-
-        csv_writer.flush().unwrap();
+        crate::exe_pipeline::save(samples, labels, csv_path);
     }
 
     /// Samples [
@@ -118,7 +91,7 @@ impl GraphEmbedding {
         let mut feature: Vec<usize> = self.add_features_from_associated_dtn(addr);
 
         // vectorize ancestors
-        let mut current_node_addrs: HashSet<u64> = HashSet::new();
+        let mut current_node_addrs: HashSet<u64>;
         let mut ancestor_addrs: HashSet<u64> = HashSet::new();
         ancestor_addrs.insert(addr);
 
