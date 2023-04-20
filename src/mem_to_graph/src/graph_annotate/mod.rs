@@ -21,7 +21,7 @@ impl GraphAnnotate {
     fn annotate(&mut self) {
 
         self.annotate_graph_with_key_data();
-        self.annotate_graph_with_special_ptr();
+        //self.annotate_graph_with_special_ptr(); // TODO: fix this
     }
 
     /// annotate graph with ptr from json file

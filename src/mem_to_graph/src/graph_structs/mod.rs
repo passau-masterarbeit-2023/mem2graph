@@ -289,7 +289,7 @@ impl SessionStateNode {
     /// build a new SessionStateNode from an old one
     /// WARN: the old node must be a PointerNode
     pub fn new(old_node: &Node) -> Self {
-        assert!(old_node.is_pointer());
+        assert!(old_node.is_pointer(), "Old node must be a pointer node, but is {:?}", old_node);
         Self {
             addr: old_node.get_address(),
             points_to: old_node.points_to().unwrap(),

@@ -79,12 +79,12 @@ lazy_static! {
         }
     };
 
-    pub static ref BASE_EMBEDDING_DEPTH: usize = {
-        let base_embedding_depth = std::env::var("BASE_EMBEDDING_DEPTH");
+    pub static ref EMBEDDING_DEPTH: usize = {
+        let base_embedding_depth = std::env::var("EMBEDDING_DEPTH");
         match base_embedding_depth {
             Ok(depth) => depth.parse::<usize>().unwrap(),
             Err(_) => {
-                println!("BASE_EMBEDDING_DEPTH environment variable not set. Defaulting to '1'.");
+                println!("EMBEDDING_DEPTH environment variable not set. Defaulting to '1'.");
                 return 1;
             },
         }
@@ -105,6 +105,12 @@ lazy_static! {
                 return false;
             },
         }
+    };
+
+    pub static ref TESTING_DATA_DIR_PATH: PathBuf = {
+        let testing_data_dir_path = std::env::var("TESTING_DATA_DIR_PATH")
+            .expect("TESTING_DATA_DIR_PATH environment variable must be set").to_string();
+        PathBuf::from(&testing_data_dir_path)
     };
 
 }
