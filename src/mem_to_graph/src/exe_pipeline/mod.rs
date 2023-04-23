@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use walkdir::WalkDir;
 use rayon::prelude::*;
+use std::time::Instant;
 
 use crate::graph_embedding::GraphEmbedding;
 
@@ -9,6 +10,9 @@ use crate::graph_embedding::GraphEmbedding;
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
 pub fn run(dir_path: PathBuf) {
+    // start timer
+    let start_time = Instant::now();
+
     // cut the path to just after "phdtrack_data"
     let dir_path_ = dir_path.clone();
     let dir_path_end_str = dir_path_.to_str().unwrap().split("phdtrack_data/").collect::<Vec<&str>>()[1];
@@ -31,7 +35,11 @@ pub fn run(dir_path: PathBuf) {
     let chunk_size = 10;
     let mut chunck_index = 0;
 
+    // run the sample and label generation for each file by chunks
     for chunk in heap_dump_raw_file_paths.chunks(chunk_size) {
+        // chunk time
+        let chunk_start_time = Instant::now();
+
         // check save
         let csv_file_name = format!("{}_chunck_idx-{}_samples.csv", dir_path_end_str.replace("/", "_"), chunck_index);
         let csv_path = crate::params::SAMPLES_AND_LABELS_DATA_DIR_PATH.clone().join(csv_file_name.clone());
@@ -75,6 +83,17 @@ pub fn run(dir_path: PathBuf) {
         }
         save(samples, labels, csv_path);
 
+        // log time
+        let chunk_duration = chunk_start_time.elapsed();
+        let total_duration = start_time.elapsed();
+        let progress = progress_bar(chunck_index * chunk_size, nb_files, 20);
+        log::info!(
+            " ⏱️  [chunk: {:.2?} / total: {:.2?}] {}",
+            chunk_duration,
+            total_duration,
+            progress
+        );
+
         chunck_index += 1;
     }
 
@@ -107,4 +126,12 @@ pub fn save(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_path: PathBuf) {
     }
 
     csv_writer.flush().unwrap();
+}
+
+fn progress_bar(current: usize, total: usize, length: usize) -> String {
+    let ratio = current as f64 / total as f64;
+    let filled_len = (ratio * length as f64).round() as usize;
+    let empty_len = length - filled_len;
+
+    format!("|{}{}| {:.2?}%", "█".repeat(filled_len), " ".repeat(empty_len), (ratio * 100.0))
 }
