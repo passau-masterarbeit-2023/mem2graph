@@ -2,6 +2,9 @@ use lazy_static::lazy_static;
 use std::path::{PathBuf};
 use dotenv::dotenv;
 use std::sync::Once;
+use std::io::Write;
+use chrono;
+use std::str::FromStr;
 
 use crate::utils::Endianness;
 
@@ -14,10 +17,45 @@ pub const MALLOC_HEADER_ENDIANNESS: Endianness = Endianness::Little;
 /// Initialize logger. 
 /// WARN: Must be called before any logging is done.
 fn init_logger() {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or(LOGGER_MODE.as_str()));
+    let log_directory = "./log";
+    std::fs::create_dir_all(log_directory).expect("Failed to create log directory");
+
+    let file_out = fern::log_file(&format!("{}/output.log", log_directory)).expect("Failed to open log file");
+
+    // Parse the log level from LOGGER_MODE
+    let log_level = match log::LevelFilter::from_str(LOGGER_MODE.as_str()) {
+        Ok(level) => level,
+        Err(_) => {
+            println!("Invalid LOGGER_MODE value. Defaulting to 'info'.");
+            log::LevelFilter::Info
+        },
+    };
+
+    let logger_config = fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "[{} {}][{} {}] {}",
+                chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
+                chrono::offset::Utc::now().format("%Z"),
+                record.level(),
+                record.target(),
+                message
+            ))
+        })
+        .level(log_level)
+        .chain(file_out)
+        .chain(fern::Output::call(|record| {
+            println!("{}", record.args());
+        }))
+        .apply();
+
+    if let Err(e) = logger_config {
+        panic!("Failed to initialize logger: {}", e);
+    }
 
     log::info!(" 🚀 starting mem to graph converter");
 }
+
 
 static INIT: Once = Once::new();
 
@@ -117,6 +155,17 @@ lazy_static! {
         let samples_and_labels_data_dir_path = std::env::var("SAMPLES_AND_LABELS_DATA_DIR_PATH")
             .expect("SAMPLES_AND_LABELS_DATA_DIR_PATH environment variable must be set").to_string();
         PathBuf::from(&samples_and_labels_data_dir_path)
+    };
+
+    pub static ref NB_FILES_PER_CHUNK: usize = {
+        let nb_files_per_chunk = std::env::var("NB_FILES_PER_CHUNK");
+        match nb_files_per_chunk {
+            Ok(nb) => nb.parse::<usize>().unwrap(),
+            Err(_) => {
+                println!("NB_FILES_PER_CHUNK environment variable not set. Defaulting to '10'.");
+                return 10;
+            },
+        }
     };
 
 }

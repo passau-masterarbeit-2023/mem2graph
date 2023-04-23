@@ -32,7 +32,7 @@ pub fn run(dir_path: PathBuf) {
     }
 
     let nb_files = heap_dump_raw_file_paths.len();
-    let chunk_size = 10;
+    let chunk_size = crate::params::NB_FILES_PER_CHUNK.clone();
     let mut chunck_index = 0;
 
     // run the sample and label generation for each file by chunks

@@ -141,10 +141,10 @@ fn generate_key_data_from_json(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::{
+    use crate::{params::{
         BLOCK_BYTE_SIZE, 
         TEST_HEAP_DUMP_FILE_PATH
-    };
+    }, utils::{hex_str_to_addr, Endianness}};
 
     #[test]
     fn test_object_creation() {
