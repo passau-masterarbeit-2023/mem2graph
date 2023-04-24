@@ -65,12 +65,28 @@ pub fn run(dir_path: PathBuf) {
                 *crate::params::EMBEDDING_DEPTH
             );
 
-            let (samples_, labels_) = graph_embedding.generate_samples_and_labels();
+            match graph_embedding {
+                Ok(graph_embedding) => {
+                    // generate samples and labels
+                    let (samples_, labels_) = graph_embedding.generate_samples_and_labels();
 
-            let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
-            log::info!(" 🟢 [N°{} / {} files] [id: {}]    (Nb samples: {})", global_idx, nb_files, file_name_id, samples_.len());
+                    let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
+                    log::info!(" 🟢 [N°{} / {} files] [id: {}]    (Nb samples: {})", global_idx, nb_files, file_name_id, samples_.len());
 
-            (samples_, labels_)
+                    (samples_, labels_)
+                },
+                Err(err) => match err {
+                    crate::utils::ErrorKind::MissingJsonKeyError(key) => {
+                        log::warn!(" 🔴 [N°{} / {} files] [id: {}]    Missing JSON key: {}", global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), key);
+                        (Vec::new(), Vec::new())
+                    },
+                    _ => {
+                        panic!("Other unexpected graph embedding error: {}", err);
+                    }
+                }
+            }
+
+            
         }).collect();
 
         // save to csv
@@ -99,6 +115,8 @@ pub fn run(dir_path: PathBuf) {
 
 }
 
+/// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
+/// for broken files (missing JSON key, etc.)
 pub fn save(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_path: PathBuf) {
     let mut csv_writer = csv::Writer::from_path(csv_path).unwrap();
 

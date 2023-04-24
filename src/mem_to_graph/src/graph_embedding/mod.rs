@@ -18,14 +18,14 @@ impl GraphEmbedding {
         heap_dump_raw_file_path: PathBuf, 
         pointer_byte_size: usize,
         depth: usize
-    ) -> GraphEmbedding {
-        let graph_annotate = GraphAnnotate::new(heap_dump_raw_file_path, pointer_byte_size);
+    ) -> Result<GraphEmbedding, crate::utils::ErrorKind> {
+        let graph_annotate = GraphAnnotate::new(heap_dump_raw_file_path, pointer_byte_size)?;
         
-        GraphEmbedding {
+        Ok(GraphEmbedding {
             graph_annotate,
             depth,
             test_first: false,
-        }
+        })
     }
 
     fn save_samples_and_labels_to_csv(&self, csv_path: PathBuf) {
@@ -154,7 +154,7 @@ mod tests {
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             crate::params::BLOCK_BYTE_SIZE,
             5
-        );
+        ).unwrap();
 
         graph_embedding.save_samples_and_labels_to_csv(
             params::TEST_CSV_EMBEDDING_FILE_PATH.clone()

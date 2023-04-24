@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 
 use crate::graph_structs::KeyData;
-use crate::utils::{self, json_value_to_addr, json_value_to_usize};
+use crate::utils::{self, json_value_to_addr, json_value_to_usize, json_value_for_key, ErrorKind};
 use crate::params::BLOCK_BYTE_SIZE;
 
 pub struct HeapDumpData {
@@ -30,7 +30,7 @@ impl HeapDumpData {
     pub fn new(
         heap_dump_raw_file_path: PathBuf,
         block_size: usize,
-    ) -> HeapDumpData {
+    ) -> Result<HeapDumpData, crate::utils::ErrorKind>  {
         // check if file exists
         if !heap_dump_raw_file_path.exists() {
             log::error!("File doesn't exist: {:?}", heap_dump_raw_file_path);
@@ -41,14 +41,14 @@ impl HeapDumpData {
         let json_path = utils::heap_dump_path_to_json_path(&heap_dump_raw_file_path);
         let blocks = HeapDumpData::generate_blocks_from_heap_dump(&heap_dump_raw_file_path, block_size);
         let json_data = HeapDumpData::get_json_data(&json_path);
-        let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len(), block_size);
-        let addr_to_key_data = generate_key_data_from_json(&json_data);
+        let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len(), block_size)?;
+        let addr_to_key_data = generate_key_data_from_json(&json_data)?;
 
         // special addresses
-        let addr_ssh_struct = json_value_to_addr(&json_data[&"SSH_STRUCT_ADDR"]);
-        let addr_session_state = json_value_to_addr(&json_data[&"SESSION_STATE_ADDR"]);
+        let addr_ssh_struct = json_value_to_addr(json_value_for_key(&json_data, "SSH_STRUCT_ADDR".to_string())?);
+        let addr_session_state = json_value_to_addr(json_value_for_key(&json_data, "SESSION_STATE_ADDR".to_string())?);
 
-        HeapDumpData {
+        Ok(HeapDumpData {
             block_size,
             blocks,
             heap_dump_raw_file_path: heap_dump_raw_file_path,
@@ -58,7 +58,7 @@ impl HeapDumpData {
             addr_to_key_data,
             addr_ssh_struct,
             addr_session_state,
-        }
+        })
     }
 
     pub fn addr_to_index_wrapper(&self, addr: u64) -> usize {
@@ -92,10 +92,10 @@ impl HeapDumpData {
     }
 
     /// get min and max address from json file to a given heap dump
-    fn get_min_max_addr(json_data: &Value, nb_blocks: usize, block_size: usize) -> (u64, u64) {
-        let min_addr = json_value_to_addr(&json_data["HEAP_START"]);
+    fn get_min_max_addr(json_data: &Value, nb_blocks: usize, block_size: usize) -> Result<(u64, u64), ErrorKind> {
+        let min_addr = json_value_to_addr(json_value_for_key(&json_data, "HEAP_START".to_string())?);
         let max_addr = min_addr + (nb_blocks as u64) * (block_size as u64);
-        (min_addr, max_addr)
+        Ok((min_addr, max_addr))
     }
 
 
@@ -107,17 +107,17 @@ impl HeapDumpData {
 /// dict keys are addresses of the keys (first block of the key)
 fn generate_key_data_from_json( 
     json_data: &Value,
-) -> HashMap<u64, KeyData> {
+) -> Result<HashMap<u64, KeyData>, ErrorKind> {
     let mut addr_key_pairs: HashMap<u64, KeyData> = HashMap::new();
 
     for (json_key, json_value) in json_data.as_object().unwrap().iter() {
         if json_key.starts_with("KEY_") && json_key.len() == 5 {
-            let real_key_addr = json_value_to_addr(&json_data[(json_key.to_owned() + "_ADDR")]);
+            let real_key_addr = json_value_to_addr(json_value_for_key(&json_data, (json_key.to_owned() + "_ADDR").to_string())?);
             let key_hex = json_value.as_str().unwrap();
             let key_bytes = hex::decode(key_hex).unwrap();
 
-            let key_size = json_value_to_usize(&json_data[&(json_key.to_owned() + "_LEN")]);
-            let real_key_len = json_value_to_usize(&json_data[&(json_key.to_owned() + "_REAL_LEN")]);
+            let key_size = json_value_to_usize(json_value_for_key(&json_data, (json_key.to_owned() + "_LEN").to_string())?);
+            let real_key_len = json_value_to_usize(json_value_for_key(&json_data, (json_key.to_owned() + "_REAL_LEN").to_string())?);
 
             let key_data = KeyData {
                 name: json_key.clone(),
@@ -133,7 +133,7 @@ fn generate_key_data_from_json(
 
     log::debug!("Number of keys in JSON: {}", addr_key_pairs.len());
 
-    addr_key_pairs
+    Ok(addr_key_pairs)
 }
 
 // NOTE: tests must be in the same module as the code they are testing
@@ -149,10 +149,10 @@ mod tests {
     #[test]
     fn test_object_creation() {
         crate::tests::setup();
-        let heap_dump_data = HeapDumpData::new(
+        let heap_dump_data: HeapDumpData = HeapDumpData::new(
             TEST_HEAP_DUMP_FILE_PATH.clone(), 
             BLOCK_BYTE_SIZE
-        );
+        ).unwrap();
 
         assert_eq!(heap_dump_data.block_size, BLOCK_BYTE_SIZE);
         assert_eq!(heap_dump_data.heap_dump_raw_file_path.to_str(), TEST_HEAP_DUMP_FILE_PATH.to_str());
@@ -194,7 +194,7 @@ mod tests {
             &crate::params::TEST_HEAP_JSON_FILE_PATH
         );
         let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(
-            &json_data, blocks.len(), BLOCK_BYTE_SIZE);
+            &json_data, blocks.len(), BLOCK_BYTE_SIZE).unwrap();
 
         assert!(min_addr < max_addr);
     }
@@ -202,7 +202,10 @@ mod tests {
     #[test]
     fn test_addr_to_index_wrapper_and_index_to_addr_wrapper() {
         crate::tests::setup();
-        let heap_dump_data = HeapDumpData::new(TEST_HEAP_DUMP_FILE_PATH.clone(), BLOCK_BYTE_SIZE);
+        let heap_dump_data = HeapDumpData::new(
+            TEST_HEAP_DUMP_FILE_PATH.clone(), 
+            BLOCK_BYTE_SIZE
+        ).unwrap();
         let addr = heap_dump_data.min_addr + 2 * BLOCK_BYTE_SIZE as u64;
 
         let index = heap_dump_data.addr_to_index_wrapper(addr);
@@ -218,7 +221,7 @@ mod tests {
         let json_data = HeapDumpData::get_json_data(
             &*crate::params::TEST_HEAP_JSON_FILE_PATH
         );
-        let addr_to_key_data = generate_key_data_from_json(&json_data);
+        let addr_to_key_data = generate_key_data_from_json(&json_data).unwrap();
 
         assert_eq!(addr_to_key_data.len(), 6); // 6 keys, from A to F
 

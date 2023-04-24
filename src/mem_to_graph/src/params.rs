@@ -2,7 +2,6 @@ use lazy_static::lazy_static;
 use std::path::{PathBuf};
 use dotenv::dotenv;
 use std::sync::Once;
-use std::io::Write;
 use chrono;
 use std::str::FromStr;
 

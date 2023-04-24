@@ -1,9 +1,10 @@
 use std::convert::TryInto;
 use std::path::PathBuf;
-
+use error_chain::ChainedError;
+use error_chain::error_chain;
 use serde_json::Value;
-use crate::params::PTR_ENDIANNESS;
 
+use crate::params::PTR_ENDIANNESS;
 use crate::graph_structs::{Node, PointerNode, ValueNode, BasePointerNode, BaseValueNode};
 
 /// convert an address to an index
@@ -43,12 +44,32 @@ pub fn json_value_to_usize(json_value: &Value) -> usize {
     u64::from_str_radix(int_str, 10).unwrap() as usize
 }
 
+error_chain! {
+    foreign_links {
+        Io(std::io::Error);
+        Json(serde_json::Error);
+    }
+    errors {
+        MissingJsonKeyError(json_annotation: String) {
+            description("Invalid json annotation")
+            display("Invalid json annotation: {}", json_annotation)
+        }
+    }
+}
+
+/// check if a json value is a null value
+/// in that case, return custom error
+pub fn json_value_for_key(json: &Value, key: String) -> Result<&Value> {
+    json.get(&key)
+        .ok_or_else(|| Error::from_kind(ErrorKind::MissingJsonKeyError(key)))
+}
+
 /// convert a hex string to an address represented as a u64
 /// WARN: necessary to specify the string endianness for the conversion
 /// WARN: Due to little endian needing to have a fixed length of 16 characters, 
 ///       the hex string will be padded with 0s to the right if it is less than 16 characters
 /// NOTE: always returns a big endian address as a u64
-pub fn hex_str_to_addr(hex_str: &str, endianness: Endianness) -> Result<u64, std::num::ParseIntError> {
+pub fn hex_str_to_addr(hex_str: &str, endianness: Endianness) -> std::result::Result<u64, std::num::ParseIntError> {
     match endianness {
         Endianness::Big => Ok(u64::from_str_radix(hex_str, 16)?),
         Endianness::Little => {

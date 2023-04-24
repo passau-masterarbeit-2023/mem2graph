@@ -6,14 +6,14 @@ pub struct GraphAnnotate {
 }
 
 impl GraphAnnotate {
-    pub fn new(heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> GraphAnnotate {
-        let graph_data = GraphData::new(heap_dump_raw_file_path, pointer_byte_size);
+    pub fn new(heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> Result<GraphAnnotate, crate::utils::ErrorKind> {
+        let graph_data = GraphData::new(heap_dump_raw_file_path, pointer_byte_size)?;
         
         let mut graph_annotate = GraphAnnotate {
             graph_data,
         };
         graph_annotate.annotate();
-        graph_annotate
+        Ok(graph_annotate)
     }
 
     /// Annotate the graph with data from the JSON file
@@ -130,7 +130,7 @@ mod tests {
         let graph_annotate = GraphAnnotate::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE
-        );
+        ).unwrap();
 
         // check that there is at least one SSH_STRUCT node
         assert!(graph_annotate.graph_data.addr_to_node.values().any(|node| {
@@ -153,7 +153,7 @@ mod tests {
         let graph_annotate = GraphAnnotate::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE
-        );
+        ).unwrap();
 
         // check that there is at least one KeyNode
         assert!(graph_annotate.graph_data.addr_to_node.values().any(|node| {
