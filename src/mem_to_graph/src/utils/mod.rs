@@ -1,6 +1,5 @@
 use std::convert::TryInto;
 use std::path::PathBuf;
-use error_chain::ChainedError;
 use error_chain::error_chain;
 use serde_json::Value;
 

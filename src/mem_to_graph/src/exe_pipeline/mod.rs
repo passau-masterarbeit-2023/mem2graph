@@ -5,31 +5,45 @@ use std::time::Instant;
 
 use crate::graph_embedding::GraphEmbedding;
 
-/// Takes a directory, then list all files in that directory and its subdirectories
+/// Takes a path as input.
+/// This path can be a file or a directory.
+/// If it is a file, return a vector containing only this file.
+/// If it is a directory, return a vector containing all files in this directory.
+fn get_raw_file_or_files_from_path(path: PathBuf) -> Vec<PathBuf> {
+    let mut raw_file_paths: Vec<PathBuf> = Vec::new();
+
+    if path.is_file() {
+        raw_file_paths.push(path);
+    } else if path.is_dir() {
+        for entry in WalkDir::new(path) {
+            let entry = entry.unwrap();
+            let path = entry.path();
+
+            if path.is_file() {
+                if path.extension().map_or(false, |ext| ext == "raw") {
+                    raw_file_paths.push(path.to_path_buf());
+                }
+            }
+        }
+    }
+
+    return raw_file_paths;
+}
+
+/// Takes a directory or a file
+/// If directory then list all files in that directory and its subdirectories
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run(dir_path: PathBuf) {
+pub fn run(path: PathBuf) {
     // start timer
     let start_time = Instant::now();
 
     // cut the path to just after "phdtrack_data"
-    let dir_path_ = dir_path.clone();
+    let dir_path_ = path.clone();
     let dir_path_end_str = dir_path_.to_str().unwrap().split("phdtrack_data/").collect::<Vec<&str>>()[1];
 
-    let mut heap_dump_raw_file_paths: Vec<PathBuf> = Vec::new();
-
-    // list all files in the directory and its subdirectories
-    for entry in WalkDir::new(dir_path) {
-        let entry = entry.unwrap();
-        let path = entry.path();
-
-        if path.is_file() {
-            if path.extension().map_or(false, |ext| ext == "raw") {
-                heap_dump_raw_file_paths.push(path.to_path_buf());
-            }
-        }
-    }
+    let heap_dump_raw_file_paths: Vec<PathBuf> = get_raw_file_or_files_from_path(path.clone());
 
     let nb_files = heap_dump_raw_file_paths.len();
     let chunk_size = crate::params::NB_FILES_PER_CHUNK.clone();

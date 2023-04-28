@@ -9,8 +9,6 @@ use std::collections::HashSet;
 pub struct GraphEmbedding {
     graph_annotate: GraphAnnotate,
     depth: usize,
-
-    test_first: bool
 }
 
 impl GraphEmbedding {
@@ -24,7 +22,6 @@ impl GraphEmbedding {
         Ok(GraphEmbedding {
             graph_annotate,
             depth,
-            test_first: false,
         })
     }
 

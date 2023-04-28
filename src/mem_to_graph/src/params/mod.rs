@@ -6,6 +6,7 @@ use chrono;
 use std::str::FromStr;
 
 use crate::utils::Endianness;
+pub mod argv;
 
 pub const BLOCK_BYTE_SIZE: usize = 8; // 64-bit, ex: C0 03 7B 09 2A 56 00 00
 
@@ -55,7 +56,6 @@ fn init_logger() {
     log::info!(" 🚀 starting mem to graph converter");
 }
 
-
 static INIT: Once = Once::new();
 
 /// Initialize things that need to be initialized only once.
@@ -69,6 +69,8 @@ pub fn init() {
 
 // Get the path to files for the program, using the environment variables.
 lazy_static! {
+    pub static ref ARGV: argv::Argv = argv::get_program_args();
+
     static ref LOGGER_MODE: String = {
         let logger_mode = std::env::var("LOGGER_MODE");
         match logger_mode {

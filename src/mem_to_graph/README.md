@@ -1,5 +1,13 @@
 # Mem to Graph
 
+## run
+
+`cargo run -- -h`: display help on program arguments
+
+`cargo run`: run program with default values (especially default dir from `.env` config file).
+
+
+
 ## program params
 
 ### `COMPRESS_POINTER_CHAINS`
@@ -23,8 +31,6 @@ However, when the graph is compressed, all the graphs only have at most 1 pointe
 ![compressed graph](./graphs/keep_img/test_graph_from_302-1644391327_compressed_no_vn-sfdp.png)
 
 > For simplicity, we thus decide to overwrite any depth value to 1 if the graph compression is active.
-
-
 
 ### `REMOVE_TRIVIAL_ZERO_SAMPLES`
 

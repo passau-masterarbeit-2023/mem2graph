@@ -104,7 +104,7 @@ impl GraphAnnotate {
                         "key ({}) found in heap dump is not the same as the key found in the json file.  
                         found aggregated_key: {:?}, 
                         expected key_data.key: {:?}", 
-                        key_data.name, key_data.key, aggregated_key
+                        key_data.name, aggregated_key, key_data.key
                     );
                 }
 
