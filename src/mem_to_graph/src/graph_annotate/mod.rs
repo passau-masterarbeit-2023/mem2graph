@@ -85,7 +85,6 @@ impl GraphAnnotate {
                         );
                         break;
                     }
-                    
                 }
                 
                 // annotate if the key found in the heap dump is the same as the key found in the json file

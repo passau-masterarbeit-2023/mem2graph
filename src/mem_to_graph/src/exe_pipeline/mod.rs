@@ -41,13 +41,23 @@ pub fn run(path: PathBuf) {
 
     // cut the path to just after "phdtrack_data"
     let dir_path_ = path.clone();
-    let dir_path_end_str = dir_path_.to_str().unwrap().split("phdtrack_data/").collect::<Vec<&str>>()[1];
+    let dir_path_split = dir_path_.to_str().unwrap().split("phdtrack_data/").collect::<Vec<&str>>();
+    
+    if dir_path_split.len() != 2 {
+        panic!("The path must contains \"phdtrack_data/\" and the name of the directory or file.");
+    }
+    let dir_path_end_str = dir_path_split[1];
 
     let heap_dump_raw_file_paths: Vec<PathBuf> = get_raw_file_or_files_from_path(path.clone());
 
     let nb_files = heap_dump_raw_file_paths.len();
     let chunk_size = crate::params::NB_FILES_PER_CHUNK.clone();
     let mut chunck_index = 0;
+
+    // test if there is at least one file
+    if nb_files == 0 {
+        panic!("The file doesn't exist or the directory doesn't contain any .raw file: {}", path.to_str().unwrap());
+    }
 
     // run the sample and label generation for each file by chunks
     for chunk in heap_dump_raw_file_paths.chunks(chunk_size) {
