@@ -42,7 +42,27 @@ def remove_vn_lines(input_file, output_dir):
     # Read input file and remove lines containing "VN"
     with open(input_file, 'r') as f:
         lines = f.readlines()
-        filtered_lines = [line for line in lines if "VN" not in line]
+        
+        # is node line
+        def is_node_line(line):
+            return "->" not in line
+        
+        # get the specials nodes addresses to identify the lines to keep
+        specials_nodes_lines = [line for line in lines if is_node_line(line) and "label" in line]
+        specials_nodes_addr = [line.split("(")[1] for line in specials_nodes_lines]
+        specials_nodes_addr = [line.split(")")[0] for line in specials_nodes_addr]
+        print("Specials nodes addresses:", specials_nodes_addr)
+
+        def is_special_node_line(line):
+            for addr in specials_nodes_addr:
+                if addr in line:
+                    return True
+            return False
+        
+        def is_vn_line(line):
+            return "VN" in line
+
+        filtered_lines = [line for line in lines if not is_vn_line(line) or is_special_node_line(line)]
 
     # Save the new file in the output directory
     output_file = os.path.join(output_dir, os.path.basename(input_file)).replace(".gv", "_no_vn.gv")

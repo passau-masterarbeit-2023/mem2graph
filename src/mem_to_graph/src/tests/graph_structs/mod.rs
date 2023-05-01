@@ -19,18 +19,8 @@ fn create_test_structs() -> Vec<Node> {
         points_to: 8,
     });
 
-    let session_state_node = PointerNode::SessionStateNode(SessionStateNode {
-        addr: 3,
-        points_to: 16,
-    });
-
-    let ssh_struct_node = PointerNode::SshStructNode(SshStructNode {
-        addr: 4,
-        points_to: 24,
-    });
-
     let key_data = KeyData {
-        addr: 5,
+        addr: 3,
         name: "key1".to_string(),
         key: vec![0, 1, 2, 3, 4, 5, 6, 7],
         len: 4,
@@ -38,7 +28,7 @@ fn create_test_structs() -> Vec<Node> {
     };
 
     let key_node = ValueNode::KeyNode(KeyNode {
-        addr: 6,
+        addr: 4,
         dtn_addr: 0,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
         key: vec![0, 1, 2, 3, 4, 5, 6, 7],
@@ -51,8 +41,6 @@ fn create_test_structs() -> Vec<Node> {
         Node::ValueNode(base_value_node.clone()),
         Node::ValueNode(key_node.clone()),
         Node::PointerNode(base_pointer_node.clone()),
-        Node::PointerNode(session_state_node.clone()),
-        Node::PointerNode(ssh_struct_node.clone()),
     ];
 
     nodes
@@ -97,19 +85,13 @@ fn test_hierarchy() {
                     PointerNode::BasePointerNode(_) => {
                         counter_pointer_nodes += 1;
                     }
-                    PointerNode::SessionStateNode(_) => {
-                        counter_pointer_nodes += 1;
-                    }
-                    PointerNode::SshStructNode(_) => {
-                        counter_pointer_nodes += 1;
-                    }
                 }
             }
         }
     }
     assert_eq!(counter_data_structure_nodes, 1);
     assert_eq!(counter_value_nodes, 2);
-    assert_eq!(counter_pointer_nodes, 3);
+    assert_eq!(counter_pointer_nodes, 1);
     
 }
 
@@ -125,7 +107,7 @@ fn test_important_nodes() {
             counter_importants += 1;
         }
     }
-    assert_eq!(counter_importants, 3);
+    assert_eq!(counter_importants, 1);
 }
 
 #[test]
@@ -141,7 +123,7 @@ fn test_is_pointer() {
             counter_pointers += 1;
         }
     }
-    assert_eq!(counter_pointers, 3);
+    assert_eq!(counter_pointers, 1);
 }
 
 #[test]

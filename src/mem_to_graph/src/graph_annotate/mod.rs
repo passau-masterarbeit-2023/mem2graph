@@ -1,4 +1,4 @@
-use crate::{graph_data::GraphData, graph_structs::{PointerNode, SshStructNode, Node, SessionStateNode, ValueNode, KeyNode}};
+use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation}};
 use std::path::{PathBuf};
 
 pub struct GraphAnnotate {
@@ -21,42 +21,28 @@ impl GraphAnnotate {
     fn annotate(&mut self) {
 
         self.annotate_graph_with_key_data();
-        self.annotate_graph_with_special_ptr();
+        self.annotate_graph_with_special_node_annotation();
     }
 
     /// annotate graph with ptr from json file
-    fn annotate_graph_with_special_ptr(&mut self) {
+    fn annotate_graph_with_special_node_annotation(&mut self) {
         {
             // SSH_STRUCT_ADDR
             let ssh_struct_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_ssh_struct;
-            let old_node: Option<&Node> = self.graph_data.addr_to_node.get(&ssh_struct_addr);
-            if old_node.is_some() {
-                let new_node = Node::PointerNode(PointerNode::SshStructNode(
-                    SshStructNode::new(old_node.unwrap())
-                ));
-    
-                // replace old node with new node in the map
-                self.graph_data.addr_to_node.insert(ssh_struct_addr, new_node);
-                log::info!("ssh_struct_addr ({}) found.", ssh_struct_addr)
-            } else {
-                log::info!("ssh_struct_addr ({}) not found.", ssh_struct_addr)
-            }
+            
+            self.graph_data.special_node_to_annotation.insert(
+                ssh_struct_addr,
+                SpecialNodeAnnotation::SshStructNodeAnnotation,
+            );
         }
         {
             // SESSION_STATE_ADDR
             let session_state_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_session_state;
-            let old_node: Option<&Node> = self.graph_data.addr_to_node.get(&session_state_addr);
-            if old_node.is_some() {
-                let new_node = Node::PointerNode(PointerNode::SessionStateNode(
-                    SessionStateNode::new(old_node.unwrap())
-                ));
-    
-                // replace old node with new node in the map
-                self.graph_data.addr_to_node.insert(session_state_addr, new_node);
-                log::info!("session_state_addr ({}) found.", session_state_addr)
-            } else {
-                log::info!("session_state_addr ({}) not found.", session_state_addr)
-            }
+            
+            self.graph_data.special_node_to_annotation.insert(
+                session_state_addr,
+                SpecialNodeAnnotation::SessionStateNodeAnnotation,
+            );
         }
     }
 
@@ -149,8 +135,8 @@ mod tests {
     use crate::graph_structs::{
         Node, 
         ValueNode, 
-        PointerNode, 
     };
+    use crate::tests::{TEST_GRAPH_DOT_DIR_PATH, TEST_HEAP_DUMP_FILE_NUMBER};
 
     #[test]
     fn test_annotation() {
@@ -161,18 +147,18 @@ mod tests {
             params::BLOCK_BYTE_SIZE
         ).unwrap();
 
-        // check that there is at least one SSH_STRUCT node
-        assert!(graph_annotate.graph_data.addr_to_node.values().any(|node| {
-            if let Node::PointerNode(PointerNode::SshStructNode(_)) = node {
-                true
-            } else {
-                false
-            }
-        }));
+        // check that there is the SshStructNodeAnnotation
+        let ssh_struct_annotation = graph_annotate.graph_data.special_node_to_annotation.get(&*crate::tests::TEST_SSH_STRUCT_ADDR);
+        assert!(ssh_struct_annotation.is_some());
+        assert!(matches!(ssh_struct_annotation.unwrap(), SpecialNodeAnnotation::SshStructNodeAnnotation));
 
+        // check that there is the SessionStateNodeAnnotation
         // NOTE: We have no SESSION_STATE node in the test heap dump file
         // we don't really know why.
         // TODO: Find out why there is no SESSION_STATE node in the test heap dump file
+        let session_state_annotation = graph_annotate.graph_data.special_node_to_annotation.get(&*crate::tests::TEST_SESSION_STATE_ADDR);
+        assert!(session_state_annotation.is_some());
+        assert!(matches!(session_state_annotation.unwrap(), SpecialNodeAnnotation::SessionStateNodeAnnotation));
     }
 
     #[test]
@@ -203,6 +189,29 @@ mod tests {
             },
             _ => panic!("Node is not a KeyNode"),
         }
+    }
+
+    #[test]
+    fn test_graph_generation_to_dot() {
+        crate::tests::setup();
+
+        use std::path::Path;
+        use std::fs::File;
+        use std::io::Write;
+        
+        let graph_annotate = GraphAnnotate::new(
+            params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
+            params::BLOCK_BYTE_SIZE
+        ).unwrap();
+
+        // save the graph to a file as a dot file (graphviz)
+        let dot_file_name: String = format!("{}test_graph_from_{}.gv", &*TEST_GRAPH_DOT_DIR_PATH, &*TEST_HEAP_DUMP_FILE_NUMBER);
+        let dot_file_path = Path::new(dot_file_name.as_str());
+        let mut dot_file = File::create(dot_file_path).unwrap();
+        dot_file.write_all(format!("{}", graph_annotate.graph_data).as_bytes()).unwrap(); // using the custom formatter
+
+        // check that the value node addresses are kept
+        assert!(graph_annotate.graph_data.unannotated_value_node_addrs.len() > 0);
     }
 
 }

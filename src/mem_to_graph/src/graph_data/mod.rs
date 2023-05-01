@@ -7,7 +7,7 @@ use petgraph::visit::IntoEdgeReferences;
 pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
-use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT};
+use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT, SpecialNodeAnnotation};
 use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS, COMPRESS_POINTER_CHAINS};
 use crate::utils;
 
@@ -25,6 +25,8 @@ pub struct GraphData {
     pub addr_to_node: HashMap<u64, graph_structs::Node>,
     pub unannotated_value_node_addrs: Vec<u64>, // list of the addresses of the nodes that are values (and potental keys)
 
+    pub special_node_to_annotation: HashMap<u64, SpecialNodeAnnotation>, // special nodes are the ones that are not values (and not keys)
+
     pub heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
 }
 
@@ -37,6 +39,7 @@ impl GraphData {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
             unannotated_value_node_addrs: Vec::new(),
+            special_node_to_annotation: HashMap::new(),
             heap_dump_data: Some(
                 HeapDumpData::new(
                     heap_dump_raw_file_path,
@@ -56,6 +59,7 @@ impl GraphData {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
             unannotated_value_node_addrs: Vec::new(),
+            special_node_to_annotation: HashMap::new(),
             heap_dump_data: None,
         }
     }
@@ -305,8 +309,22 @@ impl std::fmt::Display for GraphData {
         // TODO match node and call its associated display function
         for addr in self.graph.nodes() {
             let node = self.addr_to_node.get(&addr).unwrap();
-            // call the display function of the node
-            writeln!(f, "{}", node)?;
+
+            // handle special nodes
+            match self.special_node_to_annotation.get(&addr) {
+                Some(annotation) => {
+                    writeln!(
+                        f, 
+                        "    \"{}\" {}", 
+                        node.str_addr_and_type(), 
+                        annotation.annotate_dot_attributes()
+                    )?;
+                },
+                None => {
+                    // Not a special node, just call the display function of the node
+                    writeln!(f, "{}", node)?;
+                }
+            }
         }
         
         // since edge doesn't stores references but real addresses,
@@ -515,29 +533,4 @@ mod tests {
         );
         assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     }
-
-    #[test]
-    fn test_graph_from_test_file() {
-        crate::tests::setup();
-
-        use std::path::Path;
-        use std::fs::File;
-        use std::io::Write;
-        
-        let graph_data = GraphData::new(
-            params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
-            params::BLOCK_BYTE_SIZE
-        ).unwrap();
-        check_heap_dump!(graph_data);
-
-        // save the graph to a file as a dot file (graphviz)
-        let dot_file_name: String = format!("{}test_graph_from_{}.gv", &*TEST_GRAPH_DOT_DIR_PATH, &*TEST_HEAP_DUMP_FILE_NUMBER);
-        let dot_file_path = Path::new(dot_file_name.as_str());
-        let mut dot_file = File::create(dot_file_path).unwrap();
-        dot_file.write_all(format!("{}", graph_data).as_bytes()).unwrap(); // using the custom formatter
-
-        // check that the value node addresses are kept
-        assert!(graph_data.unannotated_value_node_addrs.len() > 0);
-    }
-
 }

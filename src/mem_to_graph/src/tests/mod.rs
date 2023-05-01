@@ -80,4 +80,10 @@ lazy_static! {
     pub static ref TEST_KEY_F_NAME: String = "KEY_F".to_string();
     pub static ref TEST_KEY_F_LEN: usize = TEST_KEY_F_BYTES.len();
 
+    // special nodes
+    pub static ref TEST_SSH_STRUCT_ADDR_STR: String = "55a6d2363630".to_string();
+    pub static ref TEST_SSH_STRUCT_ADDR: u64 = hex_str_to_addr(&*TEST_SSH_STRUCT_ADDR_STR.as_str(), Endianness::Big).unwrap();
+    pub static ref TEST_SESSION_STATE_ADDR_STR: String = "55a6d2364940".to_string();
+    pub static ref TEST_SESSION_STATE_ADDR: u64 = hex_str_to_addr(&*TEST_SESSION_STATE_ADDR_STR.as_str(), Endianness::Big).unwrap();
+
 }
