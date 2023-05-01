@@ -21,7 +21,7 @@ impl GraphAnnotate {
     fn annotate(&mut self) {
 
         self.annotate_graph_with_key_data();
-        //self.annotate_graph_with_special_ptr(); // TODO: fix this
+        self.annotate_graph_with_special_ptr();
     }
 
     /// annotate graph with ptr from json file
@@ -71,12 +71,37 @@ impl GraphAnnotate {
                 let mut aggregated_key: Vec<u8> = Vec::new();
 
                 // get all the ValueNodes that are part of the key
+                // WARN: when the key lenght is not a multiple of the block size,
+                // we need to crop the aggregated_key to the real key length
                 let block_size = self.graph_data.heap_dump_data.as_ref().unwrap().block_size;
                 for i in 0..(key_data.len / block_size) {
                     let current_key_block_addr = addr + (i * block_size) as u64;
                     let current_key_block_node: Option<&Node> = self.graph_data.addr_to_node.get(&current_key_block_addr);
                     if current_key_block_node.is_some() {
-                        aggregated_key.extend_from_slice(&current_key_block_node.unwrap().get_value().unwrap());
+                        let current_node = current_key_block_node.unwrap();
+                        // WARN: it is possible that one the block has been identified as a PointerNode
+                        // since we are doing the annotation, we know that it should be a ValueNode.
+                        // Do NOT modify the graph, since we are at the annotation stage.
+                        // Instead, we just get the value of the ValueNode, and convert the pointer to a row byte array
+                        match current_node {
+                            Node::ValueNode(_) => {
+                                aggregated_key.extend_from_slice(&current_node.get_value().unwrap());
+                            },
+                            Node::PointerNode(_) => {
+                                let pointer_value = current_node.points_to().unwrap();
+                                aggregated_key.extend_from_slice(&pointer_value.to_be_bytes());
+                            },
+                            _ => {
+                                // log warning
+                                log::warn!(
+                                    "current_key_block_node is not a ValueNode nor a PointerNode for addr: {}, for key {}", 
+                                    current_key_block_addr, key_data.name
+                                );
+                                break;
+                            },
+                        }
+
+                        
                     } else {
                         // log warning
                         log::warn!(
@@ -85,6 +110,11 @@ impl GraphAnnotate {
                         );
                         break;
                     }
+                }
+
+                // crop key to real key length
+                if aggregated_key.len() > key_data.len {
+                    aggregated_key.truncate(key_data.len);
                 }
                 
                 // annotate if the key found in the heap dump is the same as the key found in the json file

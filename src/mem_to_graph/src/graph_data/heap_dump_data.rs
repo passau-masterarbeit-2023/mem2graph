@@ -116,8 +116,6 @@ fn generate_key_data_from_json(
             let key_hex: &str = json_value.as_str().unwrap();
             let key_bytes: Vec<u8> = hex::decode(key_hex).unwrap();
 
-            log::info!("name: {}, key_hex str: {}, key_bytes: {:?}", json_key, key_hex, key_bytes);
-
             let key_size = json_value_to_usize(json_value_for_key(&json_data, (json_key.to_owned() + "_LEN").to_string())?);
             let real_key_len = json_value_to_usize(json_value_for_key(&json_data, (json_key.to_owned() + "_REAL_LEN").to_string())?);
 
@@ -128,8 +126,6 @@ fn generate_key_data_from_json(
                 len: key_size,
                 real_len: real_key_len,
             };
-
-            log::info!("KeyData.key: {:?}", key_data.key);
 
             addr_key_pairs.insert(real_key_addr, key_data);
         }
