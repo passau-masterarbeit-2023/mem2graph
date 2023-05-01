@@ -151,14 +151,13 @@ mod tests {
         let ssh_struct_annotation = graph_annotate.graph_data.special_node_to_annotation.get(&*crate::tests::TEST_SSH_STRUCT_ADDR);
         assert!(ssh_struct_annotation.is_some());
         assert!(matches!(ssh_struct_annotation.unwrap(), SpecialNodeAnnotation::SshStructNodeAnnotation));
+        assert!(graph_annotate.graph_data.addr_to_node.get(&*crate::tests::TEST_SSH_STRUCT_ADDR).is_some());
 
-        // check that there is the SessionStateNodeAnnotation
-        // NOTE: We have no SESSION_STATE node in the test heap dump file
-        // we don't really know why.
-        // TODO: Find out why there is no SESSION_STATE node in the test heap dump file
         let session_state_annotation = graph_annotate.graph_data.special_node_to_annotation.get(&*crate::tests::TEST_SESSION_STATE_ADDR);
         assert!(session_state_annotation.is_some());
         assert!(matches!(session_state_annotation.unwrap(), SpecialNodeAnnotation::SessionStateNodeAnnotation));
+        // TODO : we have no session state node in the graph ! 
+        // assert!(graph_annotate.graph_data.addr_to_node.get(&*crate::tests::TEST_SESSION_STATE_ADDR).is_some());
     }
 
     #[test]
