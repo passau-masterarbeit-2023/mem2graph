@@ -32,7 +32,7 @@ impl GraphAnnotate {
             
             self.graph_data.special_node_to_annotation.insert(
                 ssh_struct_addr,
-                SpecialNodeAnnotation::SshStructNodeAnnotation,
+                SpecialNodeAnnotation::SshStructNodeAnnotation(ssh_struct_addr),
             );
         }
         {
@@ -41,7 +41,7 @@ impl GraphAnnotate {
             
             self.graph_data.special_node_to_annotation.insert(
                 session_state_addr,
-                SpecialNodeAnnotation::SessionStateNodeAnnotation,
+                SpecialNodeAnnotation::SessionStateNodeAnnotation(session_state_addr),
             );
         }
     }
@@ -149,15 +149,19 @@ mod tests {
 
         // check that there is the SshStructNodeAnnotation
         let ssh_struct_annotation = graph_annotate.graph_data.special_node_to_annotation.get(&*crate::tests::TEST_SSH_STRUCT_ADDR);
+        let ssh_struct_addr = &*crate::tests::TEST_SSH_STRUCT_ADDR;
+        
         assert!(ssh_struct_annotation.is_some());
-        assert!(matches!(ssh_struct_annotation.unwrap(), SpecialNodeAnnotation::SshStructNodeAnnotation));
-        assert!(graph_annotate.graph_data.addr_to_node.get(&*crate::tests::TEST_SSH_STRUCT_ADDR).is_some());
+        assert!(matches!(ssh_struct_annotation.unwrap(), SpecialNodeAnnotation::SshStructNodeAnnotation(_)));
+        assert!(graph_annotate.graph_data.addr_to_node.get(ssh_struct_addr).is_some());
 
         let session_state_annotation = graph_annotate.graph_data.special_node_to_annotation.get(&*crate::tests::TEST_SESSION_STATE_ADDR);
+        
         assert!(session_state_annotation.is_some());
-        assert!(matches!(session_state_annotation.unwrap(), SpecialNodeAnnotation::SessionStateNodeAnnotation));
-        // TODO : we have no session state node in the graph ! 
-        // assert!(graph_annotate.graph_data.addr_to_node.get(&*crate::tests::TEST_SESSION_STATE_ADDR).is_some());
+        assert!(matches!(session_state_annotation.unwrap(), SpecialNodeAnnotation::SessionStateNodeAnnotation(_)));
+        // TODO: we have no session state node in the graph ! 
+        //let session_state_addr = &*crate::tests::TEST_SESSION_STATE_ADDR;
+        // assert!(graph_annotate.graph_data.addr_to_node.get(session_state_addr).is_some());
     }
 
     #[test]

@@ -24,18 +24,18 @@ pub enum Node {
 /// Anotations for special nodes used in graph_data.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SpecialNodeAnnotation {
-    SessionStateNodeAnnotation,
-    SshStructNodeAnnotation,
+    SessionStateNodeAnnotation(u64),
+    SshStructNodeAnnotation(u64),
 }
 
 impl SpecialNodeAnnotation {
     fn special_node_type(&self) -> String {
         match self {
-            SpecialNodeAnnotation::SessionStateNodeAnnotation => {
-                "SSN".to_string()
+            SpecialNodeAnnotation::SessionStateNodeAnnotation(addr) => {
+                format!("SSN({:#x})", addr).to_string()
             }
-            SpecialNodeAnnotation::SshStructNodeAnnotation => {
-                "SSHN".to_string()
+            SpecialNodeAnnotation::SshStructNodeAnnotation(addr) => {
+                format!("SSHN({:#x})", addr).to_string()
             }
         }
     }
