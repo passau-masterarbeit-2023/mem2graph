@@ -10,7 +10,7 @@ pub struct Argv {
 
     /// Number of times to greet
     #[arg(short, long, required = false, exclusive = true)]
-    pub directory: Option<String>,
+    pub directory: Option<Vec<String>>,
 }
 
 pub fn get_program_args() -> Argv {
