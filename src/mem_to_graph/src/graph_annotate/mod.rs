@@ -1,4 +1,4 @@
-use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation}};
+use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation}, utils::div_round_up};
 use std::path::{PathBuf};
 
 pub struct GraphAnnotate {
@@ -58,9 +58,11 @@ impl GraphAnnotate {
 
                 // get all the ValueNodes that are part of the key
                 // WARN: when the key lenght is not a multiple of the block size,
-                // we need to crop the aggregated_key to the real key length
+                //      we need to crop the aggregated_key to the real key length
+                // WARN: Need to round up the division that determines the number of blocks needed.
+                //      Otherwise, we will miss the last block, since it is possible that we only need a fraction of it.
                 let block_size = self.graph_data.heap_dump_data.as_ref().unwrap().block_size;
-                for i in 0..(key_data.len / block_size) {
+                for i in 0..div_round_up(key_data.len, block_size) {
                     let current_key_block_addr = addr + (i * block_size) as u64;
                     let current_key_block_node: Option<&Node> = self.graph_data.addr_to_node.get(&current_key_block_addr);
                     if current_key_block_node.is_some() {

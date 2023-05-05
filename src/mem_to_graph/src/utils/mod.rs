@@ -173,3 +173,12 @@ pub fn heap_dump_path_to_json_path(heap_dump_raw_file_path: &PathBuf) -> PathBuf
     }
     return json_path;
 }
+
+/// compute division on 2 integers and round up if necessary
+// For example, let's say we have a numerator of 11 and a denominator of 4:
+//     Original division: 11 / 4 = 2.75 (rounded down to 2 using integer division)
+//     New numerator: 11 + 4 - 1 = 14
+//     New division: 14 / 4 = 3.5 (rounded down to 3 using integer division)
+pub fn div_round_up(numerator: usize, denominator: usize) -> usize {
+    (numerator + denominator - 1) / denominator
+}
