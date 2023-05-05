@@ -27,7 +27,7 @@ impl GraphEmbedding {
 
     fn save_samples_and_labels_to_csv(&self, csv_path: PathBuf) {
         let (samples, labels) = self.generate_samples_and_labels();
-        crate::exe_pipeline::save(samples, labels, csv_path);
+        crate::exe_pipeline::save(samples, labels, csv_path, self.depth);
     }
 
     /// Samples [

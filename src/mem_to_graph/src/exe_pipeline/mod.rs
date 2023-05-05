@@ -134,7 +134,7 @@ pub fn run(path: PathBuf) {
             labels.extend(labels_);
             
         }
-        save(samples, labels, csv_path);
+        save(samples, labels, csv_path, *crate::params::EMBEDDING_DEPTH);
 
         // log time
         let chunk_duration = chunk_start_time.elapsed();
@@ -154,7 +154,7 @@ pub fn run(path: PathBuf) {
 
 /// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
 /// for broken files (missing JSON key, etc.)
-pub fn save(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_path: PathBuf) {
+pub fn save(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_path: PathBuf, embedding_depth: usize) {
     let mut csv_writer = csv::Writer::from_path(csv_path).unwrap();
 
     // header of CSV
@@ -164,7 +164,7 @@ pub fn save(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_path: PathBuf) {
     header.push("f_dtn_ptrs".to_string());
     header.push("f_dtn_vns".to_string());
     // start at 1 since 0 is a ValueNode (so always [0, 0])
-    for i in 1..*crate::params::EMBEDDING_DEPTH {
+    for i in 1..embedding_depth {
         header.push(format!("f_dtns_ancestor_{}", i));
         header.push(format!("f_ptrs_ancestor_{}", i));
     }
