@@ -53,6 +53,10 @@ error_chain! {
             description("Invalid json annotation")
             display("Invalid json annotation: {}", json_annotation)
         }
+        JsonFileNotFound(json_file_path: PathBuf) {
+            description("Json file not found")
+            display("Json file not found: {:?}", json_file_path)
+        }
     }
 }
 

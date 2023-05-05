@@ -40,7 +40,22 @@ impl HeapDumpData {
 
         let json_path = utils::heap_dump_path_to_json_path(&heap_dump_raw_file_path);
         let blocks = HeapDumpData::generate_blocks_from_heap_dump(&heap_dump_raw_file_path, block_size);
-        let json_data = HeapDumpData::get_json_data(&json_path);
+        
+        
+        let potential_json_data = HeapDumpData::get_json_data(&json_path);
+        let json_data;
+        match potential_json_data {
+            Ok(data) => {
+                json_data = data;
+                log::info!(" 📋 json file path: {:?}", json_path);
+            },
+            Err(_) => {
+                log::error!("File doesn't exist: {:?}", json_path);
+                return Err(ErrorKind::JsonFileNotFound(json_path));
+            }
+        }
+        
+        
         let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len(), block_size)?;
         let addr_to_key_data = generate_key_data_from_json(&json_data)?;
 
@@ -70,10 +85,11 @@ impl HeapDumpData {
     }
 
     /// load json file
-    fn get_json_data(json_file_path: &PathBuf) -> Value {
+    fn get_json_data(json_file_path: &PathBuf) -> Result<Value, std::io::Error> {
         let file = File::open(json_file_path).unwrap();
         let reader = BufReader::new(file);
-        serde_json::from_reader(reader).unwrap()
+        let res = serde_json::from_reader(reader)?;
+        Ok(res)
     }
 
     /// load heap dump file and split it into blocks
@@ -164,7 +180,7 @@ mod tests {
 
         let json_data = HeapDumpData::get_json_data(
             &crate::params::TEST_HEAP_JSON_FILE_PATH,
-        );
+        ).unwrap();
 
         assert!(json_data.is_object());
         assert!(json_data["HEAP_START"].is_string());
@@ -192,7 +208,7 @@ mod tests {
         );
         let json_data = HeapDumpData::get_json_data(
             &crate::params::TEST_HEAP_JSON_FILE_PATH
-        );
+        ).unwrap();
         let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(
             &json_data, blocks.len(), BLOCK_BYTE_SIZE).unwrap();
 
@@ -220,7 +236,7 @@ mod tests {
         
         let json_data = HeapDumpData::get_json_data(
             &*crate::params::TEST_HEAP_JSON_FILE_PATH
-        );
+        ).unwrap();
         let addr_to_key_data = generate_key_data_from_json(&json_data).unwrap();
 
         assert_eq!(addr_to_key_data.len(), 6); // 6 keys, from A to F

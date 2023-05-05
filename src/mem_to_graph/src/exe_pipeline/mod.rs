@@ -79,39 +79,52 @@ pub fn run(path: PathBuf) {
             continue;
         }
 
+        // Create a thread pool with named threads
+        let pool = rayon::ThreadPoolBuilder::new()
+            .thread_name(|index| format!("worker-{}", index))
+            .build()
+            .unwrap();
+
         // generate samples and labels
-        let results: Vec<_> = chunk.par_iter().enumerate().map(|(i, heap_dump_raw_file_path)| {
-            let global_idx = i + chunk_size*chunck_index;
+        let results: Vec<_> = pool.install(|| {
+            chunk.par_iter().enumerate().map(|(i, heap_dump_raw_file_path)| {
+                let current_thread = std::thread::current();
+                let thread_name = current_thread.name().unwrap_or("<unnamed>");
+                let global_idx = i + chunk_size*chunck_index;
 
-            let graph_embedding = GraphEmbedding::new(
-                heap_dump_raw_file_path.clone(),
-                crate::params::BLOCK_BYTE_SIZE,
-                *crate::params::EMBEDDING_DEPTH
-            );
+                let graph_embedding = GraphEmbedding::new(
+                    heap_dump_raw_file_path.clone(),
+                    crate::params::BLOCK_BYTE_SIZE,
+                    *crate::params::EMBEDDING_DEPTH
+                );
 
-            match graph_embedding {
-                Ok(graph_embedding) => {
-                    // generate samples and labels
-                    let (samples_, labels_) = graph_embedding.generate_samples_and_labels();
+                match graph_embedding {
+                    Ok(graph_embedding) => {
+                        // generate samples and labels
+                        let (samples_, labels_) = graph_embedding.generate_samples_and_labels();
 
-                    let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
-                    log::info!(" 🟢 [N°{} / {} files] [id: {}]    (Nb samples: {})", global_idx, nb_files, file_name_id, samples_.len());
+                        let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
+                        log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, samples_.len());
 
-                    (samples_, labels_)
-                },
-                Err(err) => match err {
-                    crate::utils::ErrorKind::MissingJsonKeyError(key) => {
-                        log::warn!(" 🔴 [N°{} / {} files] [id: {}]    Missing JSON key: {}", global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), key);
-                        (Vec::new(), Vec::new())
+                        (samples_, labels_)
                     },
-                    _ => {
-                        panic!("Other unexpected graph embedding error: {}", err);
+                    Err(err) => match err {
+                        crate::utils::ErrorKind::MissingJsonKeyError(key) => {
+                            log::warn!(" 🔴 [t: {}] [N°{} / {} files] [fid: {}]    Missing JSON key: {}", thread_name, global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), key);
+                            (Vec::new(), Vec::new())
+                        },
+                        crate::utils::ErrorKind::JsonFileNotFound(json_file_path) => {
+                            log::warn!(" 🟣 [t: {}] [N°{} / {} files] [fid: {}]    JSON file not found: {:?}", thread_name, global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), json_file_path);
+                            (Vec::new(), Vec::new())
+                        },
+                        _ => {
+                            panic!("Other unexpected graph embedding error: {}", err);
+                        }
                     }
                 }
-            }
-
-            
-        }).collect();
+                
+            }).collect()
+        });
 
         // save to csv
         let mut samples = Vec::new();
