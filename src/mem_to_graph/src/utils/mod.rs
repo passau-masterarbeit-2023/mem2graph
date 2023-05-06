@@ -33,14 +33,26 @@ pub fn block_bytes_to_addr(block_bytes: &[u8; crate::params::BLOCK_BYTE_SIZE], e
 /// convert a json value to an address represented as a u64 (intended from a hex string)
 /// WARN: all addresses in the json file are big endian
 pub fn json_value_to_addr(json_value: &Value) -> u64 {
-    let addr_str = json_value.as_str().unwrap();
-    hex_str_to_addr(addr_str, Endianness::Big).unwrap()
+    // check whether the json value is a string or an integer
+    if json_value.is_string() {
+        return hex_str_to_addr(json_value.as_str().unwrap(), Endianness::Big).unwrap();
+    } else if json_value.is_number() {
+        return json_value.as_u64().unwrap();
+    } else {
+        panic!("Invalid json value: {}", json_value);
+    }
 }
 
 /// convert a json value to a usize (intented from a decimal string)
 pub fn json_value_to_usize(json_value: &Value) -> usize {
-    let int_str = json_value.as_str().unwrap();
-    u64::from_str_radix(int_str, 10).unwrap() as usize
+    // check whether the json value is a string or an integer
+    if json_value.is_string() {
+        return json_value.as_str().unwrap().parse::<usize>().unwrap();
+    } else if json_value.is_number() {
+        return json_value.as_u64().unwrap() as usize;
+    } else {
+        panic!("Invalid json value: {}", json_value);
+    }
 }
 
 error_chain! {

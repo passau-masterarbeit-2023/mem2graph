@@ -47,7 +47,7 @@ impl HeapDumpData {
         match potential_json_data {
             Ok(data) => {
                 json_data = data;
-                log::info!(" 📋 json file path: {:?}", json_path);
+                //log::info!(" 📋 json file path: {:?}", json_path);
             },
             Err(_) => {
                 log::error!("File doesn't exist: {:?}", json_path);
