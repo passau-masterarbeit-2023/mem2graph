@@ -128,17 +128,9 @@ fn generate_key_data_from_json(
 
     for (json_key, _) in json_data.as_object().unwrap().iter() {
         if json_key.starts_with("KEY_") && json_key.len() == 5 {
-            let key_data: Result<KeyData, ErrorKind> = generate_key_data_for_a_key(&json_data, json_key);
+            let key_data: KeyData = generate_key_data_for_a_key(&json_data, json_key)?;
 
-            match key_data {
-                Ok(key_data) => {
-                    let real_key_addr = key_data.addr;
-                    addr_key_pairs.insert(real_key_addr, key_data);
-                },
-                Err(err) => {
-                    log::warn!("Error while generating key data for key {}: {}", json_key, err);
-                }
-            }
+            addr_key_pairs.insert(key_data.addr, key_data);
         }
     }
 
