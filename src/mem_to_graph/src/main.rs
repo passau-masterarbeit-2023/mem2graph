@@ -16,7 +16,10 @@ fn main() {
     // call pipeline
     let mut input_path: Vec<std::path::PathBuf> = Vec::new();
     if params::ARGV.file.is_some() {
-        input_path.push(PathBuf::from(params::ARGV.file.as_ref().unwrap()));
+        let files = params::ARGV.file.as_ref().unwrap();
+        for (_, file) in files.iter().enumerate() {
+            input_path.push(PathBuf::from(file));
+        }
     } else if params::ARGV.directory.is_some() {
         for path in params::ARGV.directory.as_ref().unwrap() {
             input_path.push(PathBuf::from(path));
