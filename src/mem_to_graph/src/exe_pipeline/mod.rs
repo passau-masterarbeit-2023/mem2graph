@@ -66,7 +66,7 @@ pub fn run(path: PathBuf) {
 
         // check save
         let csv_file_name = format!("{}_chunck_idx-{}_samples.csv", dir_path_end_str.replace("/", "_"), chunck_index);
-        let csv_path = crate::params::SAMPLES_AND_LABELS_DATA_DIR_PATH.clone().join(csv_file_name.clone());
+        let csv_path = crate::params::DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH.clone().join(csv_file_name.clone());
         if csv_path.exists() {
             log::info!(" 🔵 [N°{}-{} / {} files] [id: {}] already saved (csv: {}).", 
                 chunck_index*chunk_size,
@@ -155,7 +155,10 @@ pub fn run(path: PathBuf) {
 /// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
 /// for broken files (missing JSON key, etc.)
 pub fn save(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_path: PathBuf, embedding_depth: usize) {
-    let mut csv_writer = csv::Writer::from_path(csv_path).unwrap();
+    let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
+    let mut csv_writer = csv::Writer::from_path(csv_path).unwrap_or_else(
+        |_| panic!("{}", csv_error_message)
+    );
 
     // header of CSV
     let mut header = Vec::new();

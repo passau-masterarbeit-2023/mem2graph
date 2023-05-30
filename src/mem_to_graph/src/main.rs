@@ -15,18 +15,18 @@ fn main() {
 
     // call pipeline
     let mut input_path: Vec<std::path::PathBuf> = Vec::new();
-    if params::ARGV.file.is_some() {
-        let files = params::ARGV.file.as_ref().unwrap();
+    if params::ARGV.files.is_some() {
+        let files = params::ARGV.files.as_ref().unwrap();
         for (_, file) in files.iter().enumerate() {
             input_path.push(PathBuf::from(file));
         }
-    } else if params::ARGV.directory.is_some() {
-        for path in params::ARGV.directory.as_ref().unwrap() {
+    } else if params::ARGV.directories.is_some() {
+        for path in params::ARGV.directories.as_ref().unwrap() {
             input_path.push(PathBuf::from(path));
         }
     } else {
         // default
-        input_path.push(params::TESTING_DATA_DIR_PATH.clone());
+        input_path.push(params::DEFAULT_DATA_DIR_PATH.clone());
     }
 
     // test all provided paths

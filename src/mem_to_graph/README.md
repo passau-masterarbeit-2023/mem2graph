@@ -2,11 +2,9 @@
 
 ## run
 
-`cargo run -- -h`: display help on program arguments
+`cargo run -- -h`: display help on program arguments, display available command flags.
 
 `cargo run`: run program with default values (especially default dir from `.env` config file).
-
-
 
 ## program params
 

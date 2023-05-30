@@ -82,25 +82,16 @@ lazy_static! {
         }
     };
 
-    static ref HOME_DIR: String = std::env::var("HOME")
-        .expect("HOME environment variable must be set");
-
-    static ref REPO_DIR: String = {
-        let repo_dir = std::env::var("REPOSITORY_BASE_DIR")
-            .expect("REPOSITORY_BASE_DIR environment variable must be set");
-        HOME_DIR.clone() + &repo_dir
-    };
-
-    static ref DATA_DIR: String = {
-        let data_dir = std::env::var("DATA_BASE_DIR")
-            .expect("DATA_BASE_DIR environment variable must be set");
-        HOME_DIR.clone() + &data_dir
+    static ref PROJECT_BASE_DIR: PathBuf = {
+        let repo_dir = std::env::var("PROJECT_BASE_DIR")
+            .expect("PROJECT_BASE_DIR environment variable must be set");
+        PathBuf::from(repo_dir)
     };
     
     pub static ref TEST_HEAP_DUMP_FILE_PATH: PathBuf = {
         let test_heap_dump_raw_file_path = std::env::var("TEST_HEAP_DUMP_RAW_FILE_PATH")
             .expect("TEST_HEAP_DUMP_RAW_FILE_PATH environment variable must be set").to_string();
-        PathBuf::from(REPO_DIR.clone() + &test_heap_dump_raw_file_path)
+        PROJECT_BASE_DIR.join(&test_heap_dump_raw_file_path)
     };
 
     pub static ref TEST_HEAP_JSON_FILE_PATH: PathBuf = {
@@ -132,7 +123,7 @@ lazy_static! {
     pub static ref TEST_CSV_EMBEDDING_FILE_PATH: PathBuf = {
         let test_csv_embedding_file_path = std::env::var("TEST_CSV_EMBEDDING_FILE_PATH")
             .expect("TEST_CSV_EMBEDDING_FILE_PATH environment variable must be set").to_string();
-        PathBuf::from(&test_csv_embedding_file_path)
+        PROJECT_BASE_DIR.join(&test_csv_embedding_file_path)
     };
 
     pub static ref REMOVE_TRIVIAL_ZERO_SAMPLES: bool = {
@@ -146,16 +137,16 @@ lazy_static! {
         }
     };
 
-    pub static ref TESTING_DATA_DIR_PATH: PathBuf = {
-        let testing_data_dir_path = std::env::var("TESTING_DATA_DIR_PATH")
-            .expect("TESTING_DATA_DIR_PATH environment variable must be set").to_string();
-        PathBuf::from(&testing_data_dir_path)
+    pub static ref DEFAULT_DATA_DIR_PATH: PathBuf = {
+        let testing_data_dir_path = std::env::var("DEFAULT_DATA_DIR_PATH")
+            .expect("DEFAULT_DATA_DIR_PATH environment variable must be set").to_string();
+        PROJECT_BASE_DIR.join(&testing_data_dir_path)
     };
 
-    pub static ref SAMPLES_AND_LABELS_DATA_DIR_PATH: PathBuf = {
-        let samples_and_labels_data_dir_path = std::env::var("SAMPLES_AND_LABELS_DATA_DIR_PATH")
-            .expect("SAMPLES_AND_LABELS_DATA_DIR_PATH environment variable must be set").to_string();
-        PathBuf::from(&samples_and_labels_data_dir_path)
+    pub static ref DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH: PathBuf = {
+        let samples_and_labels_data_dir_path = std::env::var("DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH")
+            .expect("DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH environment variable must be set").to_string();
+        PathBuf::from(samples_and_labels_data_dir_path)
     };
 
     pub static ref NB_FILES_PER_CHUNK: usize = {
