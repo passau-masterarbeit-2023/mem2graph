@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use exe_pipeline::value_embedding::run_value_embedding;
+
 // link modules
 mod params;
 mod tests;
@@ -38,7 +40,6 @@ fn main() {
 
     // launch computations
     for path in input_path {
-        crate::exe_pipeline::run(path);
+        run_value_embedding(path);
     }
-    
 }

@@ -1,3 +1,4 @@
+use crate::exe_pipeline::value_embedding::save_value_embeding;
 use crate::graph_structs::{
     Node,
 };
@@ -27,7 +28,7 @@ impl GraphEmbedding {
 
     fn save_samples_and_labels_to_csv(&self, csv_path: PathBuf) {
         let (samples, labels) = self.generate_samples_and_labels();
-        crate::exe_pipeline::save(samples, labels, csv_path, self.depth);
+        save_value_embeding(samples, labels, csv_path, self.depth);
     }
 
     /// Samples [
