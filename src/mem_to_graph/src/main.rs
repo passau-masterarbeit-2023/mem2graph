@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use exe_pipeline::value_embedding::run_value_embedding;
+use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation};
 
 // link modules
 mod params;
@@ -40,6 +40,9 @@ fn main() {
 
     // launch computations
     for path in input_path {
-        run_value_embedding(path);
+        match params::ARGV.pipeline {
+            params::argv::Pipeline::ValueEmbedding => run_value_embedding(path),
+            params::argv::Pipeline::Graph => run_graph_generation(path),
+        }
     }
 }

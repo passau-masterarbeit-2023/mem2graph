@@ -3,6 +3,7 @@ use walkdir::WalkDir;
 
 
 pub mod value_embedding;
+pub mod graph_generation;
 
 /// Takes a path as input.
 /// This path can be a file or a directory.

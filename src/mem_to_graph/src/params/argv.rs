@@ -1,8 +1,11 @@
 use clap::{Parser, ValueEnum};
 
-/// NOTE: 'group = "file_input_group"' means that only one of the options in the group can be used
-/// the result is stored always in 'files_input', and on the option used (the other is None)
-/// NOTE: the "///" comments are used to generate the help message
+// NOTE: 'group = "file_input_group"' means that only one of the options in the group can be used
+// the result is stored always in 'files_input', and on the option used (the other is None)
+// NOTE: the "///" comments are used to generate the help message
+/// Graph generation and embedding program
+/// NOTE : to add multiple files/folders duplicate the flags before the files/folders, 
+/// like : cargo run -- -f /path/to/file1 -f /path/to/file2
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Argv {
