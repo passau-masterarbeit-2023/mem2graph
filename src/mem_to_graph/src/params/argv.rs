@@ -23,6 +23,10 @@ pub struct Argv {
     /// the pipeline to run
     #[arg(value_enum, short, long, default_value = "value-embedding")]
     pub pipeline: Pipeline,
+
+    /// The directory to output the results
+    #[arg(short, long, required = false)]
+    pub output: Option<String>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]

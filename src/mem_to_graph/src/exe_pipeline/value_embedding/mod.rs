@@ -9,7 +9,7 @@ use super::get_raw_file_or_files_from_path;
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run_value_embedding(path: PathBuf) {
+pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf) {
     // start timer
     let start_time = Instant::now();
 
@@ -40,7 +40,7 @@ pub fn run_value_embedding(path: PathBuf) {
 
         // check save
         let csv_file_name = format!("{}_chunck_idx-{}_samples.csv", dir_path_end_str.replace("/", "_"), chunck_index);
-        let csv_path = crate::params::DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH.clone().join(csv_file_name.clone());
+        let csv_path = output_folder.clone().join(csv_file_name.clone());
         if csv_path.exists() {
             log::info!(" 🔵 [N°{}-{} / {} files] [id: {}] already saved (csv: {}).", 
                 chunck_index*chunk_size,

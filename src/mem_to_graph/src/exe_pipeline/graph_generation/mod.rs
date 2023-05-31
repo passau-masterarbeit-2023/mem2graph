@@ -8,7 +8,7 @@ use super::get_raw_file_or_files_from_path;
 /// If directory then list all files in that directory and its subdirectories
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the graph generation for all these file
-pub fn run_graph_generation(path: PathBuf) {
+pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf) {
    // start timer
    let start_time = Instant::now();
 
@@ -54,7 +54,7 @@ pub fn run_graph_generation(path: PathBuf) {
                 let heap_dump_name = heap_dump_path_copy.file_name().unwrap().to_os_string().into_string().unwrap();
                 let dot_file_name = format!("{}_{}_dot.gv", dir_path_end_str.replace("/", "_"), heap_dump_name.replace("/", "_"));
                 println!("{}", dot_file_name);
-                let dot_path = crate::params::DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH.clone().join(dot_file_name.clone());
+                let dot_path = output_folder.clone().join(dot_file_name.clone());
                 if dot_path.exists() {
                     log::info!(" 🔵 [N°{}-{} / {} files] [id: {}] already saved (csv: {}).", 
                         chunck_index*chunk_size,

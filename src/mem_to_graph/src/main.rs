@@ -31,6 +31,14 @@ fn main() {
         input_path.push(params::DEFAULT_DATA_DIR_PATH.clone());
     }
 
+    // output folder
+    let output_folder;
+    if params::ARGV.output.is_some() {
+        output_folder = PathBuf::from(params::ARGV.output.as_ref().unwrap());
+    } else {
+        output_folder = params::DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH.clone();
+    }
+
     // test all provided paths
     for path in input_path.clone() {
         if !path.exists() {
@@ -41,8 +49,8 @@ fn main() {
     // launch computations
     for path in input_path {
         match params::ARGV.pipeline {
-            params::argv::Pipeline::ValueEmbedding => run_value_embedding(path),
-            params::argv::Pipeline::Graph => run_graph_generation(path),
+            params::argv::Pipeline::ValueEmbedding => run_value_embedding(path, output_folder.clone()),
+            params::argv::Pipeline::Graph => run_graph_generation(path, output_folder.clone()),
         }
     }
 }
