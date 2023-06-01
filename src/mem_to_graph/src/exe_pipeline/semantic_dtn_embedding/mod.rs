@@ -9,7 +9,7 @@ use super::get_raw_file_or_files_from_path;
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf) {
+pub fn run_semantic_dtn_embedding(path: PathBuf, output_folder: PathBuf) {
     // start timer
     let start_time = Instant::now();
 
@@ -75,21 +75,21 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf) {
                 match graph_embedding {
                     Ok(graph_embedding) => {
                         // generate samples and labels
-                        let (samples_, labels_) = graph_embedding.generate_value_samples_and_labels();
+                        let samples_ = graph_embedding.generate_semantic_dtns_samples();
 
                         let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
                         log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, samples_.len());
 
-                        (samples_, labels_)
+                        samples_
                     },
                     Err(err) => match err {
                         crate::utils::ErrorKind::MissingJsonKeyError(key) => {
                             log::warn!(" 🔴 [t: {}] [N°{} / {} files] [fid: {}]    Missing JSON key: {}", thread_name, global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), key);
-                            (Vec::new(), Vec::new())
+                            Vec::new()
                         },
                         crate::utils::ErrorKind::JsonFileNotFound(json_file_path) => {
                             log::warn!(" 🟣 [t: {}] [N°{} / {} files] [fid: {}]    JSON file not found: {:?}", thread_name, global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), json_file_path);
-                            (Vec::new(), Vec::new())
+                            Vec::new()
                         },
                         _ => {
                             panic!("Other unexpected graph embedding error: {}", err);
@@ -102,13 +102,11 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf) {
 
         // save to csv
         let mut samples = Vec::new();
-        let mut labels = Vec::new();
-        for (samples_, labels_) in results {
+        for samples_ in results {
             samples.extend(samples_);
-            labels.extend(labels_);
             
         }
-        save_value_embeding(samples, labels, csv_path, *crate::params::EMBEDDING_DEPTH);
+        save_value_embeding(samples, csv_path, *crate::params::EMBEDDING_DEPTH);
 
         // log time
         let chunk_duration = chunk_start_time.elapsed();
@@ -128,7 +126,7 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf) {
 
 /// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
 /// for broken files (missing JSON key, etc.)
-pub fn save_value_embeding(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_path: PathBuf, embedding_depth: usize) {
+pub fn save_value_embeding(samples: Vec<Vec<usize>>, csv_path: PathBuf, embedding_depth: usize) {
     let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
     let mut csv_writer = csv::Writer::from_path(csv_path).unwrap_or_else(
         |_| panic!("{}", csv_error_message)
@@ -136,23 +134,26 @@ pub fn save_value_embeding(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_pat
 
     // header of CSV
     let mut header = Vec::new();
+    header.push("f_dtns_addr".to_string());
     header.push("f_dtn_byte_size".to_string());
-    header.push("f_position_in_dtn".to_string());
     header.push("f_dtn_ptrs".to_string());
-    header.push("f_dtn_vns".to_string());
-    // start at 1 since 0 is a ValueNode (so always [0, 0])
+    // start at 1 since 0 is a dtn (so always [0, 0])
     for i in 1..embedding_depth {
         header.push(format!("f_dtns_ancestor_{}", i));
         header.push(format!("f_ptrs_ancestor_{}", i));
     }
-    header.push("label".to_string());
+
+    // start at 1 since 0 is a dtn (so always [0, 0])
+    for i in 1..embedding_depth {
+        header.push(format!("f_dtns_children_{}", i));
+        header.push(format!("f_ptrs_children_{}", i));
+    }
     csv_writer.write_record(header).unwrap();
 
     // save samples and labels to CSV
-    for (sample, label) in samples.iter().zip(labels.iter()) {
+    for sample in samples.iter() {
         let mut row: Vec<String> = Vec::new();
         row.extend(sample.iter().map(|value| value.to_string()));
-        row.push(label.to_string());
 
         csv_writer.write_record(&row).unwrap();
     }

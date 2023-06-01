@@ -143,6 +143,14 @@ impl Node {
         }
     }
 
+    /// Check if a node is a data structure node
+    pub fn is_dtn (&self) -> bool {
+        match self {
+            Node::DataStructureNode(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_key(&self) -> bool {
         match self {
             Node::ValueNode(value_node) => {

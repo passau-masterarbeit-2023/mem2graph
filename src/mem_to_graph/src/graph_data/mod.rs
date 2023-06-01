@@ -23,7 +23,10 @@ macro_rules! check_heap_dump {
 pub struct GraphData {
     pub graph: DiGraphMap<u64, graph_structs::Edge>,
     pub addr_to_node: HashMap<u64, graph_structs::Node>,
-    pub unannotated_value_node_addrs: Vec<u64>, // list of the addresses of the nodes that are values (and potental keys)
+    /// list of all the addresses of the nodes that are dtn
+    pub dtn_addrs: Vec<u64>,
+    /// list of the addresses of the nodes that are values (and potential keys) TODO : rename this !:!!!!!
+    pub unannotated_value_node_addrs: Vec<u64>, 
 
     pub special_node_to_annotation: HashMap<u64, SpecialNodeAnnotation>, // special nodes are the ones that are not values (and not keys)
 
@@ -38,6 +41,7 @@ impl GraphData {
         let mut instance = Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
+            dtn_addrs: Vec::new(),
             unannotated_value_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
             heap_dump_data: Some(
@@ -58,6 +62,7 @@ impl GraphData {
         Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
+            dtn_addrs: Vec::new(),
             unannotated_value_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
             heap_dump_data: None,
@@ -93,6 +98,8 @@ impl GraphData {
         // keep addr of all the value nodes
         if node.is_value() {
             self.unannotated_value_node_addrs.push(node.get_address());
+        }else if node.is_dtn() {
+            self.dtn_addrs.push(node.get_address());
         }
 
         let node_addr = node.get_address();

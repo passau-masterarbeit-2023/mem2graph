@@ -35,6 +35,8 @@ pub enum Pipeline {
     ValueEmbedding,
     /// make the graph and save it
     Graph,
+    /// make a semantic embedding of the DTN
+    SemanticEmbeddingDTN,
 }
 
 pub fn get_program_args() -> Argv {

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation};
+use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation, semantic_dtn_embedding::run_semantic_dtn_embedding};
 
 // link modules
 mod params;
@@ -51,6 +51,7 @@ fn main() {
         match params::ARGV.pipeline {
             params::argv::Pipeline::ValueEmbedding => run_value_embedding(path, output_folder.clone()),
             params::argv::Pipeline::Graph => run_graph_generation(path, output_folder.clone()),
+            params::argv::Pipeline::SemanticEmbeddingDTN => run_semantic_dtn_embedding(path, output_folder.clone()),
         }
     }
 }
