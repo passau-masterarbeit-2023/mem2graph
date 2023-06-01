@@ -1,5 +1,6 @@
+#[cfg(test)]
 use crate::graph_structs::*;
-
+#[cfg(test)]
 fn create_test_structs() -> Vec<Node> {
     let data_structure_node = Node::DataStructureNode(DataStructureNode {
         addr: 0,

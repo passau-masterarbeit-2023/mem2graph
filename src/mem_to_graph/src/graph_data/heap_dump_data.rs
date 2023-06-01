@@ -76,6 +76,7 @@ impl HeapDumpData {
         })
     }
 
+    #[cfg(test)]
     pub fn addr_to_index_wrapper(&self, addr: u64) -> usize {
         crate::utils::addr_to_index(addr, self.min_addr, self.block_size)
     }

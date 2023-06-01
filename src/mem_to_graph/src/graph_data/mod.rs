@@ -58,6 +58,7 @@ impl GraphData {
     }
 
     /// Constructor for an empty GraphData
+    #[cfg(test)]
     fn new_empty() -> Self {
         Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),

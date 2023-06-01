@@ -8,7 +8,6 @@ use crate::params;
 #[cfg(test)]
 mod utils;
 mod graph_structs;
-
 static INIT: Once = Once::new();
 
 /// WARN: Must be called after init()

@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::exe_pipeline::value_embedding::save_value_embeding;
 use crate::graph_structs::{
     Node,
@@ -26,6 +27,7 @@ impl GraphEmbedding {
         })
     }
 
+    #[cfg(test)]
     fn save_samples_and_labels_to_csv(&self, csv_path: PathBuf) {
         let (samples, labels) = self.generate_value_samples_and_labels();
         save_value_embeding(samples, labels, csv_path, self.depth);
@@ -51,7 +53,7 @@ impl GraphEmbedding {
     }
 
     /// generate semantic embedding of a DTN
-    pub fn generate_semantic_dtn_samples(&self, addr: u64) -> Vec<usize> {
+    fn generate_semantic_dtn_samples(&self, addr: u64) -> Vec<usize> {
         let mut feature: Vec<usize> = Vec::new();
 
         let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
@@ -68,18 +70,18 @@ impl GraphEmbedding {
         }
 
         // add ancestors
-        let mut ancestors = self.generate_neighbors_DTN(addr, petgraph::Direction::Incoming);
+        let mut ancestors = self.generate_neighbors_dtn(addr, petgraph::Direction::Incoming);
         feature.append(&mut ancestors);
 
         // add children
-        let mut children = self.generate_neighbors_DTN(addr, petgraph::Direction::Outgoing);
+        let mut children = self.generate_neighbors_dtn(addr, petgraph::Direction::Outgoing);
         feature.append(&mut children);
 
         feature
     }
 
     /// generate the ancestor/children (given dir) embedding of the DTN (nb of ptn and nb of dtn for each deapth)
-    fn generate_neighbors_DTN(&self, dtn_addr : u64, dir : petgraph::Direction) -> Vec<usize> {
+    fn generate_neighbors_dtn(&self, dtn_addr : u64, dir : petgraph::Direction) -> Vec<usize> {
         // calculate the ancestor for every node in the children of the dtn
         let mut ancestors_by_node : Vec<Vec<usize>> = Vec::new();
         let children = self.graph_annotate.graph_data.graph.neighbors_directed(dtn_addr, petgraph::Direction::Outgoing);

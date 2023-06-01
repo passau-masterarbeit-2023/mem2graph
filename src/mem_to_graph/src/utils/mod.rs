@@ -8,6 +8,7 @@ use crate::graph_structs::{Node, PointerNode, ValueNode, BasePointerNode, BaseVa
 
 /// convert an address to an index
 /// NOTE: addresses are represented as u64
+#[cfg(test)]
 pub fn addr_to_index(addr: u64, min_addr: u64, block_size: usize) -> usize {
     ((addr - min_addr) / block_size as u64) as usize
 }

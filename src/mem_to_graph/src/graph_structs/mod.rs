@@ -51,6 +51,7 @@ impl SpecialNodeAnnotation {
 
 impl Node {
     /// Check whether a node is important or not.
+    #[cfg(test)]
     pub fn is_important(&self) -> bool {
         match self {
             Node::ValueNode(value_node) => {
