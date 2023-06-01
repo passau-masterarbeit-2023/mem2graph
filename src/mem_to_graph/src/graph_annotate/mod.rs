@@ -216,7 +216,7 @@ mod tests {
         dot_file.write_all(format!("{}", graph_annotate.graph_data).as_bytes()).unwrap(); // using the custom formatter
 
         // check that the value node addresses are kept
-        assert!(graph_annotate.graph_data.unannotated_value_node_addrs.len() > 0);
+        assert!(graph_annotate.graph_data.value_node_addrs.len() > 0);
     }
 
 }

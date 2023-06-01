@@ -25,10 +25,11 @@ pub struct GraphData {
     pub addr_to_node: HashMap<u64, graph_structs::Node>,
     /// list of all the addresses of the nodes that are dtn
     pub dtn_addrs: Vec<u64>,
-    /// list of the addresses of the nodes that are values (and potential keys) TODO : rename this !:!!!!!
-    pub unannotated_value_node_addrs: Vec<u64>, 
+    /// list of the addresses of the nodes that are values (and potential keys)
+    pub value_node_addrs: Vec<u64>, 
 
-    pub special_node_to_annotation: HashMap<u64, SpecialNodeAnnotation>, // special nodes are the ones that are not values (and not keys)
+    /// special nodes are the ones that are not values (and not keys)
+    pub special_node_to_annotation: HashMap<u64, SpecialNodeAnnotation>, 
 
     pub heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
 }
@@ -42,7 +43,7 @@ impl GraphData {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
             dtn_addrs: Vec::new(),
-            unannotated_value_node_addrs: Vec::new(),
+            value_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
             heap_dump_data: Some(
                 HeapDumpData::new(
@@ -64,7 +65,7 @@ impl GraphData {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
             dtn_addrs: Vec::new(),
-            unannotated_value_node_addrs: Vec::new(),
+            value_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
             heap_dump_data: None,
         }
@@ -98,7 +99,7 @@ impl GraphData {
     fn add_node_wrapper(&mut self, node: graph_structs::Node) -> u64 {
         // keep addr of all the value nodes
         if node.is_value() {
-            self.unannotated_value_node_addrs.push(node.get_address());
+            self.value_node_addrs.push(node.get_address());
         }else if node.is_dtn() {
             self.dtn_addrs.push(node.get_address());
         }

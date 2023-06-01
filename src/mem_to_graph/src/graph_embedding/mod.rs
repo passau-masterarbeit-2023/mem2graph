@@ -120,7 +120,7 @@ impl GraphEmbedding {
         let mut samples = Vec::new();
         let mut labels = Vec::new();
 
-        for addr in self.graph_annotate.graph_data.unannotated_value_node_addrs.iter() {
+        for addr in self.graph_annotate.graph_data.value_node_addrs.iter() {
             let sample = self.generate_value_sample(*addr);
             let label = self.generate_value_label(*addr);
 
