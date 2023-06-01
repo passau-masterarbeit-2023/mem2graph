@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::{time::Instant, path::PathBuf};
+use std::{time::Instant, path::{PathBuf}};
 
 use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar};
 
@@ -80,16 +80,16 @@ pub fn run_semantic_dtn_embedding(path: PathBuf, output_folder: PathBuf) {
                         let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
                         log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, samples_.len());
 
-                        samples_
+                        (samples_, heap_dump_raw_file_path.as_os_str().to_str().unwrap().to_string())
                     },
                     Err(err) => match err {
                         crate::utils::ErrorKind::MissingJsonKeyError(key) => {
                             log::warn!(" 🔴 [t: {}] [N°{} / {} files] [fid: {}]    Missing JSON key: {}", thread_name, global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), key);
-                            Vec::new()
+                            (Vec::new(), "".to_string())
                         },
                         crate::utils::ErrorKind::JsonFileNotFound(json_file_path) => {
                             log::warn!(" 🟣 [t: {}] [N°{} / {} files] [fid: {}]    JSON file not found: {:?}", thread_name, global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), json_file_path);
-                            Vec::new()
+                            (Vec::new(), "".to_string())
                         },
                         _ => {
                             panic!("Other unexpected graph embedding error: {}", err);
@@ -102,11 +102,14 @@ pub fn run_semantic_dtn_embedding(path: PathBuf, output_folder: PathBuf) {
 
         // save to csv
         let mut samples = Vec::new();
-        for samples_ in results {
+        let mut paths = Vec::new();
+        for (samples_, path) in results {
+            for _ in 0..samples_.len() {
+                paths.push(path.clone());
+            }
             samples.extend(samples_);
-            
         }
-        save_value_embeding(samples, csv_path, *crate::params::EMBEDDING_DEPTH);
+        save_dtn_embeding(samples, paths, csv_path, *crate::params::EMBEDDING_DEPTH);
 
         // log time
         let chunk_duration = chunk_start_time.elapsed();
@@ -126,7 +129,7 @@ pub fn run_semantic_dtn_embedding(path: PathBuf, output_folder: PathBuf) {
 
 /// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
 /// for broken files (missing JSON key, etc.)
-pub fn save_value_embeding(samples: Vec<Vec<usize>>, csv_path: PathBuf, embedding_depth: usize) {
+pub fn save_dtn_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, csv_path: PathBuf, embedding_depth: usize) {
     let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
     let mut csv_writer = csv::Writer::from_path(csv_path).unwrap_or_else(
         |_| panic!("{}", csv_error_message)
@@ -134,6 +137,7 @@ pub fn save_value_embeding(samples: Vec<Vec<usize>>, csv_path: PathBuf, embeddin
 
     // header of CSV
     let mut header = Vec::new();
+    header.push("file_path".to_string());
     header.push("f_dtns_addr".to_string());
     header.push("f_dtn_byte_size".to_string());
     header.push("f_dtn_ptrs".to_string());
@@ -151,8 +155,9 @@ pub fn save_value_embeding(samples: Vec<Vec<usize>>, csv_path: PathBuf, embeddin
     csv_writer.write_record(header).unwrap();
 
     // save samples and labels to CSV
-    for sample in samples.iter() {
+    for (sample, path) in samples.iter().zip(paths.iter()) {
         let mut row: Vec<String> = Vec::new();
+        row.push(path.to_string());
         row.extend(sample.iter().map(|value| value.to_string()));
 
         csv_writer.write_record(&row).unwrap();
