@@ -17,10 +17,11 @@ pub struct Argv {
     #[arg(short, long, required = false, group = "file_input_group")]
     pub directories: Option<Vec<String>>,
 
+    /// The directory or file containing the heap dump files
     #[arg(long, requires = "file_input_group")]
     pub files_input: Option<Vec<String>>, 
 
-    /// the pipeline to run
+    /// The pipeline to run
     #[arg(value_enum, short, long, default_value = "value-embedding")]
     pub pipeline: Pipeline,
 
