@@ -9,7 +9,7 @@ use clap::{Parser, ValueEnum};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Argv {
-    /// File to path to heap dump file
+    /// File path to heap dump file
     #[arg(short, long, required = false, group = "file_input_group")]
     pub files: Option<Vec<String>>,
 
@@ -38,6 +38,8 @@ pub enum Pipeline {
     Graph,
     /// make a semantic embedding of the DTN
     SemanticEmbeddingDTN,
+    /// extract the dts informations from the heap dump
+    DtsExtraction,
 }
 
 pub fn get_program_args() -> Argv {

@@ -33,6 +33,63 @@ impl GraphEmbedding {
         save_value_embeding(samples, labels, csv_path, self.depth);
     }
 
+    // ----------------------------- extracting dts -----------------------------//
+    /// extract the data of all the dts from the graph
+    /// the couple (dts_base_info, dts_data) is returned for each dts
+    pub fn extract_all_dts_data(&self, block_size : usize) -> (Vec<Vec<usize>>, Vec<Vec<String>>) {
+        let mut dts_base_info = Vec::new();
+        let mut dts_data = Vec::new();
+
+        for dtn_addr in self.graph_annotate.graph_data.dtn_addrs.iter() {
+            let base_info = self.get_dts_basics_informations(*dtn_addr);
+            let data = self.extract_dts_data(*dtn_addr, block_size);
+
+            dts_base_info.push(base_info);
+            dts_data.push(data);
+        }
+
+        (dts_base_info, dts_data)
+    }
+    
+    /// extract the data of the dts :
+    /// get the blocks block_size bytes by block_size bytes (get empty string if the block is a pointer, else get the hexa value)*
+    fn extract_dts_data(&self, addr: u64, block_size : usize) -> Vec<String> {
+        let mut data = Vec::new();
+        let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
+
+        match node {
+            Node::DataStructureNode(data_structure_node) => {
+                let mut current_addr = data_structure_node.addr + block_size as u64;
+
+                // get the data of the dts
+                for _ in 1..(data_structure_node.byte_size/8) {
+                    // get the node at the current address
+                    let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&current_addr).unwrap();
+                    let mut current_block_str = String::new();
+
+                    // if the block is a pointer
+                    if node.is_pointer() {
+                        data.push(format!("p:{:x}", node.points_to().unwrap()));
+                    } else {
+                        let current_block = node.get_value().unwrap();
+                        current_block_str.push_str("v:");
+                        // convert the block to hexa
+                        for i in 0..block_size {
+                            current_block_str.push_str(&format!("{:02x}", current_block[i]));
+                        }
+                        // add the block to the data
+                        data.push(current_block_str);
+                    }
+                    
+                    current_addr += block_size as u64;
+                }
+            },
+            _ => // if the node is not in a data structure, we panic
+                panic!("Node is not a DTN"),
+        }
+        data
+    }
+
     // ----------------------------- DTN embedding -----------------------------//
     /// generate semantic embedding of all the DTN
     /// in order :
@@ -56,18 +113,8 @@ impl GraphEmbedding {
     fn generate_semantic_dtn_samples(&self, addr: u64) -> Vec<usize> {
         let mut feature: Vec<usize> = Vec::new();
 
-        let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
-
-        // add features from parent dtn node
-        match node {
-            Node::DataStructureNode(data_structure_node) => {
-                feature.push(data_structure_node.addr.try_into().expect("addr overflow in embedding")); // WARN : can be overflow !!!!!!
-                feature.push(data_structure_node.byte_size);
-                feature.push(data_structure_node.nb_pointer_nodes);
-            },
-            _ => // if the node is not in a data structure, we panic
-                panic!("Node is not a DTN"),
-        }
+        let mut info = self.get_dts_basics_informations(addr);
+        feature.append(&mut info);
 
         // add ancestors
         let mut ancestors = self.generate_neighbors_dtn(addr, petgraph::Direction::Incoming);
@@ -78,6 +125,24 @@ impl GraphEmbedding {
         feature.append(&mut children);
 
         feature
+    }
+
+    /// extract the basics information of the dts
+    fn get_dts_basics_informations(&self, addr: u64) -> Vec<usize> {
+        let mut info = Vec::new();
+        let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
+
+        // add features from parent dtn node
+        match node {
+            Node::DataStructureNode(data_structure_node) => {
+                info.push(data_structure_node.addr.try_into().expect("addr overflow in embedding")); // WARN : can be overflow !!!!!!
+                info.push(data_structure_node.byte_size);
+                info.push(data_structure_node.nb_pointer_nodes);
+            },
+            _ => // if the node is not in a data structure, we panic
+                panic!("Node is not a DTN"),
+        }
+        info
     }
 
     /// generate the ancestor/children (given dir) embedding of the DTN (nb of ptn and nb of dtn for each deapth)
