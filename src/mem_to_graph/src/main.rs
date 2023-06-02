@@ -39,9 +39,6 @@ fn main() {
         output_folder = params::DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH.clone();
     }
 
-    // no pointers
-    let no_pointers = params::ARGV.no_pointers;
-
     // test all provided paths
     for path in input_path.clone() {
         if !path.exists() {
@@ -55,7 +52,7 @@ fn main() {
             params::argv::Pipeline::ValueEmbedding => run_value_embedding(path, output_folder.clone()),
             params::argv::Pipeline::Graph => run_graph_generation(path, output_folder.clone()),
             params::argv::Pipeline::SemanticEmbeddingDTN => run_semantic_dtn_embedding(path, output_folder.clone()),
-            params::argv::Pipeline::DtsExtraction => run_extract_dtn_data(path, output_folder.clone(), no_pointers),
+            params::argv::Pipeline::DtsExtraction => run_extract_dtn_data(path, output_folder.clone(), *params::EXTRACT_NO_POINTER),
         }
     }
 }

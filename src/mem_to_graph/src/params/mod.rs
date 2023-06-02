@@ -160,4 +160,15 @@ lazy_static! {
         }
     };
 
+    pub static ref EXTRACT_NO_POINTER: bool = {
+        let val = std::env::var("EXTRACT_NO_POINTER");
+        match val {
+            Ok(nb) => nb.parse::<bool>().unwrap(),
+            Err(_) => {
+                println!("EXTRACT_NO_POINTER environment variable not set. Defaulting to false.");
+                return false;
+            },
+        }
+    };
+
 }
