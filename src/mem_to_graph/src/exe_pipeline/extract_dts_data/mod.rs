@@ -9,7 +9,7 @@ use super::get_raw_file_or_files_from_path;
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run_extract_dtn_data(path: PathBuf, output_folder: PathBuf) {
+pub fn run_extract_dtn_data(path: PathBuf, output_folder: PathBuf, no_pointers: bool) {
     // start timer
     let start_time = Instant::now();
 
@@ -75,7 +75,7 @@ pub fn run_extract_dtn_data(path: PathBuf, output_folder: PathBuf) {
                 match graph_embedding {
                     Ok(graph_embedding) => {
                         // generate samples and labels
-                        let (dts_base_info_, dts_data_) = graph_embedding.extract_all_dts_data(crate::params::BLOCK_BYTE_SIZE);
+                        let (dts_base_info_, dts_data_) = graph_embedding.extract_all_dts_data(crate::params::BLOCK_BYTE_SIZE, no_pointers);
 
                         let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
                         log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, dts_base_info_.len());

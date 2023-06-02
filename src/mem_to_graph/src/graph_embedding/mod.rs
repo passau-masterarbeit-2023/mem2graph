@@ -36,13 +36,13 @@ impl GraphEmbedding {
     // ----------------------------- extracting dts -----------------------------//
     /// extract the data of all the dts from the graph
     /// the couple (dts_base_info, dts_data) is returned for each dts
-    pub fn extract_all_dts_data(&self, block_size : usize) -> (Vec<Vec<usize>>, Vec<Vec<String>>) {
+    pub fn extract_all_dts_data(&self, block_size : usize, no_pointer : bool) -> (Vec<Vec<usize>>, Vec<Vec<String>>) {
         let mut dts_base_info = Vec::new();
         let mut dts_data = Vec::new();
 
         for dtn_addr in self.graph_annotate.graph_data.dtn_addrs.iter() {
             let base_info = self.get_dts_basics_informations(*dtn_addr);
-            let data = self.extract_dts_data(*dtn_addr, block_size);
+            let data = self.extract_dts_data(*dtn_addr, block_size, no_pointer);
 
             dts_base_info.push(base_info);
             dts_data.push(data);
@@ -53,7 +53,7 @@ impl GraphEmbedding {
     
     /// extract the data of the dts :
     /// get the blocks block_size bytes by block_size bytes (get empty string if the block is a pointer, else get the hexa value)*
-    fn extract_dts_data(&self, addr: u64, block_size : usize) -> Vec<String> {
+    fn extract_dts_data(&self, addr: u64, block_size : usize, no_pointer : bool) -> Vec<String> {
         let mut data = Vec::new();
         let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
 
@@ -69,10 +69,16 @@ impl GraphEmbedding {
 
                     // if the block is a pointer
                     if node.is_pointer() {
-                        data.push(format!("p:{:x}", node.points_to().unwrap()));
+                        if no_pointer {
+                            data.push(String::new());
+                        } else {
+                            data.push(format!("p:{:x}", node.points_to().unwrap()));
+                        }
                     } else {
                         let current_block = node.get_value().unwrap();
-                        current_block_str.push_str("v:");
+                        if !no_pointer {
+                            current_block_str.push_str("v:");
+                        }
                         // convert the block to hexa
                         for i in 0..block_size {
                             current_block_str.push_str(&format!("{:02x}", current_block[i]));

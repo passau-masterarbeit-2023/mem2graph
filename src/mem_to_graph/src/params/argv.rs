@@ -28,6 +28,11 @@ pub struct Argv {
     /// The directory to output the results
     #[arg(short, long, required = false)]
     pub output: Option<String>,
+
+    /// eliminate completly the pointers during the data extractions ?
+    /// NOTE: this option is only used for the data extraction
+    #[arg(short, long, required = false)]
+    pub no_pointers: bool,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
