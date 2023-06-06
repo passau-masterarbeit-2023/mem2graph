@@ -38,7 +38,11 @@ pub struct GraphData {
 impl GraphData {
 
     /// Initialize the graph data from a raw heap dump file.
-    pub fn new(heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> Result<Self, crate::utils::ErrorKind> {
+    pub fn new(
+        heap_dump_raw_file_path: PathBuf, 
+        pointer_byte_size: usize,
+        annotation : bool,
+    ) -> Result<Self, crate::utils::ErrorKind> {
         let mut instance = Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
@@ -49,6 +53,7 @@ impl GraphData {
                 HeapDumpData::new(
                     heap_dump_raw_file_path,
                     pointer_byte_size,
+                    annotation,
                 )?
             ),
         };
@@ -491,7 +496,8 @@ mod tests {
         
         let graph_data = GraphData::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
-            params::BLOCK_BYTE_SIZE
+            params::BLOCK_BYTE_SIZE,
+            true
         ).unwrap();
         check_heap_dump!(graph_data);
 
@@ -533,7 +539,8 @@ mod tests {
         
         let graph_data = GraphData::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
-            params::BLOCK_BYTE_SIZE
+            params::BLOCK_BYTE_SIZE,
+            true
         ).unwrap();
         let node = graph_data.create_node_from_bytes_wrapper_index(
             &*TEST_PTR_1_VALUE_BYTES, 

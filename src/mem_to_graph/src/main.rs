@@ -45,14 +45,16 @@ fn main() {
             panic!("🚩 The path doesn't exist: {}", path.to_str().unwrap());
         }
     }
+    // annotation of the graph
+    let annotation = !params::ARGV.no_annotation;
 
     // launch computations
     for path in input_path {
         match params::ARGV.pipeline {
-            params::argv::Pipeline::ValueEmbedding => run_value_embedding(path, output_folder.clone()),
-            params::argv::Pipeline::Graph => run_graph_generation(path, output_folder.clone()),
-            params::argv::Pipeline::SemanticEmbeddingDTN => run_semantic_dtn_embedding(path, output_folder.clone()),
-            params::argv::Pipeline::DtsExtraction => run_extract_dtn_data(path, output_folder.clone(), *params::EXTRACT_NO_POINTER),
+            params::argv::Pipeline::ValueEmbedding => run_value_embedding(path, output_folder.clone(), annotation),
+            params::argv::Pipeline::Graph => run_graph_generation(path, output_folder.clone(), annotation),
+            params::argv::Pipeline::SemanticEmbeddingDTN => run_semantic_dtn_embedding(path, output_folder.clone(), annotation),
+            params::argv::Pipeline::DtsExtraction => run_extract_dtn_data(path, output_folder.clone(), *params::EXTRACT_NO_POINTER, annotation),
         }
     }
 }

@@ -6,13 +6,19 @@ pub struct GraphAnnotate {
 }
 
 impl GraphAnnotate {
-    pub fn new(heap_dump_raw_file_path: PathBuf, pointer_byte_size: usize) -> Result<GraphAnnotate, crate::utils::ErrorKind> {
-        let graph_data = GraphData::new(heap_dump_raw_file_path, pointer_byte_size)?;
+    pub fn new(
+        heap_dump_raw_file_path: PathBuf, 
+        pointer_byte_size: usize,
+        annotation : bool,
+    ) -> Result<GraphAnnotate, crate::utils::ErrorKind> {
+        let graph_data = GraphData::new(heap_dump_raw_file_path, pointer_byte_size, annotation)?;
         
         let mut graph_annotate = GraphAnnotate {
             graph_data,
         };
-        graph_annotate.annotate();
+        if annotation {
+            graph_annotate.annotate();
+        }
         Ok(graph_annotate)
     }
 
@@ -146,7 +152,8 @@ mod tests {
 
         let graph_annotate = GraphAnnotate::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
-            params::BLOCK_BYTE_SIZE
+            params::BLOCK_BYTE_SIZE,
+            true,
         ).unwrap();
 
         // check that there is the SshStructNodeAnnotation
@@ -172,7 +179,8 @@ mod tests {
 
         let graph_annotate = GraphAnnotate::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
-            params::BLOCK_BYTE_SIZE
+            params::BLOCK_BYTE_SIZE,
+            true,
         ).unwrap();
 
         // check that there is at least one KeyNode
@@ -206,7 +214,8 @@ mod tests {
         
         let graph_annotate = GraphAnnotate::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
-            params::BLOCK_BYTE_SIZE
+            params::BLOCK_BYTE_SIZE,
+            true,
         ).unwrap();
 
         // save the graph to a file as a dot file (graphviz)

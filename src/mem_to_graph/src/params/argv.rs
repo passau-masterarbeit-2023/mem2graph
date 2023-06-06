@@ -28,6 +28,11 @@ pub struct Argv {
     /// The directory to output the results
     #[arg(short, long, required = false)]
     pub output: Option<String>,
+
+    /// If the graph is annotated
+    /// NOTE : By default the graph is annotated, if you want to disable it use this flag
+    #[arg(short = 'a', long, action)]
+    pub no_annotation: bool,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]

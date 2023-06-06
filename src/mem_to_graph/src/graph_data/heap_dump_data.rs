@@ -30,6 +30,7 @@ impl HeapDumpData {
     pub fn new(
         heap_dump_raw_file_path: PathBuf,
         block_size: usize,
+        annotation : bool,
     ) -> Result<HeapDumpData, crate::utils::ErrorKind>  {
         // check if file exists
         if !heap_dump_raw_file_path.exists() {
@@ -57,11 +58,23 @@ impl HeapDumpData {
         
         
         let (min_addr, max_addr) = HeapDumpData::get_min_max_addr(&json_data, blocks.len(), block_size)?;
-        let addr_to_key_data = generate_key_data_from_json(&json_data)?;
+        let addr_to_key_data;
+        if annotation {
+            addr_to_key_data = generate_key_data_from_json(&json_data)?;
+        } else {
+            addr_to_key_data = HashMap::new();
+        }
 
         // special addresses
-        let addr_ssh_struct = json_value_to_addr(json_value_for_key(&json_data, "SSH_STRUCT_ADDR".to_string())?);
-        let addr_session_state = json_value_to_addr(json_value_for_key(&json_data, "SESSION_STATE_ADDR".to_string())?);
+        let addr_ssh_struct;
+        let addr_session_state;
+        if annotation {
+            addr_ssh_struct = json_value_to_addr(json_value_for_key(&json_data, "SSH_STRUCT_ADDR".to_string())?);
+            addr_session_state = json_value_to_addr(json_value_for_key(&json_data, "SESSION_STATE_ADDR".to_string())?);
+        } else {
+            addr_ssh_struct = 0;
+            addr_session_state = 0;
+        }
 
         Ok(HeapDumpData {
             block_size,
@@ -177,7 +190,8 @@ mod tests {
         crate::tests::setup();
         let heap_dump_data: HeapDumpData = HeapDumpData::new(
             TEST_HEAP_DUMP_FILE_PATH.clone(), 
-            BLOCK_BYTE_SIZE
+            BLOCK_BYTE_SIZE,
+            true
         ).unwrap();
 
         assert_eq!(heap_dump_data.block_size, BLOCK_BYTE_SIZE);
@@ -230,7 +244,8 @@ mod tests {
         crate::tests::setup();
         let heap_dump_data = HeapDumpData::new(
             TEST_HEAP_DUMP_FILE_PATH.clone(), 
-            BLOCK_BYTE_SIZE
+            BLOCK_BYTE_SIZE,
+            true
         ).unwrap();
         let addr = heap_dump_data.min_addr + 2 * BLOCK_BYTE_SIZE as u64;
 

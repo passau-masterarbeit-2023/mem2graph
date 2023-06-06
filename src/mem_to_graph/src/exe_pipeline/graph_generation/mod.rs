@@ -8,7 +8,7 @@ use super::get_raw_file_or_files_from_path;
 /// If directory then list all files in that directory and its subdirectories
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the graph generation for all these file
-pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf) {
+pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf, annotation : bool) {
    // start timer
    let start_time = Instant::now();
 
@@ -68,7 +68,8 @@ pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf) {
 
                let graph_annotate = GraphAnnotate::new(
                    heap_dump_raw_file_path.clone(),
-                   crate::params::BLOCK_BYTE_SIZE
+                   crate::params::BLOCK_BYTE_SIZE,
+                   annotation
                );
 
                match graph_annotate {
