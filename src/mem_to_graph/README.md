@@ -6,6 +6,10 @@
 
 `cargo run`: run program with default values (especially default dir from `.env` config file).
 
+#### examples
+
+`cargo run -- -d /home/onyr/code/phdtrack/phdtrack_data/Performance_Test -d /home/onyr/code/phdtrack/phdtrack_data/Training -d /home/onyr/code/phdtrack/phdtrack_data/Validation -o /home/onyr/code/phdtrack/phdtrack_project_3/src/mem_to_graph/data/semantic_embedding_dtn -p semantic-embedding-dtn` run the `semantic-embedding-dtn` for several directories containing the data, and specify the output directory.
+
 ## program params
 
 ### `COMPRESS_POINTER_CHAINS`
