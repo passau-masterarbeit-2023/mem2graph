@@ -62,7 +62,10 @@ static INIT: Once = Once::new();
 pub fn init() {
     INIT.call_once(|| {
         // initialization code here
-        dotenv().ok();
+        print!("Loading .env file... ");
+        dotenv().expect("Failed to load .env file");
+
+        print!("Initializing logger... ");
         init_logger();
     });
 }
@@ -85,17 +88,23 @@ lazy_static! {
     static ref PROJECT_BASE_DIR: PathBuf = {
         let repo_dir = std::env::var("PROJECT_BASE_DIR")
             .expect("PROJECT_BASE_DIR environment variable must be set");
-        PathBuf::from(repo_dir)
+        let path: PathBuf = PathBuf::from(repo_dir);
+        check_path(&path);
+        path
     };
     
     pub static ref TEST_HEAP_DUMP_FILE_PATH: PathBuf = {
         let test_heap_dump_raw_file_path = std::env::var("TEST_HEAP_DUMP_RAW_FILE_PATH")
             .expect("TEST_HEAP_DUMP_RAW_FILE_PATH environment variable must be set").to_string();
-        PROJECT_BASE_DIR.join(&test_heap_dump_raw_file_path)
+        let path: PathBuf = PROJECT_BASE_DIR.join(&test_heap_dump_raw_file_path);
+        check_path(&path);
+        path
     };
 
     pub static ref TEST_HEAP_JSON_FILE_PATH: PathBuf = {
-        crate::utils::heap_dump_path_to_json_path(&TEST_HEAP_DUMP_FILE_PATH)
+        let path: PathBuf = crate::utils::heap_dump_path_to_json_path(&TEST_HEAP_DUMP_FILE_PATH);
+        check_path(&path);
+        path
     };
 
     pub static ref COMPRESS_POINTER_CHAINS: bool = {
@@ -123,7 +132,9 @@ lazy_static! {
     pub static ref TEST_CSV_EMBEDDING_FILE_PATH: PathBuf = {
         let test_csv_embedding_file_path = std::env::var("TEST_CSV_EMBEDDING_FILE_PATH")
             .expect("TEST_CSV_EMBEDDING_FILE_PATH environment variable must be set").to_string();
-        PROJECT_BASE_DIR.join(&test_csv_embedding_file_path)
+        let path: PathBuf = PROJECT_BASE_DIR.join(&test_csv_embedding_file_path);
+        check_path(&path);
+        path
     };
 
     pub static ref REMOVE_TRIVIAL_ZERO_SAMPLES: bool = {
@@ -140,13 +151,17 @@ lazy_static! {
     pub static ref DEFAULT_DATA_DIR_PATH: PathBuf = {
         let testing_data_dir_path = std::env::var("DEFAULT_DATA_DIR_PATH")
             .expect("DEFAULT_DATA_DIR_PATH environment variable must be set").to_string();
-        PROJECT_BASE_DIR.join(&testing_data_dir_path)
+        let path: PathBuf = PROJECT_BASE_DIR.join(&testing_data_dir_path);
+        check_path(&path);
+        path
     };
 
     pub static ref DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH: PathBuf = {
         let samples_and_labels_data_dir_path = std::env::var("DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH")
             .expect("DEFAULT_SAVE_SAMPLES_AND_LABELS_DIR_PATH environment variable must be set").to_string();
-        PathBuf::from(samples_and_labels_data_dir_path)
+        let path: PathBuf = PathBuf::from(samples_and_labels_data_dir_path);
+        check_path(&path);
+        path
     };
 
     pub static ref NB_FILES_PER_CHUNK: usize = {
@@ -171,4 +186,11 @@ lazy_static! {
         }
     };
 
+}
+
+/// Check if a path exists. If not, panic.
+fn check_path(path: &PathBuf) {
+    if !path.exists() {
+        panic!("Path {:?} does not exist", path);
+    }
 }

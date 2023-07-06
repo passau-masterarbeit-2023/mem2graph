@@ -1,3 +1,4 @@
+#[cfg(test)]
 use std::sync::Once;
 use lazy_static::lazy_static;
 
@@ -8,10 +9,13 @@ use crate::params;
 #[cfg(test)]
 mod utils;
 mod graph_structs;
+
+#[cfg(test)]
 static INIT: Once = Once::new();
 
 /// WARN: Must be called after init()
 /// otherwise, the logger will not be initialized
+#[cfg(test)]
 fn log_order_warning() {
     INIT.call_once(|| {
         log::info!(" 🚧 The order of the logs is not guaranteed. This is because the tests are run in parallel.");
@@ -19,8 +23,8 @@ fn log_order_warning() {
     });
 }
 
-
 // setup() function is called before each test
+#[cfg(test)]
 pub fn setup() {
         // initialization code here
         crate::params::init(); // Call the init() function to load the .env file
