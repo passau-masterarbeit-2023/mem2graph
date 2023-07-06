@@ -204,6 +204,13 @@ impl Node {
                         Some(key_node.dtn_addr)
                     }
                 }
+            },
+            Node::PointerNode(pointer_node) => {
+                match pointer_node {
+                    PointerNode::BasePointerNode(base_pointer_node) => {
+                        Some(base_pointer_node.dtn_addr)
+                    }
+                }
             }
             _ => None,
         }
@@ -250,12 +257,22 @@ impl std::fmt::Debug for Node {
     }
 }
 
+/// type of dtn to embedded
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DtnTypes {
+    Basestruct = 0,
+    Keystruct = 1,
+    SshStruct = 2,
+    SessionStateStruct = 3
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DataStructureNode {
     pub addr: u64,
     pub byte_size: usize,
     pub nb_pointer_nodes: usize,
     pub nb_value_nodes: usize,
+    pub dtn_type: DtnTypes,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -269,6 +286,7 @@ pub struct BaseValueNode {
 pub struct BasePointerNode {
     pub addr: u64,
     pub points_to: u64,
+    pub dtn_addr: u64,
 }
 
 // Key data from JSON file

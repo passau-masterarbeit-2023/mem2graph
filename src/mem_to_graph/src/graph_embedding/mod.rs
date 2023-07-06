@@ -106,6 +106,7 @@ impl GraphEmbedding {
     /// 
     ///     - ancestor (in order of depth, alternate DTN/PTR)
     ///     - children (same)
+    ///     - label (if the struct contains a key, or is the ssh or sessionState)
     pub fn generate_semantic_dtns_samples(&self) -> Vec<Vec<usize>> {
         let mut samples = Vec::new();
         // get dtn :
@@ -115,6 +116,7 @@ impl GraphEmbedding {
         }
         samples
     }
+
 
     /// generate semantic embedding of a DTN
     fn generate_semantic_dtn_samples(&self, addr: u64) -> Vec<usize> {
@@ -130,6 +132,17 @@ impl GraphEmbedding {
         // add children
         let mut children = self.generate_neighbors_dtn(addr, petgraph::Direction::Outgoing);
         feature.append(&mut children);
+
+        // add label
+        let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
+        match node {
+            Node::DataStructureNode(data_structure_node) => {
+                let label = data_structure_node.dtn_type.clone();
+                feature.push(label as usize);
+            },
+            _ => // if the node is not in a data structure, we panic
+                panic!("Node is not a DTN"),
+        }
 
         feature
     }

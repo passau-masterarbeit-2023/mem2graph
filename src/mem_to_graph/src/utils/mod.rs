@@ -158,6 +158,7 @@ pub fn create_node_from_bytes(
                 BasePointerNode {
                     addr,
                     points_to: potential_ptr.unwrap(),
+                    dtn_addr,
                 }
             )
         )

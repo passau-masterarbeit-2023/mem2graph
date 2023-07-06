@@ -2,11 +2,13 @@
 use crate::graph_structs::*;
 #[cfg(test)]
 fn create_test_structs() -> Vec<Node> {
+
     let data_structure_node = Node::DataStructureNode(DataStructureNode {
         addr: 0,
         byte_size: 8,
         nb_pointer_nodes: 0,
         nb_value_nodes: 0,
+        dtn_type : DtnTypes::Basestruct
     });
 
     let base_value_node = ValueNode::BaseValueNode(BaseValueNode {
@@ -18,6 +20,7 @@ fn create_test_structs() -> Vec<Node> {
     let base_pointer_node = PointerNode::BasePointerNode(BasePointerNode {
         addr: 2,
         points_to: 8,
+        dtn_addr: 0,
     });
 
     let key_data = KeyData {

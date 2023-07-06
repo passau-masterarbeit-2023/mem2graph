@@ -7,7 +7,7 @@ use petgraph::visit::IntoEdgeReferences;
 pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
-use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT, SpecialNodeAnnotation};
+use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT, SpecialNodeAnnotation, DtnTypes};
 use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS, COMPRESS_POINTER_CHAINS};
 use crate::utils;
 
@@ -75,7 +75,6 @@ impl GraphData {
             heap_dump_data: None,
         }
     }
-
 
     fn create_node_from_bytes_wrapper(
         &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64, dtn_addr: u64
@@ -240,6 +239,7 @@ impl GraphData {
             byte_size: datastructure_size,
             nb_pointer_nodes: count_pointer_nodes,
             nb_value_nodes: count_value_nodes,
+            dtn_type : DtnTypes::Basestruct
         });
         self.add_node_wrapper(datastructure_node);
         
@@ -393,6 +393,7 @@ mod tests {
             byte_size: 8,
             nb_pointer_nodes: 0,
             nb_value_nodes: 0,
+            dtn_type : DtnTypes::Basestruct
         });
         let base_value_node = Node::ValueNode(
             ValueNode::BaseValueNode(
@@ -407,6 +408,7 @@ mod tests {
                 PointerNode::BasePointerNode(BasePointerNode {
                     addr: 3,
                     points_to: 8,
+                    dtn_addr: 1,
                 }
             )
         );

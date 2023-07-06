@@ -1,4 +1,4 @@
-use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation}, utils::div_round_up};
+use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation, DtnTypes, DataStructureNode}, utils::div_round_up};
 use std::path::{PathBuf};
 
 pub struct GraphAnnotate {
@@ -40,6 +40,7 @@ impl GraphAnnotate {
                 ssh_struct_addr,
                 SpecialNodeAnnotation::SshStructNodeAnnotation(ssh_struct_addr),
             );
+            self.annotate_special_dtn(ssh_struct_addr, DtnTypes::SshStruct);
         }
         {
             // SESSION_STATE_ADDR
@@ -49,6 +50,8 @@ impl GraphAnnotate {
                 session_state_addr,
                 SpecialNodeAnnotation::SessionStateNodeAnnotation(session_state_addr),
             );
+            
+            self.annotate_special_dtn(session_state_addr, DtnTypes::SessionStateStruct);
         }
     }
 
@@ -121,6 +124,14 @@ impl GraphAnnotate {
                         key: aggregated_key, // found in heap dump, full key (not just the first block)
                         key_data: key_data.clone(), // found in heap dump, key data
                     }));
+                    // annotate the dtn node with the keystruct
+                    let dtn_node = self.graph_data.addr_to_node.get(&node.unwrap().get_dtn_addr().unwrap()).unwrap();
+                    let new_dtn_node_option = Self::get_annotated_dtn(dtn_node, DtnTypes::Keystruct);
+                    if new_dtn_node_option.is_some() {
+                        let new_dtn_node = new_dtn_node_option.unwrap();
+                        self.graph_data.addr_to_node.insert(new_dtn_node.get_address(), new_dtn_node);
+                    }
+                    
                     self.graph_data.addr_to_node.insert(*addr, key_node);
                 } else {
                     log::warn!(
@@ -132,6 +143,61 @@ impl GraphAnnotate {
                 }
 
             }
+        }
+    }
+
+    /// try to annotate directly the node if it is a dtn, or the parent if it is a pointer/value
+    fn annotate_special_dtn(&mut self, node_addr : u64, dtn_type : DtnTypes) {
+        // get the node and annotate the struct
+        let node: Option<&Node> = self.graph_data.addr_to_node.get(&node_addr);
+        if node.is_some() {
+            let node = node.unwrap();
+            let dtn_node = match node {
+                Node::DataStructureNode(_) => { // either the annotate node is a dtn
+                    node
+                },
+                _ => { // or it is a pointer/value, so we get the parent
+                    let parent = self.graph_data.addr_to_node.get(&node.get_dtn_addr().unwrap()).unwrap();
+                    parent
+                },
+            };
+            let new_dtn = Self::get_annotated_dtn(dtn_node, dtn_type).unwrap();
+            self.graph_data.addr_to_node.insert(new_dtn.get_address(), new_dtn);
+        } else {
+            // log warning
+            log::warn!(
+                "node not found for addr: {}, for type {:?}", 
+                node_addr, dtn_type
+            );
+        }
+    }
+
+    /// try to annotate the node as a dtn
+    fn get_annotated_dtn(dtn : &Node, new_dtn_type : DtnTypes) -> Option<Node> {
+        // check that the node is a dtn
+        match dtn {
+            Node::DataStructureNode(dtn_node_info) => {
+                // create a new DtnNode with the new dtn_type
+                Some(
+                    Node::DataStructureNode(
+                        DataStructureNode {
+                            addr: dtn_node_info.addr,
+                            byte_size: dtn_node_info.byte_size,
+                            nb_pointer_nodes: dtn_node_info.nb_pointer_nodes,
+                            nb_value_nodes: dtn_node_info.nb_value_nodes,
+                            dtn_type: new_dtn_type,
+                        }
+                    )
+                )
+            },
+            _ => {
+                // log warning
+                log::warn!(
+                    "node at dtn_addr: {} is not a DtnNode, can't annotate it", 
+                    dtn.get_address()
+                );
+                None
+            },
         }
     }
 }

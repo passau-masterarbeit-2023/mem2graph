@@ -153,6 +153,9 @@ pub fn save_dtn_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, csv_path
         header.push(format!("f_dtns_children_{}", i));
         header.push(format!("f_ptrs_children_{}", i));
     }
+    header.push("label".to_string());
+
+
     csv_writer.write_record(header).unwrap();
 
     // save samples and labels to CSV
