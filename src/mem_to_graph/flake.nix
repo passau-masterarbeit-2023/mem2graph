@@ -16,6 +16,7 @@
         pkgs.rustc
 
         pkgs.rust-analyzer
+        pkgs.rustup
         pkgs.rustfmt
       ];
 

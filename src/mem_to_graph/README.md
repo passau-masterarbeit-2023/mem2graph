@@ -60,6 +60,12 @@ These lines probably represents part of strings or text data or even arrays of v
 
 [Guide on how to setup a Nix dev environment](https://ayats.org/blog/nix-workflow/)
 
+[Guide for Rust on NixOS](https://nixos.wiki/wiki/Rust)
+
 `direnv reload`: reload direnv in current terminal.
 
 `ctrl`+`shift`+`p` > `direnv: Reload environment`: reload current VSCode window to use
+
+### VScode rust-analyzer
+
+As of now, I haven't succed to make rust-analyser work on NixOS. I have tried several things like `rustup component add rust-src` or using the [arrterian.nix-env-selector](https://marketplace.visualstudio.com/items?itemName=arrterian.nix-env-selector) extension to enable my flake... without success.
