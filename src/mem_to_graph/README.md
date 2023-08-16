@@ -55,3 +55,11 @@ When generating the samples for value nodes, it appears that most lines are as t
 In order to limit the imbalancing of the dataset, and since these lines are just full of zeros, it is not very interesting to make our models take them as parameters for the training. So we have added a parameter to remove them directly at the moment we create them.
 
 These lines probably represents part of strings or text data or even arrays of values that do not need to be accessed directly.
+
+## Nix
+
+[Guide on how to setup a Nix dev environment](https://ayats.org/blog/nix-workflow/)
+
+`direnv reload`: reload direnv in current terminal.
+
+`ctrl`+`shift`+`p` > `direnv: Reload environment`: reload current VSCode window to use
