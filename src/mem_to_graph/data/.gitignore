@@ -2,3 +2,6 @@
 *.gv
 *.zip
 seminar_data/
+
+# python pickle files
+*.pickle
