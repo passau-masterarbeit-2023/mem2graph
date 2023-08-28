@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use exe_pipeline::statistic_dtn_embedding::run_statistics_dtn_embedding;
 use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation, semantic_dtn_embedding::run_semantic_dtn_embedding, extract_dts_data::run_extract_dtn_data};
 
 // link modules
@@ -55,6 +56,7 @@ fn main() {
             params::argv::Pipeline::Graph => run_graph_generation(path, output_folder.clone(), annotation),
             params::argv::Pipeline::SemanticEmbeddingDTN => run_semantic_dtn_embedding(path, output_folder.clone(), annotation),
             params::argv::Pipeline::DtsExtraction => run_extract_dtn_data(path, output_folder.clone(), *params::EXTRACT_NO_POINTER, annotation),
+            params::argv::Pipeline::StatisticEmbeddingDTN => run_statistics_dtn_embedding(path, output_folder.clone(), annotation),
         }
     }
 }

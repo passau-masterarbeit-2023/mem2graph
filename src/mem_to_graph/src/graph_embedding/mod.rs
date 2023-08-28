@@ -1,12 +1,11 @@
 #[cfg(test)]
 use crate::exe_pipeline::value_embedding::save_value_embeding;
-use crate::graph_structs::{
-    Node,
-};
+use crate::graph_structs::Node;
 use crate::graph_annotate::GraphAnnotate;
+use crate::utils::{generate_bit_combinations, to_n_bits_binary, u64_to_bytes, compute_statistics, shannon_entropy};
 
 use std::path::PathBuf;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 pub struct GraphEmbedding {
     graph_annotate: GraphAnnotate,
@@ -43,7 +42,7 @@ impl GraphEmbedding {
 
         for dtn_addr in self.graph_annotate.graph_data.dtn_addrs.iter() {
             let base_info = self.get_dts_basics_informations(*dtn_addr);
-            let data = self.extract_dts_data(*dtn_addr, block_size, no_pointer);
+            let data = self.extract_dts_data_as_hex_blocks(*dtn_addr, block_size, no_pointer);
 
             dts_base_info.push(base_info);
             dts_data.push(data);
@@ -54,7 +53,7 @@ impl GraphEmbedding {
     
     /// extract the data of the dts :
     /// get the blocks block_size bytes by block_size bytes (get empty string if the block is a pointer, else get the hexa value)*
-    fn extract_dts_data(&self, addr: u64, block_size : usize, no_pointer : bool) -> Vec<String> {
+    fn extract_dts_data_as_hex_blocks(&self, addr: u64, block_size : usize, no_pointer : bool) -> Vec<String> {
         let mut data = Vec::new();
         let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
 
@@ -97,7 +96,205 @@ impl GraphEmbedding {
         data
     }
 
-    // ----------------------------- DTN embedding -----------------------------//
+    // ----------------------------- statistic DTN embedding -----------------------------//
+    /// generate statistic embedding of all the DTN
+    /// in order :
+    ///    - DTN addresse (not really usefull for learning, but can bu usefull to further analyse the data)
+    ///    - DTN size
+    ///    - nb pointer
+    ///    - N-gram of the DTN (in number of bit, ascending order, bitwise order)
+    /// Common statistic (f64)
+    ///    - Mean Byte Value
+    ///    - Mean Absolute Deviation (MAD)
+    ///    - Standard Deviation
+    ///    - Skewness
+    ///    - Kurtosis
+    ///    - Shannon entropy
+    pub fn generate_statistic_dtns_samples(&self, n_gram : usize, block_size : usize) -> Vec<(Vec<usize>, Vec<f64>)> {
+        let mut samples = Vec::new();
+        // get dtn :
+        for dtn_addr in self.graph_annotate.graph_data.dtn_addrs.iter() {
+            let sample = self.generate_statistic_dtn_samples(*dtn_addr, n_gram, block_size);
+            samples.push(sample);
+        }
+        samples
+    }
+
+    /// generate statistic embedding of a DTN
+    fn generate_statistic_dtn_samples(&self, addr: u64, n_gram : usize, block_size : usize) -> 
+        (Vec<usize>, Vec<f64>) {
+        let mut feature_usize: Vec<usize> = Vec::new();
+        let mut feature_f64: Vec<f64> = Vec::new();
+        
+        // -------- usize
+        
+        // common information
+        let mut info = self.get_dts_basics_informations(addr);
+        feature_usize.append(&mut info);
+
+        // add n-gram
+        let mut n_gram_vec = self.generate_n_gram_dtns(addr, n_gram, block_size);
+        feature_usize.append(&mut n_gram_vec);
+
+        // add label
+        feature_usize.push(self.get_dtn_label(addr));
+
+        // -------- f64
+
+        let mut common_statistics = self.generate_common_statistic_dtns(addr, block_size);
+        feature_f64.append(&mut common_statistics);
+        
+
+        (feature_usize, feature_f64)
+    }
+
+    /// generate common statistic
+    fn generate_common_statistic_dtns(&self, addr: u64, block_size : usize) -> Vec<f64> {
+        let mut statistics = Vec::new();
+
+
+        let bytes = self.extract_dts_data_as_bytes(addr, block_size);
+
+        let result = compute_statistics(&bytes);
+
+        statistics.push(result.0);
+        statistics.push(result.1);
+        statistics.push(result.2);
+        statistics.push(result.3);
+        statistics.push(result.4);
+
+
+        statistics.push(shannon_entropy(&bytes));
+        
+        statistics
+    }
+
+    /// generate all the n-gram of the DTN until n (include)
+    fn generate_n_gram_dtns(&self, addr: u64, n: usize, block_size : usize) -> Vec<usize> {
+        let mut n_gram = Vec::new();
+
+        let mut n_gram_counter = HashMap::<String, usize>::new();
+        // keep the ordonned key to reconstruct the vector
+        let mut ordonned_key = Vec::<String>::new();
+        // reserve this much of space because addition of all power of 2 until n is 2^(n + 1) - 1
+        ordonned_key.reserve(1 << (n + 1));
+
+        // initialise the hashmap
+        for i in 1..(n + 1){
+            let mut bit_combi = generate_bit_combinations(i);
+
+            
+            for combi in bit_combi.iter() {
+                n_gram_counter.insert(combi.clone(), 0);
+            }
+
+            ordonned_key.append(&mut bit_combi);
+        }
+
+        n_gram.reserve(ordonned_key.len());
+
+        // get th bits of the dtn
+        let dtn_bits = self.extract_dts_data_as_bits(addr, block_size);
+
+        // for each bit
+        for char_i in 0..dtn_bits.len() {
+            // get the window
+            let mut window = String::new();
+            for window_size in 1..(n + 1) {
+                if char_i + window_size > dtn_bits.len() {
+                    break;
+                }
+                window.push(dtn_bits[char_i + window_size - 1]);
+                let window_count = n_gram_counter.get_mut(&window).unwrap();
+                *window_count += 1;
+            }
+        }
+
+        // construct the final vecteur in order
+        for key in ordonned_key.iter() {
+            n_gram.push(*n_gram_counter.get(key).unwrap());
+        }
+
+
+        n_gram
+    }
+
+
+    /// extract the data of the dts :
+    /// get all the bit of the dts as u8
+    fn extract_dts_data_as_bytes(&self, addr: u64, block_size : usize) -> Vec<u8> {
+        let mut data = Vec::new();
+        let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
+
+        match node {
+            Node::DataStructureNode(data_structure_node) => {
+                let mut current_addr = data_structure_node.addr + block_size as u64;
+
+                // get the data of the dts
+                for _ in 1..(data_structure_node.byte_size/8) {
+                    // get the node at the current address
+                    let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&current_addr).unwrap();
+                    // if the block is a pointer
+                    if node.is_pointer() {
+                        let bits = u64_to_bytes(node.points_to().unwrap());
+                        data.extend_from_slice(&bits);
+                        
+                    } else {
+                        let current_block = node.get_value().unwrap();
+                        data.extend_from_slice(&current_block);
+                    }
+                    
+                    current_addr += block_size as u64;
+                }
+            },
+            _ => // if the node is not in a data structure, we panic
+                panic!("Node is not a DTN"),
+        }
+        data
+    }
+
+
+    /// extract the data of the dts :
+    /// get all the bit of the dts as char ('1' or 'O')
+    fn extract_dts_data_as_bits(&self, addr: u64, block_size : usize) -> Vec<char> {
+        let mut data = Vec::new();
+        let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
+
+        match node {
+            Node::DataStructureNode(data_structure_node) => {
+                let mut current_addr = data_structure_node.addr + block_size as u64;
+                let block_size_bit = (1 << block_size) as usize;
+
+                // get the data of the dts
+                for _ in 1..(data_structure_node.byte_size/8) {
+                    // get the node at the current address
+                    let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&current_addr).unwrap();
+                    // if the block is a pointer
+                    if node.is_pointer() {
+                        let mut bits = to_n_bits_binary(node.points_to().unwrap(), block_size_bit).chars().collect();
+                        data.append(&mut bits);
+                        
+                    } else {
+                        let current_block = node.get_value().unwrap();
+                        
+                        // convert the block to binary
+                        for i in 0..block_size {
+                            // each value of the array are bytes, so 8 bit long
+                            let mut bits = to_n_bits_binary(current_block[i] as u64, 8).chars().collect();
+                            data.append(&mut bits);
+                        }
+                    }
+                    
+                    current_addr += block_size as u64;
+                }
+            },
+            _ => // if the node is not in a data structure, we panic
+                panic!("Node is not a DTN"),
+        }
+        data
+    }
+
+    // ----------------------------- semantic DTN embedding -----------------------------//
     /// generate semantic embedding of all the DTN
     /// in order :
     ///     - DTN addresse (not really usefull for learning, but can bu usefull to further analyse the data)
@@ -134,17 +331,27 @@ impl GraphEmbedding {
         feature.append(&mut children);
 
         // add label
+        feature.push(self.get_dtn_label(addr));
+
+        feature
+    }
+
+
+    /// get the label of a dtn (graph_structure, DtnType)
+    /// Basestruct = 0,
+    /// Keystruct = 1,
+    /// SshStruct = 2,
+    /// SessionStateStruct = 3
+    fn get_dtn_label(&self, addr : u64) -> usize {
         let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
         match node {
             Node::DataStructureNode(data_structure_node) => {
                 let label = data_structure_node.dtn_type.clone();
-                feature.push(label as usize);
+                label as usize
             },
             _ => // if the node is not in a data structure, we panic
                 panic!("Node is not a DTN"),
         }
-
-        feature
     }
 
     /// extract the basics information of the dts

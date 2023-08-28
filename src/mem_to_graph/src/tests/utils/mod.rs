@@ -213,3 +213,106 @@ fn test_json_value_to_addr() {
 
     assert_eq!(actual_addr, expected_addr, "The address should be equal to the expected value");
 }
+
+
+#[test]
+fn test_generate_bit_combinations_1() {
+    let result = generate_bit_combinations(1);
+    assert_eq!(result, vec!["0", "1"]);
+}
+
+#[test]
+fn test_generate_bit_combinations_2() {
+    let result = generate_bit_combinations(2);
+    assert_eq!(result, vec!["00", "01", "10", "11"]);
+}
+
+#[test]
+fn test_generate_bit_combinations_3() {
+    let result = generate_bit_combinations(3);
+    assert_eq!(result, vec!["000", "001", "010", "011", "100", "101", "110", "111"]);
+}
+
+#[test]
+fn test_to_n_bits_binary_1() {
+    let result = to_n_bits_binary(1, 1);
+    assert_eq!(result, "1");
+}
+
+#[test]
+fn test_to_n_bits_binary_2() {
+    let result = to_n_bits_binary(2, 4);
+    assert_eq!(result, "0010");
+}
+
+#[test]
+fn test_to_n_bits_binary_3() {
+    let result = to_n_bits_binary(5, 3);
+    assert_eq!(result, "101");
+}
+
+#[test]
+fn test_to_n_bits_binary_4() {
+    let result = to_n_bits_binary(0, 5);
+    assert_eq!(result, "00000");
+}
+
+
+#[test]
+fn test_u64_to_bytes_1() {
+    let result = u64_to_bytes(1);
+    assert_eq!(result, [0, 0, 0, 0, 0, 0, 0, 1]);
+}
+
+#[test]
+fn test_u64_to_bytes_2() {
+    let result = u64_to_bytes(256);
+    assert_eq!(result, [0, 0, 0, 0, 0, 0, 1, 0]);
+}
+
+#[test]
+fn test_u64_to_bytes_3() {
+    let result = u64_to_bytes(0x1234567890ABCDEF);
+    assert_eq!(result, [0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF]);
+}
+
+#[test]
+fn test_u64_to_bytes_4() {
+    let result = u64_to_bytes(0);
+    assert_eq!(result, [0, 0, 0, 0, 0, 0, 0, 0]);
+}
+
+#[test]
+fn test_u64_to_bytes_max_value() {
+    let result = u64_to_bytes(u64::MAX);
+    assert_eq!(result, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+}
+
+
+
+#[test]
+fn test_compute_statistics_empty_data() {
+    let data = Vec::new();
+    let result = compute_statistics(&data);
+
+    println!("{:?}", result);
+
+    // For an empty dataset, all values should be NaN (Not a Number)
+    assert!(result.0.is_nan());
+    assert!(result.1.is_nan());
+    assert!(result.2.is_nan());
+    assert!(result.3.is_nan());
+    assert!(result.4.is_nan());
+}
+
+#[test]
+fn test_compute_statistics_single_byte_data() {
+    let data = vec![5];
+    let (mean, mad, std_dev, skew, kurt) = compute_statistics(&data);
+
+    assert_eq!(mean, 5.0);
+    assert_eq!(mad, 0.0);
+    assert_eq!(std_dev, 0.0);
+    assert!(skew.is_nan()); // Skewness is not defined for single data point
+    assert!(kurt.is_nan()); // Kurtosis is not defined for single data point
+}

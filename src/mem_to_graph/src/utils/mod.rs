@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::path::PathBuf;
 use error_chain::error_chain;
@@ -195,4 +196,105 @@ pub fn heap_dump_path_to_json_path(heap_dump_raw_file_path: &PathBuf) -> PathBuf
 //     New division: 14 / 4 = 3.5 (rounded down to 3 using integer division)
 pub fn div_round_up(numerator: usize, denominator: usize) -> usize {
     (numerator + denominator - 1) / denominator
+}
+
+/// generate all possible bit combinations of size n
+/// bitwise order
+pub fn generate_bit_combinations(n: usize) -> Vec<String> {
+    let mut result = Vec::new();
+    let max = 1 << n; // 2^n
+
+    for i in 0..max {
+        let binary = format!("{:0width$b}", i, width = n);
+        result.push(binary);
+    }
+
+    result
+}
+
+/// convert u64 into binary of length n
+pub fn to_n_bits_binary(value: u64, n: usize) -> String {
+    format!("{:0width$b}", value, width = n)
+}
+
+/// convert u64 into 8 bytes
+pub fn u64_to_bytes(value: u64) -> [u8; 8] {
+    let mut bytes = [0u8; 8];
+    for i in 0..8 {
+        bytes[i] = ((value >> ((8 - i - 1) * 8)) & 0xFF) as u8;
+    }
+    bytes
+}
+
+/// Computes various statistical measures for a given dataset of bytes.
+///
+/// This function calculates the following statistics:
+/// 1. Mean Byte Value
+/// 2. Mean Absolute Deviation (MAD)
+/// 3. Standard Deviation
+/// 4. Skewness
+/// 5. Kurtosis
+///
+/// # Arguments
+///
+/// * `data` - A reference to a vector of bytes (`Vec<u8>`) for which the statistics are to be computed.
+///
+/// # Returns
+///
+/// A tuple containing five `f64` values representing the mean byte value, MAD, standard deviation, skewness, and kurtosis, respectively.
+pub fn compute_statistics(data: &Vec<u8>) -> (f64, f64, f64, f64, f64) {
+    let mean = {
+        let sum: u64 = data.iter().map(|&x| u64::from(x)).sum();
+        sum as f64 / data.len() as f64
+    };
+
+    let mad = {
+        let sum: f64 = data.iter().map(|&x| (x as f64 - mean).abs()).sum();
+        sum / data.len() as f64
+    };
+
+    let std_dev = {
+        let variance: f64 = data.iter().map(|&x| (x as f64 - mean).powi(2)).sum::<f64>() / data.len() as f64;
+        variance.sqrt()
+    };
+    // WARN : at least 4 byte needed
+    let skew = {
+        if data.len() < 4 {
+            f64::NAN
+        }else{
+            let n = data.len() as f64;
+            let sum: f64 = data.iter().map(|&x| ((x as f64 - mean) / std_dev).powi(3)).sum();
+            (n / ((n - 1.0) * (n - 2.0))) * sum
+        }
+    };
+    // WARN : at least 4 byte needed
+    let kurt = {
+        if data.len() < 4 {
+            f64::NAN
+        }else{
+            let n = data.len() as f64;
+            let sum: f64 = data.iter().map(|&x| ((x as f64 - mean) / std_dev).powi(4)).sum();
+            (n * (n + 1.0) / ((n - 1.0) * (n - 2.0) * (n - 3.0))) * sum - (3.0 * (n - 1.0).powi(2) / ((n - 2.0) * (n - 3.0)))
+        }
+    };
+
+    (mean, mad, std_dev, skew, kurt)
+}
+
+/// compute the shannon entropy
+pub fn shannon_entropy(data: &Vec<u8>) -> f64 {
+    let mut frequency = HashMap::new();
+    for &byte in data.iter() {
+        *frequency.entry(byte).or_insert(0 as u64) += 1;
+    }
+
+    let len = data.len() as f64;
+    let mut entropy = 0.0;
+
+    for &count in frequency.values() {
+        let probability = count as f64 / len;
+        entropy -= probability * probability.log2();
+    }
+
+    entropy
 }

@@ -6,6 +6,7 @@ pub mod value_embedding;
 pub mod graph_generation;
 pub mod semantic_dtn_embedding;
 pub mod extract_dts_data;
+pub mod statistic_dtn_embedding;
 
 /// Takes a path as input.
 /// This path can be a file or a directory.

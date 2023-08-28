@@ -43,6 +43,8 @@ pub enum Pipeline {
     Graph,
     /// make a semantic embedding of the DTN
     SemanticEmbeddingDTN,
+    /// make a statistic embedding of the DTN
+    StatisticEmbeddingDTN,
     /// extract the dts informations from the heap dump
     DtsExtraction,
 }

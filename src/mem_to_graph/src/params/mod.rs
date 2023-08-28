@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use dotenv::dotenv;
 use std::sync::Once;
 use chrono;
@@ -124,6 +124,17 @@ lazy_static! {
             Ok(depth) => depth.parse::<usize>().unwrap(),
             Err(_) => {
                 println!("EMBEDDING_DEPTH environment variable not set. Defaulting to '1'.");
+                return 1;
+            },
+        }
+    };
+
+    pub static ref N_GRAM: usize = {
+        let base_n_gram = std::env::var("N_GRAM");
+        match base_n_gram {
+            Ok(n_gram) => n_gram.parse::<usize>().unwrap(),
+            Err(_) => {
+                println!("N_GRAM environment variable not set. Defaulting to '1'.");
                 return 1;
             },
         }
