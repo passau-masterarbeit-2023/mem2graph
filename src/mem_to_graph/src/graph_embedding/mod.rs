@@ -100,8 +100,6 @@ impl GraphEmbedding {
     /// generate statistic embedding of all the DTN
     /// in order :
     ///    - DTN addresse (not really usefull for learning, but can bu usefull to further analyse the data)
-    ///    - DTN size
-    ///    - nb pointer
     ///    - N-gram of the DTN (in number of bit, ascending order, bitwise order)
     /// Common statistic (f64)
     ///    - Mean Byte Value
@@ -129,8 +127,7 @@ impl GraphEmbedding {
         // -------- usize
         
         // common information
-        let mut info = self.get_dts_basics_informations(addr);
-        feature_usize.append(&mut info);
+        feature_usize.push(addr.try_into().expect("addr overflow in embedding"));
 
         // add n-gram
         let mut n_gram_vec = self.generate_n_gram_dtns(addr, n_gram, block_size);

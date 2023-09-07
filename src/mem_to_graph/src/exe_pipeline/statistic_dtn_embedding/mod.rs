@@ -141,8 +141,6 @@ pub fn save_dtn_embeding(samples: Vec<(Vec<usize>, Vec<f64>)>, paths : Vec<Strin
     // comon information
     header.push("file_path".to_string());
     header.push("f_dtns_addr".to_string());
-    header.push("f_dtn_byte_size".to_string());
-    header.push("f_dtn_ptrs".to_string());
     // n_gram
     let mut n_gram_names = Vec::new();
     for i in 1..(n_gram + 1) {
