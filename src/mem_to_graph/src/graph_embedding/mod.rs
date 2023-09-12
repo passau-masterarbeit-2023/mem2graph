@@ -372,26 +372,49 @@ impl GraphEmbedding {
     /// generate the ancestor/children (given dir) embedding of the DTN (nb of ptn and nb of dtn for each deapth)
     fn generate_neighbors_dtn(&self, dtn_addr : u64, dir : petgraph::Direction) -> Vec<usize> {
         // calculate the ancestor for every node in the children of the dtn
-        let mut ancestors_by_node : Vec<Vec<usize>> = Vec::new();
+        // so extract all the children of the dtn
+        let mut ancestor_addrs: HashSet<u64> = HashSet::new();
         let children = self.graph_annotate.graph_data.graph.neighbors_directed(dtn_addr, petgraph::Direction::Outgoing);
         for child_addr in children {
-            ancestors_by_node.push(self.get_neighbors(child_addr, dir));
+            ancestor_addrs.insert(child_addr);
         }
 
-        // add each ancestor for every vector
-        let mut ancestors : Vec<usize> = Vec::new();
-        // for each case in the ancestor vector
-        for ancestor_i in 0..ancestors_by_node[0].len() {
-            let mut nb = 0;
-            // for each node
-            for ancestors_by_node_i in 0..ancestors_by_node.len() {
-                nb += ancestors_by_node[ancestors_by_node_i][ancestor_i];
+        let mut result : Vec<usize> = Vec::new();
+        // vectorize ancestors
+        let mut current_node_addrs: HashSet<u64>;
+
+        // for each depth
+        for _ in 0..self.depth {
+            // swap current and next ancestors
+            current_node_addrs = ancestor_addrs;
+            ancestor_addrs = HashSet::new();
+
+            let mut nb_dtn = 0;
+            let mut nb_ptr = 0;
+
+            for ancestor_addr in current_node_addrs.iter() {
+                let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(ancestor_addr).unwrap();
+
+                // count current nodes types
+                match node {
+                    Node::DataStructureNode(_) => nb_dtn += 1,
+                    Node::PointerNode(_) => nb_ptr += 1,
+                    _ => (),
+                }
+
+                // get the next ancestors
+                for neighbor in self.graph_annotate.graph_data.graph.neighbors_directed(
+                    *ancestor_addr, dir
+                ) {
+                    ancestor_addrs.insert(neighbor);
+                }
             }
-            ancestors.push(nb);
+            
+            result.push(nb_dtn); // add number of dtns
+            result.push(nb_ptr);  // add number of ptrs
         }
 
-
-        ancestors
+        result
     }
 
     // ----------------------------- value embedding -----------------------------//

@@ -142,16 +142,14 @@ pub fn save_dtn_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, csv_path
     header.push("f_dtns_addr".to_string());
     header.push("f_dtn_byte_size".to_string());
     header.push("f_dtn_ptrs".to_string());
-    // start at 1 since 0 is a dtn (so always [0, 0])
-    for i in 1..embedding_depth {
-        header.push(format!("f_dtns_ancestor_{}", i));
-        header.push(format!("f_ptrs_ancestor_{}", i));
+    for i in 0..embedding_depth {
+        header.push(format!("f_dtns_ancestor_{}", i + 1));
+        header.push(format!("f_ptrs_ancestor_{}", i + 1));
     }
 
-    // start at 1 since 0 is a dtn (so always [0, 0])
-    for i in 1..embedding_depth {
-        header.push(format!("f_dtns_children_{}", i));
-        header.push(format!("f_ptrs_children_{}", i));
+    for i in 0..embedding_depth {
+        header.push(format!("f_dtns_children_{}", i + 1));
+        header.push(format!("f_ptrs_children_{}", i + 1));
     }
     header.push("label".to_string());
 
