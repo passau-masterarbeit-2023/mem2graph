@@ -1,5 +1,5 @@
 use petgraph::graphmap::DiGraphMap;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::collections::HashMap;
 use log;
 use petgraph::visit::IntoEdgeReferences;
@@ -27,6 +27,8 @@ pub struct GraphData {
     pub dtn_addrs: Vec<u64>,
     /// list of the addresses of the nodes that are values (and potential keys)
     pub value_node_addrs: Vec<u64>, 
+    /// list of the addresses of the nodes that are pointers
+    pub pointer_node_addrs: Vec<u64>,
 
     /// special nodes are the ones that are not values (and not keys)
     pub special_node_to_annotation: HashMap<u64, SpecialNodeAnnotation>, 
@@ -42,12 +44,14 @@ impl GraphData {
         heap_dump_raw_file_path: PathBuf, 
         pointer_byte_size: usize,
         annotation : bool,
+        without_pointer_node : bool
     ) -> Result<Self, crate::utils::ErrorKind> {
         let mut instance = Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
             dtn_addrs: Vec::new(),
             value_node_addrs: Vec::new(),
+            pointer_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
             heap_dump_data: Some(
                 HeapDumpData::new(
@@ -58,8 +62,8 @@ impl GraphData {
             ),
         };
 
-        instance.data_structure_step();
-        instance.pointer_step();
+        instance.data_structure_step(without_pointer_node);
+        instance.pointer_step(without_pointer_node);
         Ok(instance)
     }
 
@@ -71,6 +75,7 @@ impl GraphData {
             addr_to_node: HashMap::new(),
             dtn_addrs: Vec::new(),
             value_node_addrs: Vec::new(),
+            pointer_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
             heap_dump_data: None,
         }
@@ -98,19 +103,31 @@ impl GraphData {
         return self.create_node_from_bytes_wrapper(data, addr, dtn_addr);
     }
 
-    /// add node to the map & to the map
-    /// NOTE: the node is moved to the map
-    fn add_node_wrapper(&mut self, node: graph_structs::Node) -> u64 {
-        // keep addr of all the value nodes
+    /// Add a node the map.
+    /// WARN : the node is moved to the map (and not copied)
+    fn add_node_to_map_wrapper(&mut self, node: graph_structs::Node) {
+        check_heap_dump!(self);
         if node.is_value() {
             self.value_node_addrs.push(node.get_address());
         }else if node.is_dtn() {
             self.dtn_addrs.push(node.get_address());
+        }else if node.is_pointer() {
+            self.pointer_node_addrs.push(node.get_address());
         }
 
         let node_addr = node.get_address();
         self.addr_to_node.insert(node_addr, node); // move the node
+    }
+
+    /// add node to the map & to the graph
+    /// NOTE: the node is moved to the map
+    fn add_node_wrapper(&mut self, node: graph_structs::Node) -> u64 {
+        // keep addr of all the value nodes
+        let node_addr = node.get_address();
+        
+        self.add_node_to_map_wrapper(node);
         self.graph.add_node(self.addr_to_node.get(&node_addr).unwrap().get_address());
+        
         node_addr
     }
 
@@ -130,7 +147,8 @@ impl GraphData {
         utils::block_bytes_to_addr(data, MALLOC_HEADER_ENDIANNESS) as usize
     }
 
-    /////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////
+    /// ------------------------- Graph with value nodes -------------------------
     /// Step 1: data structure step
     
     /// Pass null blocks.
@@ -147,7 +165,7 @@ impl GraphData {
     }
 
     /// Parse all data structures step. Don't follow pointers yet.
-    fn data_structure_step(&mut self) {
+    fn data_structure_step(&mut self, skip_value_node : bool) {
         check_heap_dump!(self);
         
         // generate data structures and iterate over them
@@ -156,7 +174,7 @@ impl GraphData {
             block_index = self.pass_null_blocks(block_index);
 
             // get the data structure
-            let data_structure_block_size = self.parse_datastructure(block_index);
+            let data_structure_block_size = self.parse_datastructure(block_index, skip_value_node);
 
             // update the block index by leaping over the data structure
             block_index += data_structure_block_size + 1;
@@ -166,9 +184,10 @@ impl GraphData {
 
     /// Parse the data structure from a given block and populate the graph.
     /// WARN: We don't follow the pointers in the data structure. This is done in a second step.
+    /// NOTE: skip_value_node true, we will not add the value node and the pointer to the graph
     /// :return: The number of blocks in the data structure.
     /// If the data structure is not valid, return 0, since there no data structure to leap over.
-    fn parse_datastructure(&mut self, start_block_index: usize) -> usize {
+    fn parse_datastructure(&mut self, start_block_index: usize, skip_value_node : bool) -> usize {
         check_heap_dump!(self);
 
         // precondition: the block at startBlockIndex is not the last block of the heap dump or after
@@ -229,7 +248,13 @@ impl GraphData {
                 count_value_nodes += 1;
             }
 
-            self.add_node_wrapper(node); // WARN: move the node to the graph, do last
+            // WARN: move the node to the map, do last
+            if !skip_value_node {
+                self.add_node_wrapper(node); 
+            }else {
+                // add the node to the map, but not to the graph
+                self.add_node_to_map_wrapper(node);
+            }
         }
                 
         
@@ -244,13 +269,15 @@ impl GraphData {
         self.add_node_wrapper(datastructure_node);
         
         // add all the edges to the graph
-        for child_node_addr in children_node_addrs {
-            self.add_edge_wrapper(Edge {
-                from: self.addr_to_node.get(&current_datastructure_addr).unwrap().get_address(),
-                to: child_node_addr,
-                weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
-                edge_type: EdgeType::DataStructureEdge,
-            });
+        if !skip_value_node {
+            for child_node_addr in children_node_addrs {
+                self.add_edge_wrapper(Edge {
+                    from: self.addr_to_node.get(&current_datastructure_addr).unwrap().get_address(),
+                    to: child_node_addr,
+                    weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
+                    edge_type: EdgeType::DataStructureEdge,
+                });
+            }
         }
         
         return nb_blocks_in_datastructure
@@ -259,7 +286,7 @@ impl GraphData {
     /// Parse a pointer node. Follow it until it point to a node that is not a pointer, and add the edge 
     /// weightened by the number of intermediate pointer nodes.
     /// TODO: testing needed, correction needed
-    fn parse_pointer(&mut self, node_addr: u64) {
+    fn parse_pointer(&mut self, node_addr: &u64) {
         let node = self.addr_to_node.get(&node_addr).unwrap();
 
         // check if the pointer points to a node in the graph
@@ -292,26 +319,76 @@ impl GraphData {
     }
 
     /// Parse all pointers step.
-    fn pointer_step(&mut self) {
+    /// NOTE: this function is called after the data structure step.
+    /// NOTE: if without_pointer_node is true, the edge will be beetween the data structure nodes containing the pointer and the pointed node.
+    fn pointer_step(&mut self, without_pointer_node : bool) {
         // get all pointer nodes
-        let all_pointer_addr: Vec<u64> = self.get_all_ptr_node_addrs();
-
-        for pointer_addr in all_pointer_addr {
-            self.parse_pointer(pointer_addr);
+        for i in  0..self.pointer_node_addrs.len(){ // borrow checker workaround, don't use iter here
+            let pointer_addr = self.pointer_node_addrs[i];
+            if without_pointer_node {
+                self.parse_pointer_without_value_node(&pointer_addr);
+            }else{
+                self.parse_pointer(&pointer_addr);
+            }
         }
     }
 
-    fn get_all_ptr_node_addrs(&self) -> Vec<u64> {
-        let mut all_addr: Vec<u64> = Vec::new();
-        for (addr, node) in self.addr_to_node.iter() {
-            match node {
-                Node::PointerNode(_) => {
-                    all_addr.push(*addr);
-                },
-                _ => {}
-            }
+    //////////////////////////////////////////////////////////////////////////////
+    // ------------------------- Graph without value nodes -------------------------
+
+    /// get the parent dtn addr of a child node
+    pub fn get_parent_dtn_addr(&self, child_addr : &u64) -> Option<u64> {
+        // get the node of the child
+        let child_node = self.addr_to_node.get(child_addr).unwrap();
+
+        return child_node.get_dtn_addr();
+    }
+
+    /// Parse the pointers, and link datastructures to each other.
+    fn parse_pointer_without_value_node(&mut self, node_addr: &u64) {
+        let pointer_node = self.addr_to_node.get(&node_addr).unwrap();
+
+        // get the pointer dtn addr
+        let pointer_dtn_addr = pointer_node.get_dtn_addr().unwrap();
+
+        // get the pointed node
+        let pointed_node_addr = pointer_node.points_to().unwrap();
+        let pointed_node = self.addr_to_node.get(&pointed_node_addr);
+
+        // check if the pointed node is in the memory
+        if pointed_node.is_none() {
+            // the pointed node isn't in the memory, we don't add the edge
+            return;
         }
-        return all_addr
+
+        let pointed_node_dtn_addr = pointed_node.unwrap().get_dtn_addr();
+
+        let pointed_addr;
+        // check if the pointed node dtn exists
+        if pointed_node_dtn_addr.is_none() {
+            // if it doesn't exist, it means the pointed node is a dtn
+            // so we use the pointed node address as the pointed dtn address
+            pointed_addr = pointed_node_addr;
+        }else{
+            // if it exists, we use the pointed node dtn address as the pointed dtn address
+            pointed_addr = pointed_node_dtn_addr.unwrap();
+        }
+
+        let previous_edge = self.graph.edge_weight_mut(pointer_dtn_addr, pointed_addr);
+
+        // add the edge if it is not already in the graph
+        if previous_edge.is_none() {
+            self.add_edge_wrapper(Edge {
+                from: pointer_dtn_addr,
+                to: pointed_addr,
+                weight: 1,
+                edge_type: EdgeType::PointerEdge,
+            });
+        } else {
+            // update the weight of the edge
+            let previous_edge = previous_edge.unwrap();
+            previous_edge.weight += 1;
+        }
     }
 
 }
@@ -347,7 +424,7 @@ impl std::fmt::Display for GraphData {
         for (from_addr, to_addr, edge) in self.graph.edge_references() {
             let from = self.addr_to_node.get(&from_addr).unwrap();
             let to = self.addr_to_node.get(&to_addr).unwrap();
-            writeln!(f, "    \"{}\" -> \"{}\" [label=\"{}\" weight={}]", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight)?;
+            writeln!(f, "    \"{}\" -> \"{}\" [label=\"{}({})\" weight={}]", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight, edge.weight)?;
         }
 
         writeln!(f, "}}")?;
@@ -499,7 +576,8 @@ mod tests {
         let graph_data = GraphData::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE,
-            true
+            true,
+            false
         ).unwrap();
         check_heap_dump!(graph_data);
 
@@ -542,7 +620,8 @@ mod tests {
         let graph_data = GraphData::new(
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE,
-            true
+            true,
+            false
         ).unwrap();
         let node = graph_data.create_node_from_bytes_wrapper_index(
             &*TEST_PTR_1_VALUE_BYTES, 

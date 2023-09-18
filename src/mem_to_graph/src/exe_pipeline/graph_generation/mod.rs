@@ -1,14 +1,14 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf, fs::File, io::Write};
 
-use crate::{exe_pipeline::progress_bar, graph_annotate::{GraphAnnotate}};
+use crate::{exe_pipeline::progress_bar, graph_annotate::GraphAnnotate};
 
 use super::get_raw_file_or_files_from_path;
 /// Takes a directory or a file
 /// If directory then list all files in that directory and its subdirectories
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the graph generation for all these file
-pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf, annotation : bool) {
+pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf, annotation : bool, no_value_node: bool) {
    // start timer
    let start_time = Instant::now();
 
@@ -43,8 +43,8 @@ pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf, annotation : 
            .build()
            .unwrap();
 
-       // generate samples and labels
-       let _: Vec<_> = pool.install(|| {
+        // generate samples and labels
+        let _: Vec<_> = pool.install(|| {
             chunk.par_iter().enumerate().map(|(i, heap_dump_raw_file_path)| {
                 let current_thread = std::thread::current();
                 let thread_name = current_thread.name().unwrap_or("<unnamed>");
@@ -53,7 +53,7 @@ pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf, annotation : 
                 let heap_dump_path_copy = heap_dump_raw_file_path.clone();
                 let heap_dump_name = heap_dump_path_copy.file_name().unwrap().to_os_string().into_string().unwrap();
                 let dot_file_name = format!("{}_{}_dot.gv", dir_path_end_str.replace("/", "_"), heap_dump_name.replace("/", "_"));
-                println!("{}", dot_file_name);
+                //println!("{}", dot_file_name);
                 let dot_path = output_folder.clone().join(dot_file_name.clone());
                 if dot_path.exists() {
                     log::info!(" 🔵 [N°{}-{} / {} files] [id: {}] already saved (csv: {}).", 
@@ -65,12 +65,15 @@ pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf, annotation : 
                     );
                     return ();
                 }
-
+                
                let graph_annotate = GraphAnnotate::new(
                    heap_dump_raw_file_path.clone(),
                    crate::params::BLOCK_BYTE_SIZE,
-                   annotation
+                   annotation,
+                   no_value_node
                );
+
+               
 
                match graph_annotate {
                    Ok(graph_annotate) => {

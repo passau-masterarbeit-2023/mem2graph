@@ -70,7 +70,8 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : b
                     heap_dump_raw_file_path.clone(),
                     crate::params::BLOCK_BYTE_SIZE,
                     *crate::params::EMBEDDING_DEPTH,
-                    annotation
+                    annotation,
+                    false
                 );
 
                 match graph_embedding {

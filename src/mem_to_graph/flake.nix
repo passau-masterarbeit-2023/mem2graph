@@ -18,6 +18,8 @@
         pkgs.rust-analyzer
         pkgs.rustup
         pkgs.rustfmt
+
+        pkgs.graphviz
       ];
 
       RUST_BACKTRACE = "1";

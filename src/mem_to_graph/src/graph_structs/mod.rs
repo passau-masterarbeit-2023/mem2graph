@@ -193,6 +193,8 @@ impl Node {
         }
     }
 
+    /// returns the dtn address of the node
+    /// if the node is not a value node, a key node or a pointer node, returns None
     pub fn get_dtn_addr(&self) -> Option<u64> {
         match self {
             Node::ValueNode(value_node) => {

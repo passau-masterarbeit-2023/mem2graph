@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use exe_pipeline::statistic_dtn_embedding::run_statistics_dtn_embedding;
 use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation, semantic_dtn_embedding::run_semantic_dtn_embedding, extract_dts_data::run_extract_dtn_data};
+use params::argv::Pipeline;
 
 // link modules
 mod params;
@@ -48,15 +49,35 @@ fn main() {
     }
     // annotation of the graph
     let annotation = !params::ARGV.no_annotation;
+    let no_value_node = params::ARGV.no_value_node;
 
     // launch computations
     for path in input_path {
         match params::ARGV.pipeline {
-            params::argv::Pipeline::ValueEmbedding => run_value_embedding(path, output_folder.clone(), annotation),
-            params::argv::Pipeline::Graph => run_graph_generation(path, output_folder.clone(), annotation),
-            params::argv::Pipeline::SemanticEmbeddingDTN => run_semantic_dtn_embedding(path, output_folder.clone(), annotation),
-            params::argv::Pipeline::DtsExtraction => run_extract_dtn_data(path, output_folder.clone(), *params::EXTRACT_NO_POINTER, annotation),
-            params::argv::Pipeline::StatisticEmbeddingDTN => run_statistics_dtn_embedding(path, output_folder.clone(), annotation),
+            params::argv::Pipeline::ValueEmbedding => {
+                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
+                run_value_embedding(path, output_folder.clone(), annotation)
+            },
+            params::argv::Pipeline::Graph => {
+                run_graph_generation(path, output_folder.clone(), annotation, no_value_node)
+            },
+            params::argv::Pipeline::SemanticEmbeddingDTN => {
+                run_semantic_dtn_embedding(path, output_folder.clone(), annotation, no_value_node)
+            },
+            params::argv::Pipeline::DtsExtraction => {
+                run_extract_dtn_data(path, output_folder.clone(), *params::EXTRACT_NO_POINTER, annotation, no_value_node)
+            },
+            params::argv::Pipeline::StatisticEmbeddingDTN => {
+                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
+                run_statistics_dtn_embedding(path, output_folder.clone(), annotation)
+            },
         }
+    }
+}
+
+/// This function is call if the flag '-v' is used on a pipeline that doesn't use it
+fn no_arg_no_value_and_pointer_node(pipeline : Pipeline) {
+    if params::ARGV.no_value_node {
+        panic!("🚩 The flag '-v' is used with the wrong pipeline : {:?}", pipeline);
     }
 }

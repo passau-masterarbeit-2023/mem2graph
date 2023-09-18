@@ -17,9 +17,10 @@ impl GraphEmbedding {
         heap_dump_raw_file_path: PathBuf, 
         pointer_byte_size: usize,
         depth: usize,
-        annotation : bool
+        annotation : bool,
+        without_value_node : bool,
     ) -> Result<GraphEmbedding, crate::utils::ErrorKind> {
-        let graph_annotate = GraphAnnotate::new(heap_dump_raw_file_path, pointer_byte_size, annotation)?;
+        let graph_annotate = GraphAnnotate::new(heap_dump_raw_file_path, pointer_byte_size, annotation, without_value_node)?;
         
         Ok(GraphEmbedding {
             graph_annotate,
@@ -553,7 +554,8 @@ mod tests {
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             crate::params::BLOCK_BYTE_SIZE,
             5,
-            true
+            true,
+            false,
         ).unwrap();
 
         graph_embedding.save_samples_and_labels_to_csv(

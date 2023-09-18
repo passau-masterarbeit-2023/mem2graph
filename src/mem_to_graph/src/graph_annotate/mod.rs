@@ -1,8 +1,10 @@
 use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation, DtnTypes, DataStructureNode}, utils::div_round_up};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 pub struct GraphAnnotate {
     pub graph_data: GraphData,
+
+    pub no_value_node: bool,
 }
 
 impl GraphAnnotate {
@@ -10,11 +12,13 @@ impl GraphAnnotate {
         heap_dump_raw_file_path: PathBuf, 
         pointer_byte_size: usize,
         annotation : bool,
+        without_value_nodes : bool,
     ) -> Result<GraphAnnotate, crate::utils::ErrorKind> {
-        let graph_data = GraphData::new(heap_dump_raw_file_path, pointer_byte_size, annotation)?;
+        let graph_data = GraphData::new(heap_dump_raw_file_path, pointer_byte_size, annotation, without_value_nodes)?;
         
         let mut graph_annotate = GraphAnnotate {
             graph_data,
+            no_value_node: without_value_nodes,
         };
         if annotation {
             graph_annotate.annotate();
@@ -34,7 +38,10 @@ impl GraphAnnotate {
     fn annotate_graph_with_special_node_annotation(&mut self) {
         {
             // SSH_STRUCT_ADDR
-            let ssh_struct_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_ssh_struct;
+            let mut ssh_struct_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_ssh_struct;
+            if self.no_value_node {
+                ssh_struct_addr = self.graph_data.get_parent_dtn_addr(&ssh_struct_addr).unwrap();
+            }
             
             self.graph_data.special_node_to_annotation.insert(
                 ssh_struct_addr,
@@ -44,7 +51,10 @@ impl GraphAnnotate {
         }
         {
             // SESSION_STATE_ADDR
-            let session_state_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_session_state;
+            let mut session_state_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_session_state;
+            if self.no_value_node {
+                session_state_addr = self.graph_data.get_parent_dtn_addr(&session_state_addr).unwrap();
+            }
             
             self.graph_data.special_node_to_annotation.insert(
                 session_state_addr,
@@ -61,6 +71,7 @@ impl GraphAnnotate {
             // get the node at the key_data's address
             let node: Option<&Node> = self.graph_data.addr_to_node.get(addr);
             if node.is_some() && node.unwrap().is_value() {
+
                 // if the node is a ValueNode, then we can annotate it
                 // i.e. we create a KeyNode from the Node and its key_data
                 let mut aggregated_key: Vec<u8> = Vec::new();
@@ -126,7 +137,7 @@ impl GraphAnnotate {
                     }));
                     // annotate the dtn node with the keystruct
                     let dtn_node = self.graph_data.addr_to_node.get(&node.unwrap().get_dtn_addr().unwrap()).unwrap();
-                    let new_dtn_node_option = Self::get_annotated_dtn(dtn_node, DtnTypes::Keystruct);
+                    let new_dtn_node_option = Self::get_node_as_annotated_dtn(dtn_node, DtnTypes::Keystruct);
                     if new_dtn_node_option.is_some() {
                         let new_dtn_node = new_dtn_node_option.unwrap();
                         self.graph_data.addr_to_node.insert(new_dtn_node.get_address(), new_dtn_node);
@@ -161,7 +172,7 @@ impl GraphAnnotate {
                     parent
                 },
             };
-            let new_dtn = Self::get_annotated_dtn(dtn_node, dtn_type).unwrap();
+            let new_dtn = Self::get_node_as_annotated_dtn(dtn_node, dtn_type).unwrap();
             self.graph_data.addr_to_node.insert(new_dtn.get_address(), new_dtn);
         } else {
             // log warning
@@ -172,8 +183,9 @@ impl GraphAnnotate {
         }
     }
 
-    /// try to annotate the node as a dtn
-    fn get_annotated_dtn(dtn : &Node, new_dtn_type : DtnTypes) -> Option<Node> {
+    /// try to annotate the node as a dtn and return it
+    /// return None if the node is not a dtn
+    fn get_node_as_annotated_dtn(dtn : &Node, new_dtn_type : DtnTypes) -> Option<Node> {
         // check that the node is a dtn
         match dtn {
             Node::DataStructureNode(dtn_node_info) => {
@@ -220,6 +232,7 @@ mod tests {
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE,
             true,
+            false
         ).unwrap();
 
         // check that there is the SshStructNodeAnnotation
@@ -247,6 +260,7 @@ mod tests {
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE,
             true,
+            false
         ).unwrap();
 
         // check that there is at least one KeyNode
@@ -282,6 +296,7 @@ mod tests {
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             params::BLOCK_BYTE_SIZE,
             true,
+            false
         ).unwrap();
 
         // save the graph to a file as a dot file (graphviz)

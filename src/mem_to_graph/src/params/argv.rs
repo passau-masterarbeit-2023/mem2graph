@@ -33,6 +33,12 @@ pub struct Argv {
     /// NOTE : By default the graph is annotated, if you want to disable it use this flag
     #[arg(short = 'a', long, action)]
     pub no_annotation: bool,
+
+    /// if their is no value node or pointer node in the graph
+    /// NOTE : By default the graph contains value node and pointer node, if you want to disable it use this flag
+    /// NOTE : This flag is only used if the pipeline is 'SemanticEmbeddingDTN' or 'DtsExtraction' or 'graph'
+    #[arg(short = 'v', long, action)]
+    pub no_value_node: bool,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
