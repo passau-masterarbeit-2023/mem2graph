@@ -129,13 +129,18 @@ lazy_static! {
         }
     };
 
-    pub static ref N_GRAM: usize = {
+    /// WARN : This vector must be sorted in ascending order.
+    pub static ref N_GRAM: Vec<usize> = {
         let base_n_gram = std::env::var("N_GRAM");
         match base_n_gram {
-            Ok(n_gram) => n_gram.parse::<usize>().unwrap(),
+            Ok(n_gram) => {
+                let mut n_gram: Vec<usize> = n_gram.split(",").map(|s| s.parse::<usize>().unwrap()).collect();
+                n_gram.sort();
+                n_gram
+            },
             Err(_) => {
                 println!("N_GRAM environment variable not set. Defaulting to '1'.");
-                return 1;
+                return vec![1];
             },
         }
     };

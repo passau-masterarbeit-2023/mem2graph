@@ -111,7 +111,7 @@ impl GraphEmbedding {
     ///    - Skewness
     ///    - Kurtosis
     ///    - Shannon entropy
-    pub fn generate_statistic_dtns_samples(&self, n_gram : usize, block_size : usize) -> Vec<(Vec<usize>, Vec<f64>)> {
+    pub fn generate_statistic_dtns_samples(&self, n_gram : &Vec<usize>, block_size : usize) -> Vec<(Vec<usize>, Vec<f64>)> {
         let mut samples = Vec::new();
         // get dtn :
         for dtn_addr in self.graph_annotate.graph_data.dtn_addrs.iter() {
@@ -122,7 +122,7 @@ impl GraphEmbedding {
     }
 
     /// generate statistic embedding of a DTN
-    fn generate_statistic_dtn_samples(&self, addr: u64, n_gram : usize, block_size : usize) -> 
+    fn generate_statistic_dtn_samples(&self, addr: u64, n_gram : &Vec<usize>, block_size : usize) -> 
         (Vec<usize>, Vec<f64>) {
         let mut feature_usize: Vec<usize> = Vec::new();
         let mut feature_f64: Vec<f64> = Vec::new();
@@ -170,18 +170,16 @@ impl GraphEmbedding {
     }
 
     /// generate all the n-gram of the DTN until n (include)
-    fn generate_n_gram_dtns(&self, addr: u64, n: usize, block_size : usize) -> Vec<usize> {
-        let mut n_gram = Vec::new();
+    fn generate_n_gram_dtns(&self, addr: u64, n_grams : &Vec<usize>, block_size : usize) -> Vec<usize> {
+        let mut n_gram_result = Vec::new();
 
         let mut n_gram_counter = HashMap::<String, usize>::new();
         // keep the ordonned key to reconstruct the vector
         let mut ordonned_key = Vec::<String>::new();
-        // reserve this much of space because addition of all power of 2 until n is 2^(n + 1) - 1
-        ordonned_key.reserve(1 << (n + 1));
 
         // initialise the hashmap
-        for i in 1..(n + 1){
-            let mut bit_combi = generate_bit_combinations(i);
+        for i in n_grams{
+            let mut bit_combi = generate_bit_combinations(*i);
 
             
             for combi in bit_combi.iter() {
@@ -191,20 +189,24 @@ impl GraphEmbedding {
             ordonned_key.append(&mut bit_combi);
         }
 
-        n_gram.reserve(ordonned_key.len());
-
         // get th bits of the dtn
         let dtn_bits = self.extract_dts_data_as_bits(addr, block_size);
 
         // for each bit
         for char_i in 0..dtn_bits.len() {
-            // get the window
             let mut window = String::new();
-            for window_size in 1..(n + 1) {
+            // get the window
+            for window_size in n_grams {
+                // if the window is too big, we stop
                 if char_i + window_size > dtn_bits.len() {
                     break;
                 }
-                window.push(dtn_bits[char_i + window_size - 1]);
+                
+                // Extend the window to match the current window_size
+                while window.len() < *window_size {
+                    window.push(dtn_bits[char_i + window.len()]);
+                }
+
                 let window_count = n_gram_counter.get_mut(&window).unwrap();
                 *window_count += 1;
             }
@@ -212,11 +214,11 @@ impl GraphEmbedding {
 
         // construct the final vecteur in order
         for key in ordonned_key.iter() {
-            n_gram.push(*n_gram_counter.get(key).unwrap());
+            n_gram_result.push(*n_gram_counter.get(key).unwrap());
         }
 
 
-        n_gram
+        n_gram_result
     }
 
 

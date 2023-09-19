@@ -77,7 +77,7 @@ pub fn run_statistics_dtn_embedding(path: PathBuf, output_folder: PathBuf, annot
                 match graph_embedding {
                     Ok(graph_embedding) => {
                         // generate samples and labels
-                        let samples_ = graph_embedding.generate_statistic_dtns_samples(*N_GRAM, BLOCK_BYTE_SIZE);
+                        let samples_ = graph_embedding.generate_statistic_dtns_samples(&(*N_GRAM), BLOCK_BYTE_SIZE);
 
                         let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
                         log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, samples_.len());
@@ -111,7 +111,7 @@ pub fn run_statistics_dtn_embedding(path: PathBuf, output_folder: PathBuf, annot
             }
             samples.extend(samples_);
         }
-        save_dtn_embeding(samples, paths, csv_path, *N_GRAM);
+        save_dtn_embeding(samples, paths, csv_path, &(*N_GRAM));
 
         // log time
         let chunk_duration = chunk_start_time.elapsed();
@@ -131,7 +131,7 @@ pub fn run_statistics_dtn_embedding(path: PathBuf, output_folder: PathBuf, annot
 
 /// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
 /// for broken files (missing JSON key, etc.)
-pub fn save_dtn_embeding(samples: Vec<(Vec<usize>, Vec<f64>)>, paths : Vec<String>, csv_path: PathBuf, n_gram : usize) {
+pub fn save_dtn_embeding(samples: Vec<(Vec<usize>, Vec<f64>)>, paths : Vec<String>, csv_path: PathBuf, n_gram : &Vec<usize>) {
     let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
     let mut csv_writer = csv::Writer::from_path(csv_path).unwrap_or_else(
         |_| panic!("{}", csv_error_message)
@@ -144,8 +144,8 @@ pub fn save_dtn_embeding(samples: Vec<(Vec<usize>, Vec<f64>)>, paths : Vec<Strin
     header.push("f_dtns_addr".to_string());
     // n_gram
     let mut n_gram_names = Vec::new();
-    for i in 1..(n_gram + 1) {
-        let mut i_gram_names = generate_bit_combinations(i);
+    for i in n_gram {
+        let mut i_gram_names = generate_bit_combinations(*i);
         n_gram_names.append(&mut i_gram_names);
     }
 

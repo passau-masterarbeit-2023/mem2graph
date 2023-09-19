@@ -69,3 +69,4 @@ These lines probably represents part of strings or text data or even arrays of v
 ### VScode rust-analyzer
 
 As of now, I haven't succed to make rust-analyser work on NixOS. I have tried several things like `rustup component add rust-src` or using the [arrterian.nix-env-selector](https://marketplace.visualstudio.com/items?itemName=arrterian.nix-env-selector) extension to enable my flake... without success.
+
