@@ -1,10 +1,12 @@
+use lazy_static::lazy_static;
+
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::path::PathBuf;
 use error_chain::error_chain;
 use serde_json::Value;
 
-use crate::params::PTR_ENDIANNESS;
+use crate::params::{PTR_ENDIANNESS, get_n_gram_from_env};
 use crate::graph_structs::{Node, PointerNode, ValueNode, BasePointerNode, BaseValueNode};
 
 /// convert an address to an index
@@ -198,6 +200,47 @@ pub fn div_round_up(numerator: usize, denominator: usize) -> usize {
     (numerator + denominator - 1) / denominator
 }
 
+/// compute a vector of usize from a string with comma separated values
+pub fn string_to_usize_vec(string: &str) -> Vec<usize> {
+    string.split(',').filter_map(|s| s.parse::<usize>().ok()).collect()
+}
+
+// ------------------------------------ binaries utils ------------------------------------
+
+
+
+
+
+lazy_static! {
+    /// generate all possible bit combinations from n_gram in ascending order and associate the 
+    /// corresponding index in a vector
+    pub static ref BIN_TO_INDEX : HashMap<String, usize> = {
+        let mut bin_to_index = HashMap::new();
+        let mut index = 0;
+        let n_gram: Vec<usize> = get_n_gram_from_env();
+        for n in n_gram {
+            let i_gram_names = generate_bit_combinations(n);
+            for name in i_gram_names {
+                bin_to_index.insert(name, index);
+                index += 1;
+            }
+        }
+        bin_to_index
+    };
+    
+}
+
+/// get the size of the vector of all possible bit combinations in N_gram
+pub fn get_bin_to_index_size() -> usize {
+    BIN_TO_INDEX.len()
+}
+
+/// get the index of a binary in the vector of all possible bit combinations in N_gram
+pub fn get_bin_to_index(bin : &String) -> usize {
+    BIN_TO_INDEX.get(bin).unwrap().clone()
+}
+
+
 /// generate all possible bit combinations of size n
 /// bitwise order
 pub fn generate_bit_combinations(n: usize) -> Vec<String> {
@@ -225,6 +268,9 @@ pub fn u64_to_bytes(value: u64) -> [u8; 8] {
     }
     bytes
 }
+
+
+// ------------------------------------ statistics utils ------------------------------------
 
 /// Computes various statistical measures for a given dataset of bytes.
 ///

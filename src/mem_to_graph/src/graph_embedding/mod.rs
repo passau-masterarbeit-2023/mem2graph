@@ -2,10 +2,10 @@
 use crate::exe_pipeline::value_embedding::save_value_embeding;
 use crate::graph_structs::{Node, SpecialNodeAnnotation};
 use crate::graph_annotate::GraphAnnotate;
-use crate::utils::{generate_bit_combinations, to_n_bits_binary, u64_to_bytes, compute_statistics, shannon_entropy};
+use crate::utils::{to_n_bits_binary, u64_to_bytes, compute_statistics, shannon_entropy, get_bin_to_index, get_bin_to_index_size};
 
 use std::path::PathBuf;
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 
 pub struct GraphEmbedding {
     graph_annotate: GraphAnnotate,
@@ -171,23 +171,7 @@ impl GraphEmbedding {
 
     /// generate all the n-gram of the DTN until n (include)
     fn generate_n_gram_dtns(&self, addr: u64, n_grams : &Vec<usize>, block_size : usize) -> Vec<usize> {
-        let mut n_gram_result = Vec::new();
-
-        let mut n_gram_counter = HashMap::<String, usize>::new();
-        // keep the ordonned key to reconstruct the vector
-        let mut ordonned_key = Vec::<String>::new();
-
-        // initialise the hashmap
-        for i in n_grams{
-            let mut bit_combi = generate_bit_combinations(*i);
-
-            
-            for combi in bit_combi.iter() {
-                n_gram_counter.insert(combi.clone(), 0);
-            }
-
-            ordonned_key.append(&mut bit_combi);
-        }
+        let mut n_gram_result = vec![0; get_bin_to_index_size()];
 
         // get th bits of the dtn
         let dtn_bits = self.extract_dts_data_as_bits(addr, block_size);
@@ -207,16 +191,12 @@ impl GraphEmbedding {
                     window.push(dtn_bits[char_i + window.len()]);
                 }
 
-                let window_count = n_gram_counter.get_mut(&window).unwrap();
-                *window_count += 1;
+                // get the index of the window
+                let index = get_bin_to_index(&window);
+                // increment the index
+                n_gram_result[index] += 1;
             }
         }
-
-        // construct the final vecteur in order
-        for key in ordonned_key.iter() {
-            n_gram_result.push(*n_gram_counter.get(key).unwrap());
-        }
-
 
         n_gram_result
     }

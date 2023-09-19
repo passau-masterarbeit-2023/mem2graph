@@ -5,7 +5,7 @@ use std::sync::Once;
 use chrono;
 use std::str::FromStr;
 
-use crate::utils::Endianness;
+use crate::utils::{Endianness, string_to_usize_vec};
 pub mod argv;
 
 pub const BLOCK_BYTE_SIZE: usize = 8; // 64-bit, ex: C0 03 7B 09 2A 56 00 00
@@ -131,18 +131,7 @@ lazy_static! {
 
     /// WARN : This vector must be sorted in ascending order.
     pub static ref N_GRAM: Vec<usize> = {
-        let base_n_gram = std::env::var("N_GRAM");
-        match base_n_gram {
-            Ok(n_gram) => {
-                let mut n_gram: Vec<usize> = n_gram.split(",").map(|s| s.parse::<usize>().unwrap()).collect();
-                n_gram.sort();
-                n_gram
-            },
-            Err(_) => {
-                println!("N_GRAM environment variable not set. Defaulting to '1'.");
-                return vec![1];
-            },
-        }
+        get_n_gram_from_env()
     };
 
     pub static ref TEST_CSV_EMBEDDING_FILE_PATH: PathBuf = {
@@ -208,5 +197,21 @@ lazy_static! {
 fn check_path(path: &PathBuf) {
     if !path.exists() {
         panic!("Path {:?} does not exist", path);
+    }
+}
+
+/// get the N_GRAM environment variable and return it as a vector of usize.
+pub fn get_n_gram_from_env() -> Vec<usize>{
+    let base_n_gram = std::env::var("N_GRAM");
+    match base_n_gram {
+        Ok(n_gram) => {
+            let mut n_gram: Vec<usize> = string_to_usize_vec(n_gram.as_str());
+            n_gram.sort();
+            n_gram
+        },
+        Err(_) => {
+            println!("N_GRAM environment variable not set. Defaulting to '1'.");
+            return vec![1];
+        },
     }
 }
