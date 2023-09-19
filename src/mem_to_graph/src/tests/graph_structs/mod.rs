@@ -7,8 +7,7 @@ fn create_test_structs() -> Vec<Node> {
         addr: 0,
         byte_size: 8,
         nb_pointer_nodes: 0,
-        nb_value_nodes: 0,
-        dtn_type : DtnTypes::Basestruct
+        nb_value_nodes: 0
     });
 
     let base_value_node = ValueNode::BaseValueNode(BaseValueNode {

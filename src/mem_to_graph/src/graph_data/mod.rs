@@ -7,7 +7,7 @@ use petgraph::visit::IntoEdgeReferences;
 pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
-use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT, SpecialNodeAnnotation, DtnTypes};
+use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT, SpecialNodeAnnotation};
 use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS, COMPRESS_POINTER_CHAINS};
 use crate::utils;
 
@@ -33,6 +33,9 @@ pub struct GraphData {
     /// special nodes are the ones that are not values (and not keys)
     pub special_node_to_annotation: HashMap<u64, SpecialNodeAnnotation>, 
 
+    /// if the graph doesn't contain value nodes
+    pub no_value_node: bool,
+
     pub heap_dump_data: Option<HeapDumpData>, // Some because it is an optional field, for testing purposes
 }
 
@@ -53,6 +56,7 @@ impl GraphData {
             value_node_addrs: Vec::new(),
             pointer_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
+            no_value_node: without_pointer_node,
             heap_dump_data: Some(
                 HeapDumpData::new(
                     heap_dump_raw_file_path,
@@ -62,8 +66,8 @@ impl GraphData {
             ),
         };
 
-        instance.data_structure_step(without_pointer_node);
-        instance.pointer_step(without_pointer_node);
+        instance.data_structure_step();
+        instance.pointer_step();
         Ok(instance)
     }
 
@@ -77,6 +81,7 @@ impl GraphData {
             value_node_addrs: Vec::new(),
             pointer_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
+            no_value_node: false,
             heap_dump_data: None,
         }
     }
@@ -165,7 +170,7 @@ impl GraphData {
     }
 
     /// Parse all data structures step. Don't follow pointers yet.
-    fn data_structure_step(&mut self, skip_value_node : bool) {
+    fn data_structure_step(&mut self) {
         check_heap_dump!(self);
         
         // generate data structures and iterate over them
@@ -174,7 +179,7 @@ impl GraphData {
             block_index = self.pass_null_blocks(block_index);
 
             // get the data structure
-            let data_structure_block_size = self.parse_datastructure(block_index, skip_value_node);
+            let data_structure_block_size = self.parse_datastructure(block_index);
 
             // update the block index by leaping over the data structure
             block_index += data_structure_block_size + 1;
@@ -187,7 +192,7 @@ impl GraphData {
     /// NOTE: skip_value_node true, we will not add the value node and the pointer to the graph
     /// :return: The number of blocks in the data structure.
     /// If the data structure is not valid, return 0, since there no data structure to leap over.
-    fn parse_datastructure(&mut self, start_block_index: usize, skip_value_node : bool) -> usize {
+    fn parse_datastructure(&mut self, start_block_index: usize) -> usize {
         check_heap_dump!(self);
 
         // precondition: the block at startBlockIndex is not the last block of the heap dump or after
@@ -249,7 +254,7 @@ impl GraphData {
             }
 
             // WARN: move the node to the map, do last
-            if !skip_value_node {
+            if !self.no_value_node {
                 self.add_node_wrapper(node); 
             }else {
                 // add the node to the map, but not to the graph
@@ -263,13 +268,12 @@ impl GraphData {
             addr: current_datastructure_addr,
             byte_size: datastructure_size,
             nb_pointer_nodes: count_pointer_nodes,
-            nb_value_nodes: count_value_nodes,
-            dtn_type : DtnTypes::Basestruct
+            nb_value_nodes: count_value_nodes
         });
         self.add_node_wrapper(datastructure_node);
         
         // add all the edges to the graph
-        if !skip_value_node {
+        if !self.no_value_node {
             for child_node_addr in children_node_addrs {
                 self.add_edge_wrapper(Edge {
                     from: self.addr_to_node.get(&current_datastructure_addr).unwrap().get_address(),
@@ -321,11 +325,11 @@ impl GraphData {
     /// Parse all pointers step.
     /// NOTE: this function is called after the data structure step.
     /// NOTE: if without_pointer_node is true, the edge will be beetween the data structure nodes containing the pointer and the pointed node.
-    fn pointer_step(&mut self, without_pointer_node : bool) {
+    fn pointer_step(&mut self) {
         // get all pointer nodes
         for i in  0..self.pointer_node_addrs.len(){ // borrow checker workaround, don't use iter here
             let pointer_addr = self.pointer_node_addrs[i];
-            if without_pointer_node {
+            if self.no_value_node {
                 self.parse_pointer_without_value_node(&pointer_addr);
             }else{
                 self.parse_pointer(&pointer_addr);
@@ -397,7 +401,6 @@ impl GraphData {
 impl std::fmt::Display for GraphData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "digraph {{")?;
-        // TODO match node and call its associated display function
         for addr in self.graph.nodes() {
             let node = self.addr_to_node.get(&addr).unwrap();
 
@@ -412,8 +415,13 @@ impl std::fmt::Display for GraphData {
                     )?;
                 },
                 None => {
-                    // Not a special node, just call the display function of the node
-                    writeln!(f, "{}", node)?;
+                    // anote with default annotation
+                    writeln!(
+                        f, 
+                        "    \"{}\" {}", 
+                        node.str_addr_and_type(), 
+                        SpecialNodeAnnotation::get_default_dot_attributes(node)
+                    )?;
                 }
             }
         }
@@ -469,8 +477,7 @@ mod tests {
             addr: 1,
             byte_size: 8,
             nb_pointer_nodes: 0,
-            nb_value_nodes: 0,
-            dtn_type : DtnTypes::Basestruct
+            nb_value_nodes: 0
         });
         let base_value_node = Node::ValueNode(
             ValueNode::BaseValueNode(

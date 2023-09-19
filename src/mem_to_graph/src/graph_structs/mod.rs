@@ -22,29 +22,92 @@ pub enum Node {
 }
 
 /// Anotations for special nodes used in graph_data.
+/// Allow labelling for embedding, and attribute and coloring for graph generation.
+/// NOTE : Take the address of the node as parameter, to permit to display it in the label.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SpecialNodeAnnotation {
     SessionStateNodeAnnotation(u64),
     SshStructNodeAnnotation(u64),
+    KeyNodeAnnotation(u64),
 }
 
 impl SpecialNodeAnnotation {
-    fn special_node_type(&self) -> String {
+    fn get_name(&self) -> String {
         match self {
-            SpecialNodeAnnotation::SessionStateNodeAnnotation(addr) => {
-                format!("SSN({:#x})", addr).to_string()
+            SpecialNodeAnnotation::SessionStateNodeAnnotation(_) => {
+                "SSN".to_string()
             }
-            SpecialNodeAnnotation::SshStructNodeAnnotation(addr) => {
-                format!("SSHN({:#x})", addr).to_string()
+            SpecialNodeAnnotation::SshStructNodeAnnotation(_) => {
+                "SSHN".to_string()
+            }
+            SpecialNodeAnnotation::KeyNodeAnnotation(_) => {
+                "KN".to_string()
             }
         }
     }
 
+    fn get_color(&self) -> String {
+        match self {
+            SpecialNodeAnnotation::SessionStateNodeAnnotation(_) => {
+                "red".to_string()
+            }
+            SpecialNodeAnnotation::SshStructNodeAnnotation(_) => {
+                "red".to_string()
+            }
+            SpecialNodeAnnotation::KeyNodeAnnotation(_) => {
+                "green".to_string()
+            }
+        }
+    }
+
+
+    /// get the dot attributes for the node
     pub fn annotate_dot_attributes(&self) -> String {
         format!(
-            "[label=\"{}\" color=red style=filled];",
-            self.special_node_type(),
+            "[label=\"{}\" color=\"{}\" style=filled];",
+            self.get_name(),
+            self.get_color(),
         )
+    }
+
+
+    /// get the default dot attributes for the node
+    /// WARN : Key node should not be annotated with default attributes
+    pub fn get_default_dot_attributes(node : &Node) -> String {
+        match node {
+            Node::DataStructureNode(_) => {
+                "[label=\"DTN\" color=\"black\"];".to_string()
+            }
+            Node::ValueNode(value_node) => {
+                match value_node {
+                    ValueNode::BaseValueNode(_) => {
+                        "[label=\"VN\" color=\"grey\"];".to_string()
+                    }
+                    ValueNode::KeyNode(_) => {
+                        panic!("KeyNode should not be annotated with default attributes")
+                    }
+                }
+            }
+            Node::PointerNode(_) => {
+                    "[label=\"PN\" color=\"orange\"];".to_string()
+                
+            }
+        }
+    }
+
+    /// get the address of the node
+    pub fn get_address(&self) -> u64 {
+        match self {
+            SpecialNodeAnnotation::SessionStateNodeAnnotation(addr) => {
+                *addr
+            }
+            SpecialNodeAnnotation::SshStructNodeAnnotation(addr) => {
+                *addr
+            }
+            SpecialNodeAnnotation::KeyNodeAnnotation(addr) => {
+                *addr
+            }
+        }
     }
 }
 
@@ -94,32 +157,10 @@ impl Node {
     pub fn str_addr_and_type(&self) -> String {
         match self {
             Node::DataStructureNode(data_structure_node) => {
-                match data_structure_node.dtn_type {
-                    DtnTypes::Basestruct => {
-                        format!(
-                            "DTN({:#x})",
-                            data_structure_node.addr,
-                        )
-                    }
-                    DtnTypes::Keystruct => {
-                        format!(
-                            "KEY_DTN({:#x})",
-                            data_structure_node.addr,
-                        )
-                    }
-                    DtnTypes::SshStruct => {
-                        format!(
-                            "SSH_DTN({:#x})",
-                            data_structure_node.addr,
-                        )
-                    }
-                    DtnTypes::SessionStateStruct => {
-                        format!(
-                            "SS_DTN({:#x})",
-                            data_structure_node.addr,
-                        )
-                    }
-                }
+                format!(
+                    "DTN({:#x})",
+                    data_structure_node.addr,
+                )
             }
             Node::ValueNode(value_node) => {
                 match value_node {
@@ -281,22 +322,12 @@ impl std::fmt::Debug for Node {
     }
 }
 
-/// type of dtn to embedded
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DtnTypes {
-    Basestruct = 0,
-    Keystruct = 1,
-    SshStruct = 2,
-    SessionStateStruct = 3
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DataStructureNode {
     pub addr: u64,
     pub byte_size: usize,
     pub nb_pointer_nodes: usize,
     pub nb_value_nodes: usize,
-    pub dtn_type: DtnTypes,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -365,48 +396,27 @@ impl std::fmt::Display for Edge {
     }
 }
 
+/// display the name of the node (without the annotation)
 impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Node::DataStructureNode(node) => {
-                match node.dtn_type {
-                    DtnTypes::Basestruct => {
-                        write!(
-                            f, "    {:?} [color=blue];", 
-                            self.str_addr_and_type(),
-                        )
-                    }
-                    DtnTypes::Keystruct => {
-                        write!(
-                            f, "    {:?} [color=green style=filled];", 
-                            self.str_addr_and_type(),
-                        )
-                    }
-                    DtnTypes::SshStruct => {
-                        write!(
-                            f, "    {:?} [color=red style=filled];", 
-                            self.str_addr_and_type(),
-                        )
-                    }
-                    DtnTypes::SessionStateStruct => {
-                        write!(
-                            f, "    {:?} [color=orange style=filled];", 
-                            self.str_addr_and_type(),
-                        )
-                    }
-                }
+            Node::DataStructureNode(_) => {
+                write!(
+                    f, "    {:?}", 
+                    self.str_addr_and_type(),
+                )
             }
             Node::ValueNode(value_node) => {
                 match value_node {
                     ValueNode::BaseValueNode(_) => {
                         write!(
-                            f, "    {:?} [color=grey];", 
+                            f, "    {:?}", 
                             self.str_addr_and_type(),
                         )
                     }
                     ValueNode::KeyNode(_) => {
                         write!(
-                            f, "    {:?} [color=green style=filled];", 
+                            f, "    {:?}", 
                             self.str_addr_and_type(),
                         )
                     }
@@ -416,7 +426,7 @@ impl std::fmt::Display for Node {
                 match pointer_node {
                     PointerNode::BasePointerNode(_) => {
                         write!(
-                            f, "    {:?} [color=orange];",
+                            f, "    {:?}",
                             self.str_addr_and_type(),
                         )
                     }

@@ -1,10 +1,10 @@
-use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation, DtnTypes, DataStructureNode}, utils::div_round_up};
+use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation}, utils::div_round_up};
 use std::path::PathBuf;
 
 pub struct GraphAnnotate {
     pub graph_data: GraphData,
 
-    pub no_value_node: bool,
+    
 }
 
 impl GraphAnnotate {
@@ -18,7 +18,6 @@ impl GraphAnnotate {
         
         let mut graph_annotate = GraphAnnotate {
             graph_data,
-            no_value_node: without_value_nodes,
         };
         if annotation {
             graph_annotate.annotate();
@@ -29,45 +28,43 @@ impl GraphAnnotate {
     /// Annotate the graph with data from the JSON file
     /// stored in heap_dump_data
     fn annotate(&mut self) {
-
         self.annotate_graph_with_key_data();
-        self.annotate_graph_with_special_node_annotation();
+        self.annotate_graph_with_ssh_struct();
     }
 
-    /// annotate graph with ptr from json file
-    fn annotate_graph_with_special_node_annotation(&mut self) {
+    /// annotate graph with ssh struct
+    /// - annotate the value node of the ssh struct as ssh struct node (if we genrate a graph without value nodes, annotate the dtn node as ssh struct node)
+    fn annotate_graph_with_ssh_struct(&mut self) {
         {
             // SSH_STRUCT_ADDR
             let mut ssh_struct_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_ssh_struct;
-            if self.no_value_node {
+            if self.graph_data.no_value_node {
                 ssh_struct_addr = self.graph_data.get_parent_dtn_addr(&ssh_struct_addr).unwrap();
             }
             
-            self.graph_data.special_node_to_annotation.insert(
-                ssh_struct_addr,
-                SpecialNodeAnnotation::SshStructNodeAnnotation(ssh_struct_addr),
-            );
-            self.annotate_special_dtn(ssh_struct_addr, DtnTypes::SshStruct);
+            self.annotate_node(SpecialNodeAnnotation::SshStructNodeAnnotation(ssh_struct_addr));
         }
         {
             // SESSION_STATE_ADDR
             let mut session_state_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_session_state;
-            if self.no_value_node {
+            if self.graph_data.no_value_node {
                 session_state_addr = self.graph_data.get_parent_dtn_addr(&session_state_addr).unwrap();
             }
-            
-            self.graph_data.special_node_to_annotation.insert(
-                session_state_addr,
-                SpecialNodeAnnotation::SessionStateNodeAnnotation(session_state_addr),
-            );
-            
-            self.annotate_special_dtn(session_state_addr, DtnTypes::SessionStateStruct);
+
+            self.annotate_node(SpecialNodeAnnotation::SessionStateNodeAnnotation(session_state_addr));
         }
     }
 
+    /// annotate graph with key data from json file
+    /// - aggreagte the value node of the key into a key node
+    /// - annotate the key node created as keynode (if we genrate a graph without value nodes, annotate the dtn node as keynode)
     fn annotate_graph_with_key_data(&mut self) {
+        let mut annotations = Vec::new();
+
+        let no_value_node = self.graph_data.no_value_node;
+        let addr_to_key_data = &self.graph_data.heap_dump_data.as_ref().unwrap().addr_to_key_data;
         // iterate over all the key data
-        for (addr, key_data) in &self.graph_data.heap_dump_data.as_ref().unwrap().addr_to_key_data {
+        for (addr, key_data) in addr_to_key_data{
             // get the node at the key_data's address
             let node: Option<&Node> = self.graph_data.addr_to_node.get(addr);
             if node.is_some() && node.unwrap().is_value() {
@@ -127,20 +124,23 @@ impl GraphAnnotate {
                 
                 // annotate if the key found in the heap dump is the same as the key found in the json file
                 if aggregated_key == key_data.key {
+                    let dtn_addr = node.unwrap().get_dtn_addr().unwrap();
+
                     // replace the ValueNode with a KeyNode
                     let key_node = Node::ValueNode(ValueNode::KeyNode(KeyNode {
                         addr: *addr, // addr of first block of key
-                        dtn_addr: node.unwrap().get_dtn_addr().unwrap(), // dtn_addr of first block of key
+                        dtn_addr: dtn_addr, // dtn_addr of first block of key
                         value: node.unwrap().get_value().unwrap(), // first block value of key
                         key: aggregated_key, // found in heap dump, full key (not just the first block)
                         key_data: key_data.clone(), // found in heap dump, key data
                     }));
-                    // annotate the dtn node with the keystruct
-                    let dtn_node = self.graph_data.addr_to_node.get(&node.unwrap().get_dtn_addr().unwrap()).unwrap();
-                    let new_dtn_node_option = Self::get_node_as_annotated_dtn(dtn_node, DtnTypes::Keystruct);
-                    if new_dtn_node_option.is_some() {
-                        let new_dtn_node = new_dtn_node_option.unwrap();
-                        self.graph_data.addr_to_node.insert(new_dtn_node.get_address(), new_dtn_node);
+
+
+                    // annotate the dtn node with the key node annotation
+                    if no_value_node {
+                        annotations.push(SpecialNodeAnnotation::KeyNodeAnnotation(dtn_addr));
+                    } else {
+                        annotations.push(SpecialNodeAnnotation::KeyNodeAnnotation(*addr));
                     }
                     
                     self.graph_data.addr_to_node.insert(*addr, key_node);
@@ -155,62 +155,19 @@ impl GraphAnnotate {
 
             }
         }
-    }
 
-    /// try to annotate directly the node if it is a dtn, or the parent if it is a pointer/value
-    fn annotate_special_dtn(&mut self, node_addr : u64, dtn_type : DtnTypes) {
-        // get the node and annotate the struct
-        let node: Option<&Node> = self.graph_data.addr_to_node.get(&node_addr);
-        if node.is_some() {
-            let node = node.unwrap();
-            let dtn_node = match node {
-                Node::DataStructureNode(_) => { // either the annotate node is a dtn
-                    node
-                },
-                _ => { // or it is a pointer/value, so we get the parent
-                    let parent = self.graph_data.addr_to_node.get(&node.get_dtn_addr().unwrap()).unwrap();
-                    parent
-                },
-            };
-            let new_dtn = Self::get_node_as_annotated_dtn(dtn_node, dtn_type).unwrap();
-            self.graph_data.addr_to_node.insert(new_dtn.get_address(), new_dtn);
-        } else {
-            // log warning
-            log::warn!(
-                "node not found for addr: {}, for type {:?}", 
-                node_addr, dtn_type
-            );
+        // annotate the graph with the key node annotations
+        for annotation in annotations {
+            self.annotate_node(annotation);
         }
     }
 
-    /// try to annotate the node as a dtn and return it
-    /// return None if the node is not a dtn
-    fn get_node_as_annotated_dtn(dtn : &Node, new_dtn_type : DtnTypes) -> Option<Node> {
-        // check that the node is a dtn
-        match dtn {
-            Node::DataStructureNode(dtn_node_info) => {
-                // create a new DtnNode with the new dtn_type
-                Some(
-                    Node::DataStructureNode(
-                        DataStructureNode {
-                            addr: dtn_node_info.addr,
-                            byte_size: dtn_node_info.byte_size,
-                            nb_pointer_nodes: dtn_node_info.nb_pointer_nodes,
-                            nb_value_nodes: dtn_node_info.nb_value_nodes,
-                            dtn_type: new_dtn_type,
-                        }
-                    )
-                )
-            },
-            _ => {
-                // log warning
-                log::warn!(
-                    "node at dtn_addr: {} is not a DtnNode, can't annotate it", 
-                    dtn.get_address()
-                );
-                None
-            },
-        }
+    /// annote a node
+    fn annotate_node(&mut self, annotation : SpecialNodeAnnotation) {
+        self.graph_data.special_node_to_annotation.insert(
+            annotation.get_address(),
+            annotation,
+        );
     }
 }
 

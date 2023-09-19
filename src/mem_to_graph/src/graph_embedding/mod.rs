@@ -1,6 +1,6 @@
 #[cfg(test)]
 use crate::exe_pipeline::value_embedding::save_value_embeding;
-use crate::graph_structs::Node;
+use crate::graph_structs::{Node, SpecialNodeAnnotation};
 use crate::graph_annotate::GraphAnnotate;
 use crate::utils::{generate_bit_combinations, to_n_bits_binary, u64_to_bytes, compute_statistics, shannon_entropy};
 
@@ -42,11 +42,13 @@ impl GraphEmbedding {
         let mut dts_data = Vec::new();
 
         for dtn_addr in self.graph_annotate.graph_data.dtn_addrs.iter() {
-            let base_info = self.get_dts_basics_informations(*dtn_addr);
+            let mut base_info = self.get_dts_basics_informations(*dtn_addr);
+            base_info.push(self.get_node_label(*dtn_addr));
             let data = self.extract_dts_data_as_hex_blocks(*dtn_addr, block_size, no_pointer);
 
             dts_base_info.push(base_info);
             dts_data.push(data);
+
         }
 
         (dts_base_info, dts_data)
@@ -135,7 +137,7 @@ impl GraphEmbedding {
         feature_usize.append(&mut n_gram_vec);
 
         // add label
-        feature_usize.push(self.get_dtn_label(addr));
+        feature_usize.push(self.get_node_label(addr));
 
         // -------- f64
 
@@ -329,7 +331,7 @@ impl GraphEmbedding {
         feature.append(&mut children);
 
         // add label
-        feature.push(self.get_dtn_label(addr));
+        feature.push(self.get_node_label(addr));
 
         feature
     }
@@ -340,15 +342,17 @@ impl GraphEmbedding {
     /// Keystruct = 1,
     /// SshStruct = 2,
     /// SessionStateStruct = 3
-    fn get_dtn_label(&self, addr : u64) -> usize {
-        let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
-        match node {
-            Node::DataStructureNode(data_structure_node) => {
-                let label = data_structure_node.dtn_type.clone();
-                label as usize
+    fn get_node_label(&self, addr : u64) -> usize {
+        let annotation = self.graph_annotate.graph_data.special_node_to_annotation.get(&addr);
+        match annotation {
+            Some(annotation) => {
+                match annotation {
+                    SpecialNodeAnnotation::KeyNodeAnnotation(_) => 1,
+                    SpecialNodeAnnotation::SshStructNodeAnnotation(_) => 2,
+                    SpecialNodeAnnotation::SessionStateNodeAnnotation(_) => 3,
+                }
             },
-            _ => // if the node is not in a data structure, we panic
-                panic!("Node is not a DTN"),
+            None => 0,
         }
     }
 
@@ -435,7 +439,7 @@ impl GraphEmbedding {
 
         for addr in self.graph_annotate.graph_data.value_node_addrs.iter() {
             let sample = self.generate_value_sample(*addr);
-            let label = self.generate_value_label(*addr);
+            let label = self.get_node_label(*addr);
 
             // skip trivial samples (if param is set)
             if *crate::params::REMOVE_TRIVIAL_ZERO_SAMPLES &&
@@ -528,16 +532,6 @@ impl GraphEmbedding {
         }
 
         result
-    }
-
-    /// generate label for the value node (1 if the node is a key, 0 otherwise)
-    fn generate_value_label(&self, addr: u64) -> usize {
-        let node: &Node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
-        if node.is_key() {
-            1
-        } else {
-            0
-        }
     }
 }
 

@@ -145,6 +145,7 @@ pub fn save_extract_dtn_data(dts_infos: Vec<Vec<usize>>, dts_datas : Vec<Vec<Str
     header.push("f_dtns_addr".to_string());
     header.push("f_dtn_byte_size".to_string());
     header.push("f_dtn_ptrs".to_string());
+    header.push("label".to_string());
     header.push("dts_data".to_string());
     csv_writer.write_record(header).unwrap();
 
