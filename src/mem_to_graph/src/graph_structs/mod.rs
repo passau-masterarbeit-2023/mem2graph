@@ -94,10 +94,32 @@ impl Node {
     pub fn str_addr_and_type(&self) -> String {
         match self {
             Node::DataStructureNode(data_structure_node) => {
-                format!(
-                    "DTN({:#x})",
-                    data_structure_node.addr,
-                )
+                match data_structure_node.dtn_type {
+                    DtnTypes::Basestruct => {
+                        format!(
+                            "DTN({:#x})",
+                            data_structure_node.addr,
+                        )
+                    }
+                    DtnTypes::Keystruct => {
+                        format!(
+                            "KEY_DTN({:#x})",
+                            data_structure_node.addr,
+                        )
+                    }
+                    DtnTypes::SshStruct => {
+                        format!(
+                            "SSH_DTN({:#x})",
+                            data_structure_node.addr,
+                        )
+                    }
+                    DtnTypes::SessionStateStruct => {
+                        format!(
+                            "SS_DTN({:#x})",
+                            data_structure_node.addr,
+                        )
+                    }
+                }
             }
             Node::ValueNode(value_node) => {
                 match value_node {
@@ -346,11 +368,33 @@ impl std::fmt::Display for Edge {
 impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Node::DataStructureNode(_) => {
-                write!(
-                    f, "    {:?} [color=blue];", 
-                    self.str_addr_and_type(),
-                )
+            Node::DataStructureNode(node) => {
+                match node.dtn_type {
+                    DtnTypes::Basestruct => {
+                        write!(
+                            f, "    {:?} [color=blue];", 
+                            self.str_addr_and_type(),
+                        )
+                    }
+                    DtnTypes::Keystruct => {
+                        write!(
+                            f, "    {:?} [color=green style=filled];", 
+                            self.str_addr_and_type(),
+                        )
+                    }
+                    DtnTypes::SshStruct => {
+                        write!(
+                            f, "    {:?} [color=red style=filled];", 
+                            self.str_addr_and_type(),
+                        )
+                    }
+                    DtnTypes::SessionStateStruct => {
+                        write!(
+                            f, "    {:?} [color=orange style=filled];", 
+                            self.str_addr_and_type(),
+                        )
+                    }
+                }
             }
             Node::ValueNode(value_node) => {
                 match value_node {
