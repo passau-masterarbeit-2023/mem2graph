@@ -200,7 +200,7 @@ fn check_path(path: &PathBuf) {
     }
 }
 
-/// get the N_GRAM environment variable and return it as a vector of usize.
+/// get the N_GRAM environment variable and return it as a vector of usize (sorted in ascending order)
 pub fn get_n_gram_from_env() -> Vec<usize>{
     let base_n_gram = std::env::var("N_GRAM");
     match base_n_gram {
