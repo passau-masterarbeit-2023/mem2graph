@@ -182,7 +182,7 @@ impl GraphData {
             let data_structure_block_size = self.parse_datastructure(block_index);
 
             // update the block index by leaping over the data structure
-            block_index += data_structure_block_size + 1;
+            block_index += data_structure_block_size + 1; // +1 for the malloc header (1 block)
         }
 
     }

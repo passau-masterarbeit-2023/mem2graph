@@ -208,7 +208,7 @@ impl Node {
     }
 
     /// Check if a node is a data structure node
-    pub fn is_dtn (&self) -> bool {
+    pub fn is_dtn(&self) -> bool {
         match self {
             Node::DataStructureNode(_) => true,
             _ => false,
