@@ -8,7 +8,7 @@ pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
 use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT, SpecialNodeAnnotation};
-use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS, COMPRESS_POINTER_CHAINS};
+use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS};
 use crate::utils;
 
 /// macro for getting the heap_dump_data field unwrapped
@@ -294,22 +294,8 @@ impl GraphData {
         let node = self.addr_to_node.get(&node_addr).unwrap();
 
         // check if the pointer points to a node in the graph
-        let mut current_pointer_node: &Node = node;
-        let mut weight = 1;
-        let mut pointed_node: Option<&Node> = self.addr_to_node.get(&current_pointer_node.points_to().unwrap());
-
-        // only for pointer to pointer regrouping
-        if *COMPRESS_POINTER_CHAINS {
-            while current_pointer_node.is_pointer() && pointed_node.is_some() && pointed_node.unwrap().is_pointer() {
-            
-                weight += 1;
-    
-                // next iteration
-                current_pointer_node = pointed_node.unwrap();
-                
-                pointed_node = self.addr_to_node.get(&current_pointer_node.points_to().unwrap());
-            }
-        }
+        let weight = 1;
+        let pointed_node: Option<&Node> = self.addr_to_node.get(&node.points_to().unwrap());
 
         // add the edge if the node is valid
         if pointed_node.is_some() {

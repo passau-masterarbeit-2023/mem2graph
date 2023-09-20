@@ -214,7 +214,7 @@ pub fn string_to_usize_vec(string: &str) -> Vec<usize> {
 lazy_static! {
     /// generate all possible bit combinations from n_gram in ascending order and associate the 
     /// corresponding index in a vector
-    pub static ref BIN_TO_INDEX : HashMap<String, usize> = {
+    static ref BIN_TO_INDEX : HashMap<String, usize> = {
         let mut bin_to_index = HashMap::new();
         let mut index = 0;
         let n_gram: Vec<usize> = get_n_gram_from_env();

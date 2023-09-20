@@ -107,17 +107,6 @@ lazy_static! {
         path
     };
 
-    pub static ref COMPRESS_POINTER_CHAINS: bool = {
-        let compress_pointer_chains = std::env::var("COMPRESS_POINTER_CHAINS");
-        match compress_pointer_chains {
-            Ok(mode) => mode == "true",
-            Err(_) => {
-                println!("COMPRESS_POINTER_CHAINS environment variable not set. Defaulting to 'false'.");
-                return false;
-            },
-        }
-    };
-
     pub static ref EMBEDDING_DEPTH: usize = {
         let base_embedding_depth = std::env::var("EMBEDDING_DEPTH");
         match base_embedding_depth {
