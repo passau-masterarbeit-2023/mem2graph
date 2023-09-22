@@ -69,12 +69,12 @@ impl GraphAnnotate {
 
         {
             // SSH_STRUCT_ADDR
-            let ssh_struct_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_ssh_struct;
+            let ssh_struct_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_ssh_struct.unwrap();
             annotate_node!(ssh_struct_addr, SshStructNodeAnnotation, "ssh_struct_addr")
         }
         {
             // SESSION_STATE_ADDR
-            let session_state_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_session_state;
+            let session_state_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_session_state.unwrap();
             annotate_node!(session_state_addr, SessionStateNodeAnnotation, "session_state_addr")
         }
     }
@@ -194,6 +194,49 @@ impl GraphAnnotate {
 
     /// annote a node
     fn annotate_node(&mut self, annotation : SpecialNodeAnnotation) {
+        // check that the node isn't already annotated
+        let preceding_annotation = self.graph_data.special_node_to_annotation.get(&annotation.get_address());
+        if preceding_annotation.is_some() {
+            let preceding_annotation = preceding_annotation.unwrap();
+            // if the 2 are the same, then it's ok
+            if preceding_annotation == &annotation {
+                return;
+            }
+
+            // if the 2 are key nodes and session state, then superpose it
+            if (
+                matches!(preceding_annotation, SpecialNodeAnnotation::KeyNodeAnnotation(_)) && 
+                matches!(annotation, SpecialNodeAnnotation::SessionStateNodeAnnotation(_))) 
+                ||
+                (matches!(preceding_annotation, SpecialNodeAnnotation::SessionStateNodeAnnotation(_)) && 
+                matches!(annotation, SpecialNodeAnnotation::KeyNodeAnnotation(_))
+            ) {
+                self.graph_data.special_node_to_annotation.insert(
+                    annotation.get_address(),
+                    SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(annotation.get_address()),
+                );
+                return;
+            }
+
+            // if the 2 are ssh struct and session state, then superpose it
+            if (
+                matches!(preceding_annotation, SpecialNodeAnnotation::SshStructNodeAnnotation(_)) && 
+                matches!(annotation, SpecialNodeAnnotation::SessionStateNodeAnnotation(_))) 
+                ||
+                (matches!(preceding_annotation, SpecialNodeAnnotation::SessionStateNodeAnnotation(_)) && 
+                matches!(annotation, SpecialNodeAnnotation::SshStructNodeAnnotation(_))
+            ) {
+                self.graph_data.special_node_to_annotation.insert(
+                    annotation.get_address(),
+                    SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(annotation.get_address()),
+                );
+                return;
+            }
+
+            panic!("🔴 Node at address {} is already annotated with {:?}, attempted to annotate : {:?}", annotation.get_address(), preceding_annotation, annotation);
+        }
+
+
         self.graph_data.special_node_to_annotation.insert(
             annotation.get_address(),
             annotation,

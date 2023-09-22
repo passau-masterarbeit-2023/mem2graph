@@ -18,8 +18,8 @@ pub struct HeapDumpData {
     pub addr_to_key_data: HashMap<u64, KeyData>,
 
     // special addresses
-    pub addr_ssh_struct: u64,
-    pub addr_session_state: u64,
+    pub addr_ssh_struct: Option<u64>,
+    pub addr_session_state: Option<u64>,
 }
 
 impl HeapDumpData {
@@ -69,11 +69,11 @@ impl HeapDumpData {
         let addr_ssh_struct;
         let addr_session_state;
         if annotation {
-            addr_ssh_struct = json_value_to_addr(json_value_for_key(&json_data, "SSH_STRUCT_ADDR".to_string())?);
-            addr_session_state = json_value_to_addr(json_value_for_key(&json_data, "SESSION_STATE_ADDR".to_string())?);
+            addr_ssh_struct = Some(json_value_to_addr(json_value_for_key(&json_data, "SSH_STRUCT_ADDR".to_string())?));
+            addr_session_state = Some(json_value_to_addr(json_value_for_key(&json_data, "SESSION_STATE_ADDR".to_string())?));
         } else {
-            addr_ssh_struct = 0;
-            addr_session_state = 0;
+            addr_ssh_struct = None;
+            addr_session_state = None;
         }
 
         Ok(HeapDumpData {

@@ -49,6 +49,9 @@ macro_rules! unwrap_to_string {
 #[test]
 fn test_hex_str_to_addr() {
     crate::tests::setup();
+    // empty
+    assert!(hex_str_to_addr("", Endianness::Big).is_err());
+
     // 16 hex chars = 4 * 16 bits = 64 bits
     assert_eq!(hex_str_to_addr("0000000000000000", Endianness::Big).unwrap(), 0);
     assert_eq!(hex_str_to_addr("00000300", Endianness::Big).unwrap(), 768);

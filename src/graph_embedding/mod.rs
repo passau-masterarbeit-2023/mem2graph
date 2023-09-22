@@ -333,6 +333,8 @@ impl GraphEmbedding {
                     SpecialNodeAnnotation::KeyNodeAnnotation(_) => 1,
                     SpecialNodeAnnotation::SshStructNodeAnnotation(_) => 2,
                     SpecialNodeAnnotation::SessionStateNodeAnnotation(_) => 3,
+                    SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(_) => 4,
+                    SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(_) => 5,
                 }
             },
             None => 0,

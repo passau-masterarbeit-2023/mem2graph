@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use serde_derive::{Serialize, Deserialize};
 
 use crate::params::BLOCK_BYTE_SIZE;
@@ -28,7 +30,12 @@ pub enum Node {
 pub enum SpecialNodeAnnotation {
     SessionStateNodeAnnotation(u64),
     SshStructNodeAnnotation(u64),
+    /// combination of the SessionStateNodeAnnotation and SshStructNodeAnnotation (handle the superposition of the two annotations)
+    SessionStateAndSSHStructNodeAnnotation(u64),
     KeyNodeAnnotation(u64),
+
+    /// combination of the SessionStateNodeAnnotation and KeyNodeAnnotation (handle the superposition of the two annotations)
+    KeyNodeAndSessionStateNodeAnnotation(u64),
 }
 
 impl SpecialNodeAnnotation {
@@ -40,8 +47,14 @@ impl SpecialNodeAnnotation {
             SpecialNodeAnnotation::SshStructNodeAnnotation(_) => {
                 "SSHN".to_string()
             }
+            SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(_) => {
+                "SSN_SSHN".to_string()
+            }
             SpecialNodeAnnotation::KeyNodeAnnotation(_) => {
                 "KN".to_string()
+            }
+            SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(_) => {
+                "KN_SSN".to_string()
             }
         }
     }
@@ -54,7 +67,13 @@ impl SpecialNodeAnnotation {
             SpecialNodeAnnotation::SshStructNodeAnnotation(_) => {
                 "red".to_string()
             }
+            SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(_) => {
+                "red".to_string()
+            }
             SpecialNodeAnnotation::KeyNodeAnnotation(_) => {
+                "green".to_string()
+            }
+            SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(_) => {
                 "green".to_string()
             }
         }
@@ -107,10 +126,52 @@ impl SpecialNodeAnnotation {
             SpecialNodeAnnotation::KeyNodeAnnotation(addr) => {
                 *addr
             }
+            SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(addr) => {
+                *addr
+            }
+            SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(addr) => {
+                *addr
+            }
         }
     }
 }
 
+impl Debug for SpecialNodeAnnotation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SpecialNodeAnnotation::SessionStateNodeAnnotation(addr) => {
+                write!(
+                    f, "SSN({:#x})", 
+                    addr,
+                )
+            }
+            SpecialNodeAnnotation::SshStructNodeAnnotation(addr) => {
+                write!(
+                    f, "SSHN({:#x})", 
+                    addr,
+                )
+            }
+            SpecialNodeAnnotation::KeyNodeAnnotation(addr) => {
+                write!(
+                    f, "KN({:#x})", 
+                    addr,
+                )
+            }
+            SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(addr) => {
+                write!(
+                    f, "SSN_SSHN({:#x})", 
+                    addr,
+                )
+            }
+            SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(addr) => {
+                write!(
+                    f, "KN_SSN({:#x})", 
+                    addr,
+                )
+            }
+        }
+    }
+}
 
 impl Node {
     /// Check whether a node is important or not.
