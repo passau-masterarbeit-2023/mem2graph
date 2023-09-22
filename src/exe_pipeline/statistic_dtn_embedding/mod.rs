@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf};
 
-use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::{N_GRAM, BLOCK_BYTE_SIZE}, utils::generate_bit_combinations};
+use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::{N_GRAM, BLOCK_BYTE_SIZE, argv::Annotation}, utils::generate_bit_combinations};
 
 use super::get_raw_file_or_files_from_path;
 /// Takes a directory or a file
@@ -9,7 +9,7 @@ use super::get_raw_file_or_files_from_path;
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run_statistics_dtn_embedding(path: PathBuf, output_folder: PathBuf, annotation : bool) {
+pub fn run_statistics_dtn_embedding(path: PathBuf, output_folder: PathBuf, annotation : Annotation) {
     // start timer
     let start_time = Instant::now();
 

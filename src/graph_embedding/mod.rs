@@ -2,6 +2,7 @@
 use crate::exe_pipeline::value_embedding::save_value_embeding;
 use crate::graph_structs::{Node, SpecialNodeAnnotation};
 use crate::graph_annotate::GraphAnnotate;
+use crate::params::argv::Annotation;
 use crate::utils::{to_n_bits_binary, u64_to_bytes, compute_statistics, shannon_entropy, get_bin_to_index, get_bin_to_index_size};
 
 use std::path::PathBuf;
@@ -17,7 +18,7 @@ impl GraphEmbedding {
         heap_dump_raw_file_path: PathBuf, 
         pointer_byte_size: usize,
         depth: usize,
-        annotation : bool,
+        annotation : Annotation,
         without_value_node : bool,
     ) -> Result<GraphEmbedding, crate::utils::ErrorKind> {
         let graph_annotate = GraphAnnotate::new(heap_dump_raw_file_path, pointer_byte_size, annotation, without_value_node)?;
@@ -530,7 +531,7 @@ mod tests {
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             crate::params::BLOCK_BYTE_SIZE,
             5,
-            true,
+            Annotation::ValueNode,
             false,
         ).unwrap();
 

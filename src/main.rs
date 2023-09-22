@@ -48,7 +48,7 @@ fn main() {
         }
     }
     // annotation of the graph
-    let annotation = !params::ARGV.no_annotation;
+    let annotation = params::ARGV.annotation;
     let no_value_node = params::ARGV.no_value_node;
 
     // launch computations

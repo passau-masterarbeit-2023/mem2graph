@@ -29,10 +29,10 @@ pub struct Argv {
     #[arg(short, long, required = false)]
     pub output: Option<String>,
 
-    /// If the graph is annotated
-    /// NOTE : By default the graph is annotated, if you want to disable it use this flag
-    #[arg(short = 'a', long, action)]
-    pub no_annotation: bool,
+    /// How the graph is annotated
+    /// NOTE : By default the graph is annotated with value node
+    #[arg(short = 'a', long, default_value = "value-node")]
+    pub annotation: Annotation,
 
     /// if their is no value node or pointer node in the graph
     /// NOTE : By default the graph contains value node and pointer node, if you want to disable it use this flag
@@ -40,6 +40,20 @@ pub struct Argv {
     #[arg(short = 'v', long, action)]
     pub no_value_node: bool,
 }
+
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+/// control the annotation of the graph
+pub enum Annotation {
+    /// annotate the value node
+    ValueNode,
+    /// annotate the structure node
+    StructureNode,
+    /// don't annotate the graph
+    None,
+}
+
+
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Pipeline {

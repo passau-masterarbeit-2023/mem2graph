@@ -43,6 +43,7 @@ pub struct GraphData {
 impl GraphData {
 
     /// Initialize the graph data from a raw heap dump file.
+    /// NOTE : If the annotation is 'None', we will not load the key in the json
     pub fn new(
         heap_dump_raw_file_path: PathBuf, 
         pointer_byte_size: usize,
@@ -182,7 +183,7 @@ impl GraphData {
             let data_structure_block_size = self.parse_datastructure(block_index);
 
             // update the block index by leaping over the data structure
-            block_index += data_structure_block_size + 1; // +1 for the malloc header (1 block)
+            block_index += data_structure_block_size + 1;
         }
 
     }
