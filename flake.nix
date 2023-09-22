@@ -14,6 +14,7 @@
       packages = [
         pkgs.cargo
         pkgs.rustc
+        pkgs.clippy
 
         pkgs.rust-analyzer
         pkgs.rustup
@@ -23,7 +24,7 @@
       ];
 
       RUST_BACKTRACE = "1";
+      RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
     };
-
   };
 }

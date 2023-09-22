@@ -38,23 +38,44 @@ impl GraphAnnotate {
         if annotation == Annotation::None {
             panic!("Cannot annotate graph with ssh struct if annotation is None")
         }
+
+        macro_rules! annotate_node {
+            ($addr:ident, $annotation:ident, $name:literal) => {
+                {
+                    let node = self.graph_data.addr_to_node.get(&$addr);
+
+                    if node.is_none() {
+                        log::warn!("🟠 {} not found for addr: {}", $name, $addr);
+                    }else{
+                        let node = node.unwrap();
+                        if node.is_value() {
+                            if annotation == Annotation::StructureNode {
+                                self.annotate_node(SpecialNodeAnnotation::$annotation(node.get_dtn_addr().unwrap()));
+                            } else {
+                                self.annotate_node(SpecialNodeAnnotation::$annotation($addr));
+                            }
+                        } else {
+                            if annotation == Annotation::StructureNode {
+                                self.annotate_node(SpecialNodeAnnotation::$annotation($addr));
+                            } else {
+                                log::warn!("🟠 {} is not a ValueNode for addr: {}", $name, $addr)
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+
         {
             // SSH_STRUCT_ADDR
-            let mut ssh_struct_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_ssh_struct;
-            if annotation == Annotation::StructureNode{
-                ssh_struct_addr = self.graph_data.get_parent_dtn_addr(&ssh_struct_addr).unwrap();
-            }
-            
-            self.annotate_node(SpecialNodeAnnotation::SshStructNodeAnnotation(ssh_struct_addr));
+            let ssh_struct_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_ssh_struct;
+            annotate_node!(ssh_struct_addr, SshStructNodeAnnotation, "ssh_struct_addr")
         }
         {
             // SESSION_STATE_ADDR
-            let mut session_state_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_session_state;
-            if annotation == Annotation::StructureNode {
-                session_state_addr = self.graph_data.get_parent_dtn_addr(&session_state_addr).unwrap();
-            }
-
-            self.annotate_node(SpecialNodeAnnotation::SessionStateNodeAnnotation(session_state_addr));
+            let session_state_addr = self.graph_data.heap_dump_data.as_ref().unwrap().addr_session_state;
+            annotate_node!(session_state_addr, SessionStateNodeAnnotation, "session_state_addr")
         }
     }
 
