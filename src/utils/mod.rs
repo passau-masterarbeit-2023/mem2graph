@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 
 use std::collections::HashMap;
 use std::convert::TryInto;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use error_chain::error_chain;
 use serde_json::Value;
 
@@ -185,6 +185,32 @@ pub fn heap_dump_path_to_json_path(heap_dump_raw_file_path: &PathBuf) -> PathBuf
         log::error!("File doesn't exist: {:?}", json_path);
     }
     return json_path;
+}
+
+/// Truncate the path to the last n directories
+/// Return only a directory path, remove the file name if there is one
+pub fn truncate_path_to_last_n_dirs(path_str: &PathBuf, n: usize) -> PathBuf {
+    let mut truncated_path = PathBuf::new();
+    let mut components = path_str.components().rev().peekable();
+
+    // Skip the file name if exists
+    if let Some(std::path::Component::Normal(_)) = components.peek() {
+        if path_str.is_file() {
+            components.next();
+        }
+    }
+
+    // Collect n directories from the end
+    for _ in 0..n {
+        if let Some(component) = components.next() {
+            if let std::path::Component::Normal(_) = &component {
+                truncated_path.push(component.as_os_str());
+            }
+        }
+    }
+
+    truncated_path = truncated_path.components().rev().collect();
+    truncated_path
 }
 
 /// compute division on 2 integers and round up if necessary

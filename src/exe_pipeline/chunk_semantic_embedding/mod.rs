@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf};
 
-use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::argv::SelectAnnotationLocation};
+use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::argv::SelectAnnotationLocation, utils::truncate_path_to_last_n_dirs};
 
 use super::get_raw_file_or_files_from_path;
 /// Takes a directory or a file
@@ -15,12 +15,8 @@ pub fn run_chunk_semantic_embedding(path: PathBuf, output_folder: PathBuf, annot
 
     // cut the path to just after "phdtrack_data"
     let dir_path_ = path.clone();
-    let dir_path_split = dir_path_.to_str().unwrap().split("phdtrack_data/").collect::<Vec<&str>>();
-    
-    if dir_path_split.len() != 2 {
-        panic!("The path must contains \"phdtrack_data/\" and the name of the directory or file.");
-    }
-    let dir_path_end_str = dir_path_split[1];
+    let dir_path_end = truncate_path_to_last_n_dirs(&dir_path_, 5);
+    let dir_path_end_str = dir_path_end.to_str().unwrap(); 
 
     let heap_dump_raw_file_paths: Vec<PathBuf> = get_raw_file_or_files_from_path(path.clone());
 
