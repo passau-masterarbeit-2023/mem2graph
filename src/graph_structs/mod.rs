@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde_derive::{Serialize, Deserialize};
 
-use crate::params::BLOCK_BYTE_SIZE;
+use crate::{params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS}, utils};
 
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -11,6 +11,50 @@ pub enum Node {
     ValueNode(ValueNode),
     ChunkHeaderNode(ChunkHeaderNode),
     PointerNode(PointerNode),
+}
+
+/// Header flags for a header block
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct  HeaderFlags {
+    /// P: Previous chunk is in use (allocated by application)
+    pub p: bool, 
+    /// M: This chunk was allocated using mmap
+    pub m: bool,
+    /// A: The main arena uses the application's heap
+    pub a: bool,
+}
+
+impl HeaderFlags {  
+    /// Parse the header block of a chunk, just for the flags
+    pub fn parse_chunk_header_flags(block: &[u8; BLOCK_BYTE_SIZE]) -> HeaderFlags {
+        let size_and_flags = utils::block_bytes_to_addr(block, MALLOC_HEADER_ENDIANNESS) as usize;
+        
+        // get flags
+        let p = (size_and_flags & 0x01) != 0;
+        let m = (size_and_flags & 0x02) != 0;
+        let a = (size_and_flags & 0x04) != 0;
+        HeaderFlags { p, m, a }
+    }
+
+    pub fn is_preceding_chunk_free(&self) -> bool {
+        !self.p
+    }
+}
+
+/// Parse the header block of a chunk
+pub fn parse_chunk_header(block: &[u8; BLOCK_BYTE_SIZE]) -> (usize, HeaderFlags) {
+    let size_and_flags = utils::block_bytes_to_addr(block, MALLOC_HEADER_ENDIANNESS) as usize;
+    
+    // get size
+    let size = size_and_flags & !0x07;  // Clear the last 3 bits to get the size
+
+    // get flags
+    let p = (size_and_flags & 0x01) != 0;
+    let m = (size_and_flags & 0x02) != 0;
+    let a = (size_and_flags & 0x04) != 0;
+    let flags = HeaderFlags { p, m, a };
+
+    return (size, flags);
 }
 
 /// Anotations for special nodes used in graph_data.
@@ -323,6 +367,8 @@ impl std::fmt::Debug for Node {
 pub struct ChunkHeaderNode {
     pub addr: u64,
     pub byte_size: usize,
+    pub flags: HeaderFlags,
+    pub is_free: bool,
     pub nb_pointer_nodes: usize,
     pub nb_value_nodes: usize,
 }

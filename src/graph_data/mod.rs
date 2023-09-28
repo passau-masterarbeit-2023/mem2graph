@@ -7,7 +7,7 @@ use petgraph::visit::IntoEdgeReferences;
 pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
-use crate::graph_structs::{self, Node, ChunkHeaderNode, Edge, EdgeType, DEFAULT_CHUNK_EDGE_WEIGHT, SpecialNodeAnnotation};
+use crate::graph_structs::{self, Node, ChunkHeaderNode, Edge, EdgeType, DEFAULT_CHUNK_EDGE_WEIGHT, SpecialNodeAnnotation, parse_chunk_header, HeaderFlags};
 use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS};
 use crate::utils;
 
@@ -148,11 +148,6 @@ impl GraphData {
         );
     }
 
-    /// get the malloc header (number of byte allocated + 1)
-    fn get_memalloc_header(&self, data: &[u8; BLOCK_BYTE_SIZE]) -> usize {
-        utils::block_bytes_to_addr(data, MALLOC_HEADER_ENDIANNESS) as usize
-    }
-
     //////////////////////////////////////////////////////////////////////////////
     /// ------------------------- Graph with value nodes -------------------------
     /// Step 1: chunk step
@@ -206,10 +201,10 @@ impl GraphData {
 
         // get the size of the chunk from malloc header
         // NOTE: the size given by malloc header is the size of the chunk + 1
-        let chunk_byte_syze = self.get_memalloc_header(&self.heap_dump_data.as_ref().unwrap().blocks[header_addr]) - 1;
+        let (chunk_byte_size, header_flag)  = parse_chunk_header(&self.heap_dump_data.as_ref().unwrap().blocks[header_addr]);
 
         // check if chunk_byte_syze is an integer and block size aligned
-        let tmp_nb_blocks_in_chunk = chunk_byte_syze / BLOCK_BYTE_SIZE;
+        let tmp_nb_blocks_in_chunk = chunk_byte_size / BLOCK_BYTE_SIZE;
         if tmp_nb_blocks_in_chunk % 1 != 0 {
             log::debug!("tmp_nb_blocks_in_chunk: {}", tmp_nb_blocks_in_chunk);
             log::debug!("The chunk size is not a multiple of the block size, at block index: {}", header_addr);
@@ -263,12 +258,20 @@ impl GraphData {
                 self.add_node_to_map_wrapper(node);
             }
         }
-                
+
+        // determine if the current chunk is free or in use
+        let next_chunk_header_flags = HeaderFlags::parse_chunk_header_flags(
+            &self.heap_dump_data.as_ref().unwrap()
+                .blocks[header_addr + nb_blocks_in_chunk as usize + 1]
+        );
+
         
         // create the CHN with the correct number of pointer and value nodes
         let chn = Node::ChunkHeaderNode(ChunkHeaderNode {
             addr: current_chn_addr,
-            byte_size: chunk_byte_syze,
+            byte_size: chunk_byte_size,
+            flags: header_flag,
+            is_free: next_chunk_header_flags.is_preceding_chunk_free(),
             nb_pointer_nodes: count_pointer_nodes,
             nb_value_nodes: count_value_nodes
         });
@@ -456,6 +459,8 @@ mod tests {
         let chn_node = Node::ChunkHeaderNode(ChunkHeaderNode {
             addr: 1,
             byte_size: 8,
+            flags: HeaderFlags{p : true, m : false, a : false},
+            is_free: false,
             nb_pointer_nodes: 0,
             nb_value_nodes: 0
         });

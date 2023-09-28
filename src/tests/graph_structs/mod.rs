@@ -6,6 +6,8 @@ fn create_test_structs() -> Vec<Node> {
     let data_structure_node = Node::ChunkHeaderNode(ChunkHeaderNode {
         addr: 0,
         byte_size: 8,
+        flags: HeaderFlags{p : true, m : false, a : false},
+        is_free: false,
         nb_pointer_nodes: 0,
         nb_value_nodes: 0
     });
