@@ -7,7 +7,7 @@ use error_chain::error_chain;
 use serde_json::Value;
 
 use crate::params::{PTR_ENDIANNESS, get_n_gram_from_env};
-use crate::graph_structs::{Node, PointerNode, ValueNode, BasePointerNode, BaseValueNode};
+use crate::graph_structs::{Node, PointerNode, ValueNode};
 
 /// convert an address to an index
 /// NOTE: addresses are represented as u64
@@ -157,23 +157,19 @@ pub fn create_node_from_bytes(
     );
     if potential_ptr.is_some() {
         Node::PointerNode(
-            PointerNode::BasePointerNode(
-                BasePointerNode {
-                    addr,
-                    points_to: potential_ptr.unwrap(),
-                    chn_addr,
-                }
-            )
+            PointerNode {
+                addr,
+                points_to: potential_ptr.unwrap(),
+                chn_addr,
+            }
         )
     } else {
         Node::ValueNode(
-            ValueNode::BaseValueNode(
-                BaseValueNode {
-                    addr,
-                    value: *block,
-                    chn_addr,
-                }
-            )
+            ValueNode {
+                addr,
+                value: *block,
+                chn_addr,
+            }
         )
     }
 }

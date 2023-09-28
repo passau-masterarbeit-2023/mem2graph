@@ -435,10 +435,8 @@ mod tests {
     use crate::params::{self};
     use crate::graph_structs::{
         Node, 
-        ValueNode, 
         PointerNode, 
-        BaseValueNode, 
-        BasePointerNode, 
+        ValueNode, 
         ChunkHeaderNode,
         Edge,
         EdgeType,
@@ -462,21 +460,19 @@ mod tests {
             nb_value_nodes: 0
         });
         let base_value_node = Node::ValueNode(
-            ValueNode::BaseValueNode(
-                BaseValueNode {
-                    addr: 2,
-                    value: [0, 1, 2, 3, 4, 5, 6, 7],
-                    chn_addr: 1,
-                }
-            )
+            ValueNode {
+                addr: 2,
+                value: [0, 1, 2, 3, 4, 5, 6, 7],
+                chn_addr: 1,
+            }
+        
         );
-        let base_pointer_node = Node::PointerNode(
-                PointerNode::BasePointerNode(BasePointerNode {
-                    addr: 3,
-                    points_to: 8,
-                    chn_addr: 1,
-                }
-            )
+        let base_pointer_node = Node::PointerNode(PointerNode {
+                addr: 3,
+                points_to: 8,
+                chn_addr: 1,
+            }
+        
         );
 
         // add nodes as addresses

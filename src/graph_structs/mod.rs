@@ -5,20 +5,10 @@ use serde_derive::{Serialize, Deserialize};
 use crate::params::BLOCK_BYTE_SIZE;
 
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PointerNode{
-    BasePointerNode(BasePointerNode),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ValueNode{
-    BaseValueNode(BaseValueNode),
-    KeyNode(KeyNode),
-}
-
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Node {
-    ValueNode(ValueNode), // default node
+    KeyNode(KeyNode),
+    ValueNode(ValueNode),
     ChunkHeaderNode(ChunkHeaderNode),
     PointerNode(PointerNode),
 }
@@ -97,18 +87,14 @@ impl SpecialNodeAnnotation {
             Node::ChunkHeaderNode(_) => {
                 "[label=\"CHN\" color=\"black\"];".to_string()
             }
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::BaseValueNode(_) => {
-                        "[label=\"VN\" color=\"grey\"];".to_string()
-                    }
-                    ValueNode::KeyNode(_) => {
-                        panic!("KeyNode should not be annotated with default attributes")
-                    }
-                }
+            Node::ValueNode(_) => {
+                "[label=\"VN\" color=\"grey\"];".to_string()
+            }
+            Node::KeyNode(_) => {
+                panic!("KeyNode should not be annotated with default attributes")
             }
             Node::PointerNode(_) => {
-                    "[label=\"PN\" color=\"orange\"];".to_string()
+                "[label=\"PN\" color=\"orange\"];".to_string()
                 
             }
         }
@@ -178,12 +164,7 @@ impl Node {
     #[cfg(test)]
     pub fn is_important(&self) -> bool {
         match self {
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::KeyNode(_) => true,
-                    _ => false,
-                }
-            }
+            Node::KeyNode(_) => true,
             _ => false,
         }
     }
@@ -194,22 +175,14 @@ impl Node {
             Node::ChunkHeaderNode(chunk_header_node) => {
                 chunk_header_node.addr
             }
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::BaseValueNode(base_value_node) => {
-                        base_value_node.addr
-                    }
-                    ValueNode::KeyNode(key_node) => {
-                        key_node.addr
-                    }
-                }
+            Node::ValueNode(base_value_node) => {
+                base_value_node.addr
             }
-            Node::PointerNode(pointer_node) => {
-                match pointer_node {
-                    PointerNode::BasePointerNode(base_pointer_node) => {
-                        base_pointer_node.addr
-                    }
-                }
+            Node::KeyNode(key_node) => {
+                key_node.addr
+            }
+            Node::PointerNode(base_pointer_node) => {
+                base_pointer_node.addr
             }
         }
     }
@@ -223,31 +196,23 @@ impl Node {
                     chunk_header_node.addr,
                 )
             }
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::BaseValueNode(base_value_node) => {
-                        format!(
-                            "VN({:#x})",
-                            base_value_node.addr,
-                        )
-                    }
-                    ValueNode::KeyNode(key_node) => {
-                        format!(
-                            "KN_{}({:#x})", 
-                            key_node.key_data.name, key_node.addr
-                        )
-                    }
-                }
+            Node::ValueNode(base_value_node) => {
+                format!(
+                    "VN({:#x})",
+                    base_value_node.addr,
+                )
             }
-            Node::PointerNode(pointer_node) => {
-                match pointer_node {
-                    PointerNode::BasePointerNode(base_pointer_node) => {
-                        format!(
-                            "PN({:#x})",
-                            base_pointer_node.addr,
-                        )
-                    }
-                }
+            Node::KeyNode(key_node) => {
+                format!(
+                    "KN_{}({:#x})", 
+                    key_node.key_data.name, key_node.addr
+                )
+            }
+            Node::PointerNode(base_pointer_node) => {
+                format!(
+                    "PN({:#x})",
+                    base_pointer_node.addr,
+                )
             }
         }
     }
@@ -278,24 +243,15 @@ impl Node {
 
     pub fn is_key(&self) -> bool {
         match self {
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::KeyNode(_) => true,
-                    _ => false,
-                }
-            }
+            Node::KeyNode(_) => true,
             _ => false,
         }
     }
 
     pub fn points_to(&self) -> Option<u64> {
         match self {
-            Node::PointerNode(pointer_node) => {
-                match pointer_node {
-                    PointerNode::BasePointerNode(base_pointer_node) => {
-                        Some(base_pointer_node.points_to)
-                    }
-                }
+            Node::PointerNode(base_pointer_node) => {
+                Some(base_pointer_node.points_to)
             }
             _ => None,
         }
@@ -303,15 +259,11 @@ impl Node {
 
     pub fn get_value(&self) -> Option<[u8; BLOCK_BYTE_SIZE]> {
         match self {
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::BaseValueNode(base_value_node) => {
-                        Some(base_value_node.value.clone())
-                    }
-                    ValueNode::KeyNode(key_node) => {
-                        Some(key_node.value.clone())
-                    }
-                }
+            Node::ValueNode(base_value_node) => {
+                Some(base_value_node.value.clone())
+            }
+            Node::KeyNode(key_node) => {
+                Some(key_node.value.clone())
             }
             _ => None,
         }
@@ -320,22 +272,14 @@ impl Node {
     /// returns the CHN address of the node
     pub fn get_parent_chn_addr(&self) -> Option<u64> {
         match self {
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::BaseValueNode(base_value_node) => {
-                        Some(base_value_node.chn_addr)
-                    }
-                    ValueNode::KeyNode(key_node) => {
-                        Some(key_node.chn_addr)
-                    }
-                }
+            Node::ValueNode(base_value_node) => {
+                Some(base_value_node.chn_addr)
+            }
+            Node::KeyNode(key_node) => {
+                Some(key_node.chn_addr)                
             },
-            Node::PointerNode(pointer_node) => {
-                match pointer_node {
-                    PointerNode::BasePointerNode(base_pointer_node) => {
-                        Some(base_pointer_node.chn_addr)
-                    }
-                }
+            Node::PointerNode(base_pointer_node) => {
+                Some(base_pointer_node.chn_addr)
             }
             _ => None,
         }
@@ -352,31 +296,24 @@ impl std::fmt::Debug for Node {
                     chunk_header_node.addr, chunk_header_node.nb_value_nodes, chunk_header_node.nb_pointer_nodes
                 )
             }
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::BaseValueNode(base_value_node) => {
-                        write!(
-                            f, "VN: {} [value=\"{}\"]", 
-                            base_value_node.addr, hex::encode(&base_value_node.value)
-                        )
-                    }
-                    ValueNode::KeyNode(key_node) => {
-                        write!(
-                            f, "KN: {} [found_key=\"{}\" json_key=\"{}\"]", 
-                            key_node.addr, hex::encode(&key_node.key), hex::encode(&key_node.key_data.key) 
-                        )
-                    }
-                }
+            Node::ValueNode(base_value_node) => {
+                write!(
+                    f, "VN: {} [value=\"{}\"]", 
+                    base_value_node.addr, hex::encode(&base_value_node.value)
+                )
             }
-            Node::PointerNode(pointer_node) => {
-                match pointer_node {
-                    PointerNode::BasePointerNode(base_pointer_node) => {
-                        write!(
-                            f, "PN: {} [label=\"{}\"]", 
-                            base_pointer_node.addr, base_pointer_node.points_to
-                        )
-                    }
-                }
+            Node::KeyNode(key_node) => {
+                write!(
+                    f, "KN: {} [found_key=\"{}\" json_key=\"{}\"]", 
+                    key_node.addr, hex::encode(&key_node.key), hex::encode(&key_node.key_data.key) 
+                )
+            }
+            Node::PointerNode(base_pointer_node) => {
+                write!(
+                    f, "PN: {} [label=\"{}\"]", 
+                    base_pointer_node.addr, base_pointer_node.points_to
+                )
+                    
             }
         }
     }
@@ -391,14 +328,14 @@ pub struct ChunkHeaderNode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BaseValueNode {
+pub struct ValueNode {
     pub addr: u64,
     pub value: [u8; BLOCK_BYTE_SIZE],
     pub chn_addr: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BasePointerNode {
+pub struct PointerNode {
     pub addr: u64,
     pub points_to: u64,
     pub chn_addr: u64,
@@ -466,31 +403,23 @@ impl std::fmt::Display for Node {
                     self.str_addr_and_type(),
                 )
             }
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::BaseValueNode(_) => {
-                        write!(
-                            f, "    {:?}", 
-                            self.str_addr_and_type(),
-                        )
-                    }
-                    ValueNode::KeyNode(_) => {
-                        write!(
-                            f, "    {:?}", 
-                            self.str_addr_and_type(),
-                        )
-                    }
-                }
+            Node::ValueNode(_) => {
+                write!(
+                    f, "    {:?}", 
+                    self.str_addr_and_type(),
+                )
             }
-            Node::PointerNode(pointer_node) => {
-                match pointer_node {
-                    PointerNode::BasePointerNode(_) => {
-                        write!(
-                            f, "    {:?}",
-                            self.str_addr_and_type(),
-                        )
-                    }
-                }
+            Node::KeyNode(_) => {
+                write!(
+                    f, "    {:?}", 
+                    self.str_addr_and_type(),
+                )
+            }
+            Node::PointerNode(_) => {
+                write!(
+                    f, "    {:?}",
+                    self.str_addr_and_type(),
+                )
             }
         }
     } 

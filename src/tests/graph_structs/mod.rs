@@ -10,13 +10,13 @@ fn create_test_structs() -> Vec<Node> {
         nb_value_nodes: 0
     });
 
-    let base_value_node = ValueNode::BaseValueNode(BaseValueNode {
+    let base_value_node = Node::ValueNode(ValueNode {
         addr: 1,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
         chn_addr: 0,
     });
 
-    let base_pointer_node = PointerNode::BasePointerNode(BasePointerNode {
+    let base_pointer_node = Node::PointerNode(PointerNode {
         addr: 2,
         points_to: 8,
         chn_addr: 0,
@@ -30,7 +30,7 @@ fn create_test_structs() -> Vec<Node> {
         real_len: 4,
     };
 
-    let key_node = ValueNode::KeyNode(KeyNode {
+    let key_node = Node::KeyNode(KeyNode {
         addr: 4,
         chn_addr: 0,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
@@ -40,10 +40,9 @@ fn create_test_structs() -> Vec<Node> {
 
     let nodes: Vec<Node> = vec![
         data_structure_node,
-        // enum of enum
-        Node::ValueNode(base_value_node.clone()),
-        Node::ValueNode(key_node.clone()),
-        Node::PointerNode(base_pointer_node.clone()),
+        base_value_node.clone(),
+        key_node.clone(),
+        base_pointer_node.clone(),
     ];
 
     nodes
@@ -73,22 +72,14 @@ fn test_hierarchy() {
             Node::ChunkHeaderNode(_) => {
                 counter_data_structure_nodes += 1;
             }
-            Node::ValueNode(value_node) => {
-                match value_node {
-                    ValueNode::BaseValueNode(_) => {
-                        counter_value_nodes += 1;
-                    }
-                    ValueNode::KeyNode(_) => {
-                        counter_value_nodes += 1;
-                    }
-                }
+            Node::ValueNode(_) => {
+                counter_value_nodes += 1;
             }
-            Node::PointerNode(pointer_node) => {
-                match pointer_node {
-                    PointerNode::BasePointerNode(_) => {
-                        counter_pointer_nodes += 1;
-                    }
-                }
+            Node::KeyNode(_) => {
+                counter_value_nodes += 1;
+            }
+            Node::PointerNode(_) => {
+                counter_pointer_nodes += 1;
             }
         }
     }

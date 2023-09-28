@@ -1,4 +1,5 @@
-use crate::{graph_data::GraphData, graph_structs::{Node, ValueNode, KeyNode, SpecialNodeAnnotation}, utils::div_round_up, params::argv::SelectAnnotationLocation};
+use crate::{graph_data::GraphData, utils::div_round_up, params::argv::SelectAnnotationLocation};
+use crate::graph_structs::{SpecialNodeAnnotation, Node, KeyNode};
 use std::path::PathBuf;
 
 pub struct GraphAnnotate {
@@ -147,13 +148,13 @@ impl GraphAnnotate {
                     let chn_addr = node.unwrap().get_parent_chn_addr().unwrap();
 
                     // replace the ValueNode with a KeyNode
-                    let key_node = Node::ValueNode(ValueNode::KeyNode(KeyNode {
+                    let key_node = Node::KeyNode(KeyNode {
                         addr: *addr, // addr of first block of key
                         chn_addr, // chn_addr of first block of key
                         value: node.unwrap().get_value().unwrap(), // first block value of key
                         key: aggregated_key, // found in heap dump, full key (not just the first block)
                         key_data: key_data.clone(), // found in heap dump, key data
-                    }));
+                    });
 
 
                     // annotate the chn node with the key node annotation
@@ -245,10 +246,7 @@ impl GraphAnnotate {
 mod tests {
     use super::*;
     use crate::params::{self};
-    use crate::graph_structs::{
-        Node, 
-        ValueNode, 
-    };
+    use crate::graph_structs::Node;
     use crate::tests::{TEST_GRAPH_DOT_DIR_PATH, TEST_HEAP_DUMP_FILE_NUMBER};
 
     #[test]
@@ -292,7 +290,7 @@ mod tests {
 
         // check that there is at least one KeyNode
         assert!(graph_annotate.graph_data.addr_to_node.values().any(|node| {
-            if let Node::ValueNode(ValueNode::KeyNode(_)) = node {
+            if let Node::KeyNode(_) = node {
                 true
             } else {
                 false
@@ -302,7 +300,7 @@ mod tests {
         // check the last key
         let test_key_node = graph_annotate.graph_data.addr_to_node.get(&*crate::tests::TEST_KEY_F_ADDR).unwrap();
         match test_key_node {
-            Node::ValueNode(ValueNode::KeyNode(key_node)) => {
+            Node::KeyNode(key_node) => {
                 assert_eq!(key_node.key, *crate::tests::TEST_KEY_F_BYTES);
                 assert_eq!(key_node.key_data.name, *crate::tests::TEST_KEY_F_NAME);
                 assert_eq!(key_node.key_data.len, *crate::tests::TEST_KEY_F_LEN);
