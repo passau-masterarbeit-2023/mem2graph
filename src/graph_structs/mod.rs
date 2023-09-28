@@ -18,8 +18,8 @@ pub enum ValueNode{
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Node {
-    DataStructureNode(DataStructureNode),
-    ValueNode(ValueNode),
+    ValueNode(ValueNode), // default node
+    ChunkHeaderNode(ChunkHeaderNode),
     PointerNode(PointerNode),
 }
 
@@ -94,8 +94,8 @@ impl SpecialNodeAnnotation {
     /// WARN : Key node should not be annotated with default attributes
     pub fn get_default_dot_attributes(node : &Node) -> String {
         match node {
-            Node::DataStructureNode(_) => {
-                "[label=\"DTN\" color=\"black\"];".to_string()
+            Node::ChunkHeaderNode(_) => {
+                "[label=\"CHN\" color=\"black\"];".to_string()
             }
             Node::ValueNode(value_node) => {
                 match value_node {
@@ -191,8 +191,8 @@ impl Node {
     /// NOTE: If you forget to match a new Node variant, this function will panic.
     pub fn get_address(&self) -> u64 {
         match self {
-            Node::DataStructureNode(data_structure_node) => {
-                data_structure_node.addr
+            Node::ChunkHeaderNode(chunk_header_node) => {
+                chunk_header_node.addr
             }
             Node::ValueNode(value_node) => {
                 match value_node {
@@ -217,10 +217,10 @@ impl Node {
     /// returns the address of the node and its type annotation
     pub fn str_addr_and_type(&self) -> String {
         match self {
-            Node::DataStructureNode(data_structure_node) => {
+            Node::ChunkHeaderNode(chunk_header_node) => {
                 format!(
-                    "DTN({:#x})",
-                    data_structure_node.addr,
+                    "CHN({:#x})",
+                    chunk_header_node.addr,
                 )
             }
             Node::ValueNode(value_node) => {
@@ -268,10 +268,10 @@ impl Node {
         }
     }
 
-    /// Check if a node is a data structure node
-    pub fn is_dtn (&self) -> bool {
+    /// Check if a node is a chunk header node
+    pub fn is_chn (&self) -> bool {
         match self {
-            Node::DataStructureNode(_) => true,
+            Node::ChunkHeaderNode(_) => true,
             _ => false,
         }
     }
@@ -317,24 +317,23 @@ impl Node {
         }
     }
 
-    /// returns the dtn address of the node
-    /// if the node is not a value node, a key node or a pointer node, returns None
-    pub fn get_dtn_addr(&self) -> Option<u64> {
+    /// returns the CHN address of the node
+    pub fn get_parent_chn_addr(&self) -> Option<u64> {
         match self {
             Node::ValueNode(value_node) => {
                 match value_node {
                     ValueNode::BaseValueNode(base_value_node) => {
-                        Some(base_value_node.dtn_addr)
+                        Some(base_value_node.chn_addr)
                     }
                     ValueNode::KeyNode(key_node) => {
-                        Some(key_node.dtn_addr)
+                        Some(key_node.chn_addr)
                     }
                 }
             },
             Node::PointerNode(pointer_node) => {
                 match pointer_node {
                     PointerNode::BasePointerNode(base_pointer_node) => {
-                        Some(base_pointer_node.dtn_addr)
+                        Some(base_pointer_node.chn_addr)
                     }
                 }
             }
@@ -347,10 +346,10 @@ impl Node {
 impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Node::DataStructureNode(data_structure_node) => {
+            Node::ChunkHeaderNode(chunk_header_node) => {
                 write!(
-                    f, "DTN: {} [VNs: {} PNs: {}]", 
-                    data_structure_node.addr, data_structure_node.nb_value_nodes, data_structure_node.nb_pointer_nodes
+                    f, "CHN: {} [VNs: {} PNs: {}]", 
+                    chunk_header_node.addr, chunk_header_node.nb_value_nodes, chunk_header_node.nb_pointer_nodes
                 )
             }
             Node::ValueNode(value_node) => {
@@ -384,7 +383,7 @@ impl std::fmt::Debug for Node {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DataStructureNode {
+pub struct ChunkHeaderNode {
     pub addr: u64,
     pub byte_size: usize,
     pub nb_pointer_nodes: usize,
@@ -395,14 +394,14 @@ pub struct DataStructureNode {
 pub struct BaseValueNode {
     pub addr: u64,
     pub value: [u8; BLOCK_BYTE_SIZE],
-    pub dtn_addr: u64,
+    pub chn_addr: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BasePointerNode {
     pub addr: u64,
     pub points_to: u64,
-    pub dtn_addr: u64,
+    pub chn_addr: u64,
 }
 
 // Key data from JSON file
@@ -418,13 +417,13 @@ pub struct KeyData {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyNode {
     pub addr: u64,
-    pub dtn_addr: u64,
+    pub chn_addr: u64,
     pub value: [u8; BLOCK_BYTE_SIZE], // first block of key
     pub key: Vec<u8>, // found in heap dump, full key (not just the first block)
     pub key_data: KeyData, // found in JSON file
 }
 
-pub const DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT: usize = 1;
+pub const DEFAULT_CHUNK_EDGE_WEIGHT: usize = 1;
 
 pub struct Edge {
     pub from: u64,
@@ -434,7 +433,7 @@ pub struct Edge {
 }
 
 pub enum EdgeType {
-    DataStructureEdge,
+    ChunkEdge,
     PointerEdge,
 }
 
@@ -442,7 +441,7 @@ pub enum EdgeType {
 impl std::fmt::Display for EdgeType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EdgeType::DataStructureEdge => write!(f, "dts"),
+            EdgeType::ChunkEdge => write!(f, "chunk"),
             EdgeType::PointerEdge => write!(f, "ptr"),
         }
     }
@@ -461,7 +460,7 @@ impl std::fmt::Display for Edge {
 impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Node::DataStructureNode(_) => {
+            Node::ChunkHeaderNode(_) => {
                 write!(
                     f, "    {:?}", 
                     self.str_addr_and_type(),

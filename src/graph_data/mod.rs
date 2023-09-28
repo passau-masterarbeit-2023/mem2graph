@@ -7,7 +7,7 @@ use petgraph::visit::IntoEdgeReferences;
 pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
-use crate::graph_structs::{self, Node, DataStructureNode, Edge, EdgeType, DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT, SpecialNodeAnnotation};
+use crate::graph_structs::{self, Node, ChunkHeaderNode, Edge, EdgeType, DEFAULT_CHUNK_EDGE_WEIGHT, SpecialNodeAnnotation};
 use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS};
 use crate::utils;
 
@@ -23,8 +23,8 @@ macro_rules! check_heap_dump {
 pub struct GraphData {
     pub graph: DiGraphMap<u64, graph_structs::Edge>,
     pub addr_to_node: HashMap<u64, graph_structs::Node>,
-    /// list of all the addresses of the nodes that are dtn
-    pub dtn_addrs: Vec<u64>,
+    /// list of all the addresses of the nodes that are CHNs
+    pub chn_addrs: Vec<u64>,
     /// list of the addresses of the nodes that are values (and potential keys)
     pub value_node_addrs: Vec<u64>, 
     /// list of the addresses of the nodes that are pointers
@@ -53,7 +53,7 @@ impl GraphData {
         let mut instance = Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
-            dtn_addrs: Vec::new(),
+            chn_addrs: Vec::new(),
             value_node_addrs: Vec::new(),
             pointer_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
@@ -67,7 +67,7 @@ impl GraphData {
             ),
         };
 
-        instance.data_structure_step();
+        instance.chunk_step();
         instance.pointer_step();
         Ok(instance)
     }
@@ -78,7 +78,7 @@ impl GraphData {
         Self {
             graph: DiGraphMap::<u64, graph_structs::Edge>::new(),
             addr_to_node: HashMap::new(),
-            dtn_addrs: Vec::new(),
+            chn_addrs: Vec::new(),
             value_node_addrs: Vec::new(),
             pointer_node_addrs: Vec::new(),
             special_node_to_annotation: HashMap::new(),
@@ -88,13 +88,13 @@ impl GraphData {
     }
 
     fn create_node_from_bytes_wrapper(
-        &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64, dtn_addr: u64
+        &self, data: &[u8; BLOCK_BYTE_SIZE], addr: u64, parent_chn_addr: u64
     ) -> graph_structs::Node {
         check_heap_dump!(self);
         return utils::create_node_from_bytes(
             data,
             addr,
-            dtn_addr,
+            parent_chn_addr,
             self.heap_dump_data.as_ref().unwrap().min_addr,
             self.heap_dump_data.as_ref().unwrap().max_addr,
         );
@@ -102,11 +102,11 @@ impl GraphData {
     
     /// Wrapper for create_node_from_bytes_wrapper using a block index instead of an address.
     fn create_node_from_bytes_wrapper_index(
-        &self, data: &[u8; BLOCK_BYTE_SIZE], block_index: usize, dtn_addr: u64
+        &self, data: &[u8; BLOCK_BYTE_SIZE], block_index: usize, parent_chn_addr: u64
     ) -> graph_structs::Node {
         check_heap_dump!(self);
         let addr = self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(block_index);
-        return self.create_node_from_bytes_wrapper(data, addr, dtn_addr);
+        return self.create_node_from_bytes_wrapper(data, addr, parent_chn_addr);
     }
 
     /// Add a node the map.
@@ -115,8 +115,8 @@ impl GraphData {
         check_heap_dump!(self);
         if node.is_value() {
             self.value_node_addrs.push(node.get_address());
-        }else if node.is_dtn() {
-            self.dtn_addrs.push(node.get_address());
+        }else if node.is_chn() {
+            self.chn_addrs.push(node.get_address());
         }else if node.is_pointer() {
             self.pointer_node_addrs.push(node.get_address());
         }
@@ -155,7 +155,7 @@ impl GraphData {
 
     //////////////////////////////////////////////////////////////////////////////
     /// ------------------------- Graph with value nodes -------------------------
-    /// Step 1: data structure step
+    /// Step 1: chunk step
     
     /// Pass null blocks.
     fn pass_null_blocks(&self, index: usize) -> usize {
@@ -170,80 +170,81 @@ impl GraphData {
         return tmp_index
     }
 
-    /// Parse all data structures step. Don't follow pointers yet.
-    fn data_structure_step(&mut self) {
+    /// Parse all chunks step. Don't follow pointers yet.
+    fn chunk_step(&mut self) {
         check_heap_dump!(self);
         
-        // generate data structures and iterate over them
+        // discover chanks and iterate over them
         let mut block_index = 0;
         while block_index < self.heap_dump_data.as_ref().unwrap().blocks.len() {
             block_index = self.pass_null_blocks(block_index);
 
-            // get the data structure
-            let data_structure_block_size = self.parse_datastructure(block_index);
+            // get the chunk
+            let block_number_of_the_chunk = self.parse_chunk(block_index);
 
-            // update the block index by leaping over the data structure
-            block_index += data_structure_block_size + 1;
+            // update the block index by leaping over the chunk and the malloc header
+            block_index += block_number_of_the_chunk + 1;
         }
 
     }
 
-    /// Parse the data structure from a given block and populate the graph.
-    /// WARN: We don't follow the pointers in the data structure. This is done in a second step.
-    /// NOTE: skip_value_node true, we will not add the value node and the pointer to the graph
-    /// :return: The number of blocks in the data structure.
-    /// If the data structure is not valid, return 0, since there no data structure to leap over.
-    fn parse_datastructure(&mut self, start_block_index: usize) -> usize {
+    /// Parse the chunk from a given block and populate the graph.
+    /// WARN: We don't follow the pointers in the chunk step. This is done in a later step.
+    /// NOTE: If skip_value_node true, we will not add the value node and the pointer to the graph
+    /// 
+    /// :return: The number of blocks in the chunk.
+    /// 
+    /// WARN : the header is not included in the number of blocks TODO: REMOVE AND CORRECT
+    /// If the chunk is not valid, return 0, since there no chunk to leap over.
+    fn parse_chunk(&mut self, header_addr: usize) -> usize {
         check_heap_dump!(self);
 
-        // precondition: the block at startBlockIndex is not the last block of the heap dump or after
-        if start_block_index >= (self.heap_dump_data.as_ref().unwrap().blocks.len() - 1) {
-            return 0; // this is not a data structure, no need to leap over it
+        // precondition: the block at header_addr is not the last block of the heap dump or after
+        if header_addr >= (self.heap_dump_data.as_ref().unwrap().blocks.len() - 1) {
+            return 0; // this is not a chunk, no need to leap over it
         }
 
-        // get the size of the data structure from malloc header
-        // NOTE: the size given by malloc header is the size of the data structure + 1
-        let datastructure_size = self.get_memalloc_header(&self.heap_dump_data.as_ref().unwrap().blocks[start_block_index]) - 1;
+        // get the size of the chunk from malloc header
+        // NOTE: the size given by malloc header is the size of the chunk + 1
+        let chunk_byte_syze = self.get_memalloc_header(&self.heap_dump_data.as_ref().unwrap().blocks[header_addr]) - 1;
 
-        // check if nb_blocks_in_datastructure is an integer
-        let tmp_nb_blocks_in_datastructure = datastructure_size / BLOCK_BYTE_SIZE;
-        if tmp_nb_blocks_in_datastructure % 1 != 0 {
-            log::debug!("tmp_nb_blocks_in_datastructure: {}", tmp_nb_blocks_in_datastructure);
-            log::debug!("The data structure size is not a multiple of the block size, at block index: {}", start_block_index);
-            return 0 // this is not a data structure, no need to leap over it
+        // check if chunk_byte_syze is an integer and block size aligned
+        let tmp_nb_blocks_in_chunk = chunk_byte_syze / BLOCK_BYTE_SIZE;
+        if tmp_nb_blocks_in_chunk % 1 != 0 {
+            log::debug!("tmp_nb_blocks_in_chunk: {}", tmp_nb_blocks_in_chunk);
+            log::debug!("The chunk size is not a multiple of the block size, at block index: {}", header_addr);
+            return 0 // this is not a chunk, no need to leap over it
         }
 
-        // get the number of blocks in the data structure as an integer
-        let nb_blocks_in_datastructure = tmp_nb_blocks_in_datastructure;
+        // get the number of blocks in the chunk as an integer
+        let nb_blocks_in_chunk = tmp_nb_blocks_in_chunk;
 
-        // check if the data structure is complete, i.e. if the data structure is still unclosed after at the end of the heap dump
-        if (start_block_index + nb_blocks_in_datastructure) >= self.heap_dump_data.as_ref().unwrap().blocks.len() {
-            log::debug!("The data structure is not complete, at block index: {}", start_block_index);
+        // check if the chunk is complete, i.e. if the chunk is still unclosed after at the end of the heap dump
+        if (header_addr + nb_blocks_in_chunk) >= self.heap_dump_data.as_ref().unwrap().blocks.len() {
+            log::debug!("The chunk is not complete, at block index: {}", header_addr);
             return 0
         }
     
-        // check that the data structure is not empty, i.e. that it contains at least one block
-        // It cannot also be composed of only one block, since the first block is the malloc header,
-        // and a data structure cannot be only the malloc header.
-        if nb_blocks_in_datastructure < 2 {
+        // check that the chunk is not empty, i.e. that it contains at least 2 blocks
+        if nb_blocks_in_chunk < 2 {
             log::debug!(
-                "The data structure is too small ({} blocks), at block index: {}",
-                    nb_blocks_in_datastructure, start_block_index
+                "The chunk is too small ({} blocks), at block index: {}",
+                    nb_blocks_in_chunk, header_addr
                 );
             return 0
         }
         
-        // add the data structure node to the graph (as an address)
-        let current_datastructure_addr = self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(start_block_index);
+        // add the CHN to the graph (as an address)
+        let current_chn_addr = self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(header_addr);
 
         let mut count_pointer_nodes = 0;
         let mut count_value_nodes = 0;
         let mut children_node_addrs: Vec<u64> = Vec::new();
-        for block_index in (start_block_index + 1)..(start_block_index  + nb_blocks_in_datastructure as usize) {
+        for block_index in (header_addr + 1)..(header_addr  + nb_blocks_in_chunk as usize) {
             let node = self.create_node_from_bytes_wrapper_index(
                 &self.heap_dump_data.as_ref().unwrap().blocks[block_index], 
                 block_index,
-                current_datastructure_addr
+                current_chn_addr
             );
             children_node_addrs.push(node.get_address());
             
@@ -264,28 +265,28 @@ impl GraphData {
         }
                 
         
-        // create the data structure node with the correct number of pointer and value nodes
-        let datastructure_node = Node::DataStructureNode(DataStructureNode {
-            addr: current_datastructure_addr,
-            byte_size: datastructure_size,
+        // create the CHN with the correct number of pointer and value nodes
+        let chn = Node::ChunkHeaderNode(ChunkHeaderNode {
+            addr: current_chn_addr,
+            byte_size: chunk_byte_syze,
             nb_pointer_nodes: count_pointer_nodes,
             nb_value_nodes: count_value_nodes
         });
-        self.add_node_wrapper(datastructure_node);
+        self.add_node_wrapper(chn);
         
         // add all the edges to the graph
         if !self.no_value_node {
             for child_node_addr in children_node_addrs {
                 self.add_edge_wrapper(Edge {
-                    from: self.addr_to_node.get(&current_datastructure_addr).unwrap().get_address(),
+                    from: self.addr_to_node.get(&current_chn_addr).unwrap().get_address(),
                     to: child_node_addr,
-                    weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
-                    edge_type: EdgeType::DataStructureEdge,
+                    weight: DEFAULT_CHUNK_EDGE_WEIGHT,
+                    edge_type: EdgeType::ChunkEdge,
                 });
             }
         }
         
-        return nb_blocks_in_datastructure
+        return nb_blocks_in_chunk
     }
 
     /// Parse a pointer node. Follow it until it point to a node that is not a pointer, and add the edge 
@@ -310,8 +311,10 @@ impl GraphData {
     }
 
     /// Parse all pointers step.
-    /// NOTE: this function is called after the data structure step.
-    /// NOTE: if without_pointer_node is true, the edge will be beetween the data structure nodes containing the pointer and the pointed node.
+    /// NOTE: this function is called after the chunk step.
+    /// NOTE: if without_pointer_node is true, the edge will be beetween 
+    ///     the CHNs (representing chunks in the graph) containing 
+    ///     the pointer and the pointed node.
     fn pointer_step(&mut self) {
         // get all pointer nodes
         for i in  0..self.pointer_node_addrs.len(){ // borrow checker workaround, don't use iter here
@@ -327,20 +330,12 @@ impl GraphData {
     //////////////////////////////////////////////////////////////////////////////
     // ------------------------- Graph without value nodes -------------------------
 
-    /// get the parent dtn addr of a child node
-    pub fn get_parent_dtn_addr(&self, child_addr : &u64) -> Option<u64> {
-        // get the node of the child
-        let child_node = self.addr_to_node.get(child_addr).unwrap();
-
-        return child_node.get_dtn_addr();
-    }
-
-    /// Parse the pointers, and link datastructures to each other.
+    /// Parse the pointers, and link chunks to each other.
     fn parse_pointer_without_value_node(&mut self, node_addr: &u64) {
         let pointer_node = self.addr_to_node.get(&node_addr).unwrap();
 
-        // get the pointer dtn addr
-        let pointer_dtn_addr = pointer_node.get_dtn_addr().unwrap();
+        // get the pointer chn addr
+        let pointer_chn_addr = pointer_node.get_parent_chn_addr().unwrap();
 
         // get the pointed node
         let pointed_node_addr = pointer_node.points_to().unwrap();
@@ -352,25 +347,25 @@ impl GraphData {
             return;
         }
 
-        let pointed_node_dtn_addr = pointed_node.unwrap().get_dtn_addr();
+        let pointed_node_parent_chn_addr = pointed_node.unwrap().get_parent_chn_addr();
 
         let pointed_addr;
-        // check if the pointed node dtn exists
-        if pointed_node_dtn_addr.is_none() {
-            // if it doesn't exist, it means the pointed node is a dtn
-            // so we use the pointed node address as the pointed dtn address
+        // check if the pointed node parent chn exists
+        if pointed_node_parent_chn_addr.is_none() {
+            // if it doesn't exist, it means the pointed node is a chn
+            // so we use the pointed node address as the pointed chn address
             pointed_addr = pointed_node_addr;
         }else{
-            // if it exists, we use the pointed node dtn address as the pointed dtn address
-            pointed_addr = pointed_node_dtn_addr.unwrap();
+            // if it exists, we use the pointed node chn address as the pointed chn address
+            pointed_addr = pointed_node_parent_chn_addr.unwrap();
         }
 
-        let previous_edge = self.graph.edge_weight_mut(pointer_dtn_addr, pointed_addr);
+        let previous_edge = self.graph.edge_weight_mut(pointer_chn_addr, pointed_addr);
 
         // add the edge if it is not already in the graph
         if previous_edge.is_none() {
             self.add_edge_wrapper(Edge {
-                from: pointer_dtn_addr,
+                from: pointer_chn_addr,
                 to: pointed_addr,
                 weight: 1,
                 edge_type: EdgeType::PointerEdge,
@@ -444,10 +439,10 @@ mod tests {
         PointerNode, 
         BaseValueNode, 
         BasePointerNode, 
-        DataStructureNode,
+        ChunkHeaderNode,
         Edge,
         EdgeType,
-        DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
+        DEFAULT_CHUNK_EDGE_WEIGHT,
     };
     use crate::tests::*;
     use crate::utils::create_node_from_bytes;
@@ -460,7 +455,7 @@ mod tests {
         let mut graph_data = GraphData::new_empty();
 
         // create test nodes
-        let data_structure_node = Node::DataStructureNode(DataStructureNode {
+        let chn_node = Node::ChunkHeaderNode(ChunkHeaderNode {
             addr: 1,
             byte_size: 8,
             nb_pointer_nodes: 0,
@@ -471,7 +466,7 @@ mod tests {
                 BaseValueNode {
                     addr: 2,
                     value: [0, 1, 2, 3, 4, 5, 6, 7],
-                    dtn_addr: 1,
+                    chn_addr: 1,
                 }
             )
         );
@@ -479,14 +474,14 @@ mod tests {
                 PointerNode::BasePointerNode(BasePointerNode {
                     addr: 3,
                     points_to: 8,
-                    dtn_addr: 1,
+                    chn_addr: 1,
                 }
             )
         );
 
         // add nodes as addresses
-        let data_structure_node_index = graph_data.graph.add_node(
-            data_structure_node.get_address()
+        let chn_index = graph_data.graph.add_node(
+            chn_node.get_address()
         );
         let base_value_node_index = graph_data.graph.add_node(
             base_value_node.get_address()
@@ -496,14 +491,14 @@ mod tests {
         );
 
         assert_eq!(graph_data.graph.node_count(), 3);
-        assert_eq!(data_structure_node_index, data_structure_node.get_address());
+        assert_eq!(chn_index, chn_node.get_address());
         assert_eq!(base_value_node_index, base_value_node.get_address());
         assert_eq!(base_pointer_node_index, base_pointer_node.get_address());
 
         // add nodes to dictionary
         graph_data.addr_to_node.insert(
-            data_structure_node.get_address(),
-            data_structure_node // move
+            chn_node.get_address(),
+            chn_node // move
         );
         graph_data.addr_to_node.insert(
             base_value_node.get_address(),
@@ -517,11 +512,11 @@ mod tests {
         // create test edges
         // WARN: the references to the nodes have been moved inside the dictionary
         //     so we need to get them back from the dictionary (using the address as key)
-        let data_structure_edge_1 = Edge {
-            from: data_structure_node_index,
+        let chunk_edge_1 = Edge {
+            from: chn_index,
             to: base_value_node_index,
-            weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
-            edge_type: EdgeType::DataStructureEdge,
+            weight: DEFAULT_CHUNK_EDGE_WEIGHT,
+            edge_type: EdgeType::ChunkEdge,
         };
         let pointer_edge = Edge {
             from: base_pointer_node_index,
@@ -529,18 +524,18 @@ mod tests {
             weight: 1,
             edge_type: EdgeType::PointerEdge,
         };
-        let data_structure_edge_2 = Edge {
-            from: data_structure_node_index,
+        let chunk_edge_2 = Edge {
+            from: chn_index,
             to: base_pointer_node_index,
-            weight: DEFAULT_DATA_STRUCTURE_EDGE_WEIGHT,
-            edge_type: EdgeType::DataStructureEdge,
+            weight: DEFAULT_CHUNK_EDGE_WEIGHT,
+            edge_type: EdgeType::ChunkEdge,
         };
 
         // add edges (u64 to u64, with Edge as data (weight)))
         graph_data.graph.add_edge(
-            data_structure_edge_1.from, 
-            data_structure_edge_1.to, 
-            data_structure_edge_1
+            chunk_edge_1.from, 
+            chunk_edge_1.to, 
+            chunk_edge_1
         );
         graph_data.graph.add_edge(
             pointer_edge.from, 
@@ -548,9 +543,9 @@ mod tests {
             pointer_edge
         );
         graph_data.graph.add_edge(
-            data_structure_edge_2.from, 
-            data_structure_edge_2.to, 
-            data_structure_edge_2
+            chunk_edge_2.from, 
+            chunk_edge_2.to, 
+            chunk_edge_2
         );
 
         // print the type of all nodes in the map

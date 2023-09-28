@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf};
 
-use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::argv::Annotation};
+use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::argv::SelectAnnotationLocation};
 
 use super::get_raw_file_or_files_from_path;
 /// Takes a directory or a file
@@ -9,7 +9,7 @@ use super::get_raw_file_or_files_from_path;
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : Annotation) {
+pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : SelectAnnotationLocation) {
     // start timer
     let start_time = Instant::now();
 
@@ -138,13 +138,13 @@ pub fn save_value_embeding(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_pat
 
     // header of CSV
     let mut header = Vec::new();
-    header.push("f_dtn_byte_size".to_string());
-    header.push("f_position_in_dtn".to_string());
-    header.push("f_dtn_ptrs".to_string());
-    header.push("f_dtn_vns".to_string());
+    header.push("f_parent_chunk_byte_size".to_string());
+    header.push("f_position_in_parent_chunk".to_string());
+    header.push("f_parent_chunk_ptrs".to_string());
+    header.push("f_parent_chunk_vns".to_string());
     // start at 1 since 0 is a ValueNode (so always [0, 0])
     for i in 1..embedding_depth {
-        header.push(format!("f_dtns_ancestor_{}", i));
+        header.push(format!("f_chns_ancestor_{}", i));
         header.push(format!("f_ptrs_ancestor_{}", i));
     }
     header.push("label".to_string());

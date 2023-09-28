@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf};
 
-use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::argv::Annotation};
+use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::{N_GRAM, BLOCK_BYTE_SIZE, argv::SelectAnnotationLocation}, utils::generate_bit_combinations};
 
 use super::get_raw_file_or_files_from_path;
 /// Takes a directory or a file
@@ -9,7 +9,7 @@ use super::get_raw_file_or_files_from_path;
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run_semantic_dtn_embedding(path: PathBuf, output_folder: PathBuf, annotation : Annotation, no_value_node: bool) {
+pub fn run_chunk_statistics_embedding(path: PathBuf, output_folder: PathBuf, annotation : SelectAnnotationLocation) {
     // start timer
     let start_time = Instant::now();
 
@@ -71,13 +71,13 @@ pub fn run_semantic_dtn_embedding(path: PathBuf, output_folder: PathBuf, annotat
                     crate::params::BLOCK_BYTE_SIZE,
                     *crate::params::EMBEDDING_DEPTH,
                     annotation,
-                    no_value_node
+                    false
                 );
 
                 match graph_embedding {
                     Ok(graph_embedding) => {
                         // generate samples and labels
-                        let samples_ = graph_embedding.generate_semantic_dtns_samples();
+                        let samples_ = graph_embedding.generate_statistic_samples_for_all_chunks(&(*N_GRAM), BLOCK_BYTE_SIZE);
 
                         let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
                         log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, samples_.len());
@@ -111,7 +111,7 @@ pub fn run_semantic_dtn_embedding(path: PathBuf, output_folder: PathBuf, annotat
             }
             samples.extend(samples_);
         }
-        save_dtn_embeding(samples, paths, csv_path, *crate::params::EMBEDDING_DEPTH);
+        save_chunk_statistic_embedding(samples, paths, csv_path, &(*N_GRAM));
 
         // log time
         let chunk_duration = chunk_start_time.elapsed();
@@ -131,7 +131,7 @@ pub fn run_semantic_dtn_embedding(path: PathBuf, output_folder: PathBuf, annotat
 
 /// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
 /// for broken files (missing JSON key, etc.)
-pub fn save_dtn_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, csv_path: PathBuf, embedding_depth: usize) {
+fn save_chunk_statistic_embedding(samples: Vec<(Vec<usize>, Vec<f64>)>, paths : Vec<String>, csv_path: PathBuf, n_gram : &Vec<usize>) {
     let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
     let mut csv_writer = csv::Writer::from_path(csv_path).unwrap_or_else(
         |_| panic!("{}", csv_error_message)
@@ -139,19 +139,29 @@ pub fn save_dtn_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, csv_path
 
     // header of CSV
     let mut header = Vec::new();
+    // comon information
     header.push("file_path".to_string());
-    header.push("f_dtns_addr".to_string());
-    header.push("f_dtn_byte_size".to_string());
-    header.push("f_dtn_ptrs".to_string());
-    for i in 0..embedding_depth {
-        header.push(format!("f_dtns_ancestor_{}", i + 1));
-        header.push(format!("f_ptrs_ancestor_{}", i + 1));
+    header.push("f_chns_addr".to_string());
+    // n_gram
+    let mut n_gram_names = Vec::new();
+    for i in n_gram {
+        let mut i_gram_names = generate_bit_combinations(*i);
+        n_gram_names.append(&mut i_gram_names);
     }
 
-    for i in 0..embedding_depth {
-        header.push(format!("f_dtns_children_{}", i + 1));
-        header.push(format!("f_ptrs_children_{}", i + 1));
+    for i_gram in n_gram_names {
+        header.push(i_gram);
     }
+
+    // common statistic
+    header.push("mean".to_string());
+    header.push("mad".to_string());
+    header.push("std_dev".to_string());
+    header.push("Skewness".to_string());
+    header.push("Kurtosis".to_string());
+    header.push("shannon".to_string());
+
+    
     header.push("label".to_string());
 
 
@@ -161,7 +171,15 @@ pub fn save_dtn_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, csv_path
     for (sample, path) in samples.iter().zip(paths.iter()) {
         let mut row: Vec<String> = Vec::new();
         row.push(path.to_string());
-        row.extend(sample.iter().map(|value| value.to_string()));
+        
+        // keep label at the end
+        for i in 0..(sample.0.len() - 1) {
+            row.push(sample.0[i].to_string());
+        }
+
+        row.extend(sample.1.iter().map(|value| value.to_string()));
+
+        row.push(sample.0[sample.0.len() - 1].to_string());
 
         csv_writer.write_record(&row).unwrap();
     }

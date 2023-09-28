@@ -3,7 +3,7 @@ use crate::graph_structs::*;
 #[cfg(test)]
 fn create_test_structs() -> Vec<Node> {
 
-    let data_structure_node = Node::DataStructureNode(DataStructureNode {
+    let data_structure_node = Node::ChunkHeaderNode(ChunkHeaderNode {
         addr: 0,
         byte_size: 8,
         nb_pointer_nodes: 0,
@@ -13,13 +13,13 @@ fn create_test_structs() -> Vec<Node> {
     let base_value_node = ValueNode::BaseValueNode(BaseValueNode {
         addr: 1,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
-        dtn_addr: 0,
+        chn_addr: 0,
     });
 
     let base_pointer_node = PointerNode::BasePointerNode(BasePointerNode {
         addr: 2,
         points_to: 8,
-        dtn_addr: 0,
+        chn_addr: 0,
     });
 
     let key_data = KeyData {
@@ -32,7 +32,7 @@ fn create_test_structs() -> Vec<Node> {
 
     let key_node = ValueNode::KeyNode(KeyNode {
         addr: 4,
-        dtn_addr: 0,
+        chn_addr: 0,
         value: [0, 1, 2, 3, 4, 5, 6, 7],
         key: vec![0, 1, 2, 3, 4, 5, 6, 7],
         key_data,
@@ -70,7 +70,7 @@ fn test_hierarchy() {
     let mut counter_pointer_nodes = 0;
     for node in nodes {
         match node {
-            Node::DataStructureNode(_) => {
+            Node::ChunkHeaderNode(_) => {
                 counter_data_structure_nodes += 1;
             }
             Node::ValueNode(value_node) => {

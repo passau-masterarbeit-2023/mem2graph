@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf};
 
-use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::argv::Annotation};
+use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::argv::SelectAnnotationLocation};
 
 use super::get_raw_file_or_files_from_path;
 /// Takes a directory or a file
@@ -9,7 +9,7 @@ use super::get_raw_file_or_files_from_path;
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run_extract_dtn_data(path: PathBuf, output_folder: PathBuf, no_pointers: bool, annotation : Annotation, no_value_node: bool) {
+pub fn run_chunk_semantic_embedding(path: PathBuf, output_folder: PathBuf, annotation : SelectAnnotationLocation, no_value_node: bool) {
     // start timer
     let start_time = Instant::now();
 
@@ -77,21 +77,21 @@ pub fn run_extract_dtn_data(path: PathBuf, output_folder: PathBuf, no_pointers: 
                 match graph_embedding {
                     Ok(graph_embedding) => {
                         // generate samples and labels
-                        let (dts_base_info_, dts_data_) = graph_embedding.extract_all_dts_data(crate::params::BLOCK_BYTE_SIZE, no_pointers);
+                        let samples_ = graph_embedding.generate_semantic_samples_for_all_chunks();
 
                         let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
-                        log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, dts_base_info_.len());
+                        log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, samples_.len());
 
-                        (dts_base_info_, dts_data_, heap_dump_raw_file_path.as_os_str().to_str().unwrap().to_string())
+                        (samples_, heap_dump_raw_file_path.as_os_str().to_str().unwrap().to_string())
                     },
                     Err(err) => match err {
                         crate::utils::ErrorKind::MissingJsonKeyError(key) => {
                             log::warn!(" 🔴 [t: {}] [N°{} / {} files] [fid: {}]    Missing JSON key: {}", thread_name, global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), key);
-                            (Vec::new(), Vec::new(), "".to_string())
+                            (Vec::new(), "".to_string())
                         },
                         crate::utils::ErrorKind::JsonFileNotFound(json_file_path) => {
                             log::warn!(" 🟣 [t: {}] [N°{} / {} files] [fid: {}]    JSON file not found: {:?}", thread_name, global_idx, nb_files, heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap(), json_file_path);
-                            (Vec::new(), Vec::new(), "".to_string())
+                            (Vec::new(), "".to_string())
                         },
                         _ => {
                             panic!("Other unexpected graph embedding error: {}", err);
@@ -103,17 +103,15 @@ pub fn run_extract_dtn_data(path: PathBuf, output_folder: PathBuf, no_pointers: 
         });
 
         // save to csv
-        let mut dts_base_info = Vec::new();
-        let mut dts_data = Vec::new();
+        let mut samples = Vec::new();
         let mut paths = Vec::new();
-        for (dts_base_info_, dts_data_, path) in results {
-            for _ in 0..dts_base_info_.len() {
+        for (samples_, path) in results {
+            for _ in 0..samples_.len() {
                 paths.push(path.clone());
             }
-            dts_base_info.extend(dts_base_info_);
-            dts_data.extend(dts_data_);
+            samples.extend(samples_);
         }
-        save_extract_dtn_data(dts_base_info, dts_data, paths, csv_path);
+        save_chunk_semantic_embeding(samples, paths, csv_path, *crate::params::EMBEDDING_DEPTH);
 
         // log time
         let chunk_duration = chunk_start_time.elapsed();
@@ -133,7 +131,7 @@ pub fn run_extract_dtn_data(path: PathBuf, output_folder: PathBuf, no_pointers: 
 
 /// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
 /// for broken files (missing JSON key, etc.)
-pub fn save_extract_dtn_data(dts_infos: Vec<Vec<usize>>, dts_datas : Vec<Vec<String>>, paths : Vec<String>, csv_path: PathBuf) {
+fn save_chunk_semantic_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, csv_path: PathBuf, embedding_depth: usize) {
     let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
     let mut csv_writer = csv::Writer::from_path(csv_path).unwrap_or_else(
         |_| panic!("{}", csv_error_message)
@@ -142,19 +140,28 @@ pub fn save_extract_dtn_data(dts_infos: Vec<Vec<usize>>, dts_datas : Vec<Vec<Str
     // header of CSV
     let mut header = Vec::new();
     header.push("file_path".to_string());
-    header.push("f_dtns_addr".to_string());
-    header.push("f_dtn_byte_size".to_string());
-    header.push("f_dtn_ptrs".to_string());
+    header.push("f_chn_addr".to_string());
+    header.push("f_chunk_byte_size".to_string());
+    header.push("f_chunk_ptrs".to_string());
+    for i in 0..embedding_depth {
+        header.push(format!("f_chns_ancestor_{}", i + 1));
+        header.push(format!("f_ptrs_ancestor_{}", i + 1));
+    }
+
+    for i in 0..embedding_depth {
+        header.push(format!("f_chns_children_{}", i + 1));
+        header.push(format!("f_ptrs_children_{}", i + 1));
+    }
     header.push("label".to_string());
-    header.push("dts_data".to_string());
+
+
     csv_writer.write_record(header).unwrap();
 
     // save samples and labels to CSV
-    for ((dts_info, dts_data), path) in dts_infos.iter().zip(dts_datas.iter()).zip(paths.iter()) {
+    for (sample, path) in samples.iter().zip(paths.iter()) {
         let mut row: Vec<String> = Vec::new();
         row.push(path.to_string());
-        row.extend(dts_info.iter().map(|value| value.to_string()));
-        row.push(dts_data.join(";"));
+        row.extend(sample.iter().map(|value| value.to_string()));
 
         csv_writer.write_record(&row).unwrap();
     }

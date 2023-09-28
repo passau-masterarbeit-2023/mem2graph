@@ -148,7 +148,7 @@ pub fn convert_block_to_pointer_if_possible(data: &[u8], min_addr: u64, max_addr
 pub fn create_node_from_bytes(
     block: &[u8; crate::params::BLOCK_BYTE_SIZE],
     addr: u64,
-    dtn_addr: u64,
+    chn_addr: u64,
     min_addr: u64,
     max_addr: u64,
 ) -> Node {
@@ -161,7 +161,7 @@ pub fn create_node_from_bytes(
                 BasePointerNode {
                     addr,
                     points_to: potential_ptr.unwrap(),
-                    dtn_addr,
+                    chn_addr,
                 }
             )
         )
@@ -171,7 +171,7 @@ pub fn create_node_from_bytes(
                 BaseValueNode {
                     addr,
                     value: *block,
-                    dtn_addr,
+                    chn_addr,
                 }
             )
         )
@@ -327,7 +327,7 @@ pub fn compute_statistics(data: &Vec<u8>) -> (f64, f64, f64, f64, f64) {
     (mean, mad, std_dev, skew, kurt)
 }
 
-/// compute the shannon entropy
+/// compute the shannon entropy of a vector of bytes
 pub fn shannon_entropy(data: &Vec<u8>) -> f64 {
     let mut frequency = HashMap::new();
     for &byte in data.iter() {

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use exe_pipeline::statistic_dtn_embedding::run_statistics_dtn_embedding;
-use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation, semantic_dtn_embedding::run_semantic_dtn_embedding, extract_dts_data::run_extract_dtn_data};
+use exe_pipeline::chunk_statistic_embedding::run_chunk_statistics_embedding;
+use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation, chunk_semantic_embedding::run_chunk_semantic_embedding, extract_chunks_data::run_extract_chunks_data};
 use params::argv::Pipeline;
 
 // link modules
@@ -61,15 +61,15 @@ fn main() {
             params::argv::Pipeline::Graph => {
                 run_graph_generation(path, output_folder.clone(), annotation, no_value_node)
             },
-            params::argv::Pipeline::SemanticEmbeddingDTN => {
-                run_semantic_dtn_embedding(path, output_folder.clone(), annotation, no_value_node)
+            params::argv::Pipeline::ChunkSemanticEmbedding => {
+                run_chunk_semantic_embedding(path, output_folder.clone(), annotation, no_value_node)
             },
-            params::argv::Pipeline::DtsExtraction => {
-                run_extract_dtn_data(path, output_folder.clone(), *params::EXTRACT_NO_POINTER, annotation, no_value_node)
+            params::argv::Pipeline::ChunkExtraction => {
+                run_extract_chunks_data(path, output_folder.clone(), *params::EXTRACT_NO_POINTER, annotation, no_value_node)
             },
-            params::argv::Pipeline::StatisticEmbeddingDTN => {
+            params::argv::Pipeline::ChunkStatisticEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
-                run_statistics_dtn_embedding(path, output_folder.clone(), annotation)
+                run_chunk_statistics_embedding(path, output_folder.clone(), annotation)
             },
         }
     }

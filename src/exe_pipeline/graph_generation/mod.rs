@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf, fs::File, io::Write};
 
-use crate::{exe_pipeline::progress_bar, graph_annotate::GraphAnnotate, params::argv::Annotation};
+use crate::{exe_pipeline::progress_bar, graph_annotate::GraphAnnotate, params::argv::SelectAnnotationLocation};
 
 use super::get_raw_file_or_files_from_path;
 
@@ -22,7 +22,7 @@ fn truncate_path_to_last_n_dirs(path_str: &str, n: usize) -> String {
 /// If directory then list all files in that directory and its subdirectories
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the graph generation for all these file
-pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf, annotation : Annotation, no_value_node: bool) {
+pub fn run_graph_generation(path: PathBuf, output_folder: PathBuf, annotation : SelectAnnotationLocation, no_value_node: bool) {
    // start timer
    let start_time = Instant::now();
 

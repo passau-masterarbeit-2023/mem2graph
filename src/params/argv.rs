@@ -32,11 +32,14 @@ pub struct Argv {
     /// How the graph is annotated
     /// NOTE : By default the graph is annotated with value node
     #[arg(short = 'a', long, default_value = "value-node")]
-    pub annotation: Annotation,
+    pub annotation: SelectAnnotationLocation,
 
     /// if their is no value node or pointer node in the graph
-    /// NOTE : By default the graph contains value node and pointer node, if you want to disable it use this flag
-    /// NOTE : This flag is only used if the pipeline is 'SemanticEmbeddingDTN' or 'DtsExtraction' or 'graph'
+    /// 
+    /// NOTE : By default the graph contains value node and pointer node, 
+    ///     if you want to disable it use this flag
+    /// NOTE : This flag is only used if the pipeline is 
+    ///     'ChunkSemanticEmbedding' or 'ChunkExtraction' or 'graph'
     #[arg(short = 'v', long, action)]
     pub no_value_node: bool,
 }
@@ -44,11 +47,11 @@ pub struct Argv {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 /// control the annotation of the graph
-pub enum Annotation {
+pub enum SelectAnnotationLocation {
     /// annotate the value node
     ValueNode,
-    /// annotate the structure node
-    StructureNode,
+    /// annotate the chunk header node
+    ChunkHeaderNode,
     /// don't annotate the graph
     None,
 }
@@ -61,12 +64,12 @@ pub enum Pipeline {
     ValueEmbedding,
     /// make the graph and save it
     Graph,
-    /// make a semantic embedding of the DTN
-    SemanticEmbeddingDTN,
-    /// make a statistic embedding of the DTN
-    StatisticEmbeddingDTN,
-    /// extract the dts informations from the heap dump
-    DtsExtraction,
+    /// make a semantic embedding of the chunk
+    ChunkSemanticEmbedding,
+    /// make a statistic embedding of the chunk
+    ChunkStatisticEmbedding,
+    /// extract chunk information from the heap dump
+    ChunkExtraction,
 }
 
 pub fn get_program_args() -> Argv {
