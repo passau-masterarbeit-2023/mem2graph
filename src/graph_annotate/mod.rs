@@ -40,23 +40,28 @@ impl GraphAnnotate {
         macro_rules! annotate_node {
             ($addr:ident, $annotation:ident, $name:literal) => {
                 {
+                    // The node we wish to annotate
                     let node = self.graph_data.addr_to_node.get(&$addr);
 
                     if node.is_none() {
                         log::warn!("🟠 {} not found for addr: {}", $name, $addr);
                     }else{
                         let node = node.unwrap();
-                        if node.is_value() {
+                        
+                        if !node.is_chn() {
                             if annotation == SelectAnnotationLocation::ChunkHeaderNode {
                                 self.annotate_node(SpecialNodeAnnotation::$annotation(node.get_parent_chn_addr().unwrap()));
-                            } else {
+                            } else if annotation == SelectAnnotationLocation::ValueNode {
                                 self.annotate_node(SpecialNodeAnnotation::$annotation($addr));
                             }
                         } else {
                             if annotation == SelectAnnotationLocation::ChunkHeaderNode {
                                 self.annotate_node(SpecialNodeAnnotation::$annotation($addr));
-                            } else {
-                                log::warn!("🟠 {} is not a ValueNode for addr: {}", $name, $addr)
+                            } else if annotation == SelectAnnotationLocation::ValueNode {
+                                // NOTE: The case when we annotate a ChunkHeaderNode with a SessionStateNodeAnnotation
+                                // should never happen, since SessionStateNodeAnnotation are always pointing
+                                // to the first data block of a chunk (verified by scripts)
+                                log::warn!("🟠 {} cannot be annotated on a non-value node: {}", $name, $addr)
                             }
                         }
                     }

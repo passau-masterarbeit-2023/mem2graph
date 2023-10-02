@@ -32,7 +32,7 @@ impl GraphEmbedding {
 
     #[cfg(test)]
     fn save_samples_and_labels_to_csv(&self, csv_path: PathBuf) {
-        let (samples, labels) = self.generate_value_samples_and_labels();
+        let (samples, labels) = self.generate_semantic_block_embedding();
         save_value_embeding(samples, labels, csv_path, self.depth);
     }
 
@@ -424,7 +424,7 @@ impl GraphEmbedding {
 
     // ----------------------------- value embedding -----------------------------//
 
-    /// generate semantic embedding of the value nodes
+    /// generate semantic embedding of the nodes
     /// Samples [
     ///     [0.3233, ..., 0.1234],
     ///     [0.1234, ..., 0.1234],
@@ -433,7 +433,7 @@ impl GraphEmbedding {
     /// ]
     /// 
     /// Labels [0.0, 1.0, ..., 0.0],
-    pub fn generate_value_samples_and_labels(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
+    pub fn generate_semantic_block_embedding(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
         let mut samples = Vec::new();
         let mut labels = Vec::new();
 

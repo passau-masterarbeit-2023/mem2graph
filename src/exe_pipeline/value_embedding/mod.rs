@@ -73,7 +73,7 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : S
                 match graph_embedding {
                     Ok(graph_embedding) => {
                         // generate samples and labels
-                        let (samples_, labels_) = graph_embedding.generate_value_samples_and_labels();
+                        let (samples_, labels_) = graph_embedding.generate_semantic_block_embedding();
 
                         let file_name_id = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap().replace("-heap.raw", "");
                         log::info!(" 🟢 [t: {}] [N°{} / {} files] [fid: {}]    (Nb samples: {})", thread_name, global_idx, nb_files, file_name_id, samples_.len());

@@ -7,7 +7,7 @@ use petgraph::visit::IntoEdgeReferences;
 pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
-use crate::graph_structs::{self, Node, ChunkHeaderNode, Edge, EdgeType, DEFAULT_CHUNK_EDGE_WEIGHT, SpecialNodeAnnotation, parse_chunk_header, HeaderFlags};
+use crate::graph_structs::{self, Node, ChunkHeaderNode, Edge, EdgeType, DEFAULT_CHUNK_EDGE_WEIGHT, SpecialNodeAnnotation, parse_chunk_header, HeaderFlags, FooterNode};
 use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS};
 use crate::utils;
 
@@ -85,6 +85,39 @@ impl GraphData {
             no_value_node: false,
             heap_dump_data: None,
         }
+    }
+
+    /// Parse last block of a chunk
+    /// If parsing fails, return a ValueNode instead of a FooterNode
+    fn create_footer_node(
+        &self, 
+        addr: u64, 
+        chunk_size: &usize,
+        chunk_flags: &HeaderFlags,
+        parent_chn_addr: u64, 
+        block: &[u8; BLOCK_BYTE_SIZE]
+    ) -> graph_structs::Node {
+        let (potential_size, potential_flags) = parse_chunk_header(block);
+
+        // check if the footer has the same size and flags as the header
+        if (*chunk_size != potential_size) || (*chunk_flags != potential_flags) {
+            // log::debug!("The header and footer of the chunk at address {} don't have the same size or flags", parent_chn_addr);
+            // return a value node instead of a footer node when the header and footer don't match
+            let value_node = self.create_node_from_bytes_wrapper(
+                block, 
+                addr, 
+                parent_chn_addr
+            );
+            return value_node;
+        }
+
+        let footer_node = Node::FooterNode(FooterNode {
+            addr: addr,
+            byte_size: potential_size,
+            flags: potential_flags,
+            chn_addr: parent_chn_addr,
+        });
+        return footer_node;
     }
 
     fn create_node_from_bytes_wrapper(
@@ -169,16 +202,32 @@ impl GraphData {
     fn chunk_step(&mut self) {
         check_heap_dump!(self);
         
-        // discover chanks and iterate over them
+        // discover chunks and iterate over them
         let mut block_index = 0;
         while block_index < self.heap_dump_data.as_ref().unwrap().blocks.len() {
             block_index = self.pass_null_blocks(block_index);
 
             // get the chunk
-            let block_number_of_the_chunk = self.parse_chunk(block_index);
+            let chunk_size_in_blocks = self.parse_chunk(block_index);
 
-            // update the block index by leaping over the chunk and the malloc header
-            block_index += block_number_of_the_chunk + 1;
+            // In DEBUG mode, print chunk info
+            #[cfg(debug_assertions)]
+            {
+                if block_index + chunk_size_in_blocks >= self.heap_dump_data.as_ref().unwrap().blocks.len() {
+                    log::debug!("[block_index:{block_index}] chunk at address {} has {} blocks (incomplete)", self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(block_index), chunk_size_in_blocks);
+                } else {
+                    let chn = self.addr_to_node.get(
+                        &self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(block_index)
+                    ).unwrap();
+                    log::debug!(
+                        "[block_index:{block_index}][addr:{}][size:{}] chunk has {} blocks", 
+                        chn.get_address(), chunk_size_in_blocks * BLOCK_BYTE_SIZE,  chunk_size_in_blocks
+                    );
+                }
+            }
+
+            // update the block index by leaping over the chunk (size includes header, footer and data)
+            block_index += chunk_size_in_blocks;
         }
 
     }
@@ -187,66 +236,85 @@ impl GraphData {
     /// WARN: We don't follow the pointers in the chunk step. This is done in a later step.
     /// NOTE: If skip_value_node true, we will not add the value node and the pointer to the graph
     /// 
-    /// :return: The number of blocks in the chunk.
+    /// :return: The size of the chunk, in blocks. This includes the header, footer and data.
     /// 
-    /// WARN : the header is not included in the number of blocks TODO: REMOVE AND CORRECT
-    /// If the chunk is not valid, return 0, since there no chunk to leap over.
-    fn parse_chunk(&mut self, header_addr: usize) -> usize {
+    /// If the chunk is not valid (for instance, size=0), panic
+    fn parse_chunk(&mut self, header_index: usize) -> usize {
         check_heap_dump!(self);
 
         // precondition: the block at header_addr is not the last block of the heap dump or after
-        if header_addr >= (self.heap_dump_data.as_ref().unwrap().blocks.len() - 1) {
-            return 0; // this is not a chunk, no need to leap over it
+        if header_index >= (self.heap_dump_data.as_ref().unwrap().blocks.len() - 1) {
+            panic!("The block at index {} is or is aftre the last block of the heap dump", header_index);
         }
 
         // get the size of the chunk from malloc header
-        // NOTE: the size given by malloc header is the size of the chunk + 1
-        let (chunk_byte_size, header_flag)  = parse_chunk_header(&self.heap_dump_data.as_ref().unwrap().blocks[header_addr]);
+        // NOTE: The size of the chunk is the size of the data + the size of the header + the size of the footer
+        let (chunk_byte_size, header_flags)  = parse_chunk_header(
+            &self.heap_dump_data.as_ref().unwrap().blocks[header_index]
+        );
 
         // check if chunk_byte_syze is an integer and block size aligned
-        let tmp_nb_blocks_in_chunk = chunk_byte_size / BLOCK_BYTE_SIZE;
-        if tmp_nb_blocks_in_chunk % 1 != 0 {
-            log::debug!("tmp_nb_blocks_in_chunk: {}", tmp_nb_blocks_in_chunk);
-            log::debug!("The chunk size is not a multiple of the block size, at block index: {}", header_addr);
-            return 0 // this is not a chunk, no need to leap over it
+        let tmp_chunk_size_in_blocks = chunk_byte_size / BLOCK_BYTE_SIZE;
+        if tmp_chunk_size_in_blocks % 1 != 0 {
+            log::debug!("tmp_nb_blocks_in_chunk: {}", tmp_chunk_size_in_blocks);
+            log::debug!("The chunk size is not a multiple of the block size, at block index: {}", header_index);
+            panic!("The chunk size is not a multiple of the block size, at block index: {}", header_index);
         }
 
         // get the number of blocks in the chunk as an integer
-        let nb_blocks_in_chunk = tmp_nb_blocks_in_chunk;
+        let chunk_size_in_blocks = tmp_chunk_size_in_blocks;
 
         // check if the chunk is complete, i.e. if the chunk is still unclosed after at the end of the heap dump
-        if (header_addr + nb_blocks_in_chunk) >= self.heap_dump_data.as_ref().unwrap().blocks.len() {
-            log::debug!("The chunk is not complete, at block index: {}", header_addr);
-            return 0
+        if (header_index + chunk_size_in_blocks) >= self.heap_dump_data.as_ref().unwrap().blocks.len() {
+            log::debug!("The chunk is not complete, at block index: {}", header_index);
+            return self.heap_dump_data.as_ref().unwrap().blocks.len() - header_index // leaping over the chunk
         }
     
         // check that the chunk is not empty, i.e. that it contains at least 2 blocks
-        if nb_blocks_in_chunk < 2 {
+        if chunk_size_in_blocks < 2 {
             log::debug!(
                 "The chunk is too small ({} blocks), at block index: {}",
-                    nb_blocks_in_chunk, header_addr
+                    chunk_size_in_blocks, header_index
                 );
-            return 0
+            panic!(
+                "The chunk is too small ({} blocks), at block index: {}",
+                    chunk_size_in_blocks, header_index
+                );
         }
         
         // add the CHN to the graph (as an address)
-        let current_chn_addr = self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(header_addr);
+        let current_chn_addr = self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(header_index);
 
         let mut count_pointer_nodes = 0;
         let mut count_value_nodes = 0;
         let mut children_node_addrs: Vec<u64> = Vec::new();
-        for block_index in (header_addr + 1)..(header_addr  + nb_blocks_in_chunk as usize) {
-            let node = self.create_node_from_bytes_wrapper_index(
-                &self.heap_dump_data.as_ref().unwrap().blocks[block_index], 
-                block_index,
-                current_chn_addr
-            );
+        for block_index in (header_index + 1)..(header_index  + chunk_size_in_blocks as usize) {
+            // check last block
+            let node;
+            if block_index == header_index  + chunk_size_in_blocks as usize - 1 {
+                // create the footer node
+                node = self.create_footer_node(
+                    self.heap_dump_data.as_ref().unwrap().index_to_addr_wrapper(block_index),
+                    &chunk_byte_size,
+                    &header_flags,
+                    current_chn_addr,
+                    &self.heap_dump_data.as_ref().unwrap().blocks[block_index]
+                );
+            } else {
+                // create the node
+                node = self.create_node_from_bytes_wrapper_index(
+                    &self.heap_dump_data.as_ref().unwrap().blocks[block_index], 
+                    block_index,
+                    current_chn_addr
+                );
+            }
+            
             children_node_addrs.push(node.get_address());
             
             // stats
             if node.is_pointer() {
                 count_pointer_nodes += 1;
-            } else {
+            } else if node.is_value() {
                 count_value_nodes += 1;
             }
 
@@ -262,15 +330,14 @@ impl GraphData {
         // determine if the current chunk is free or in use
         let next_chunk_header_flags = HeaderFlags::parse_chunk_header_flags(
             &self.heap_dump_data.as_ref().unwrap()
-                .blocks[header_addr + nb_blocks_in_chunk as usize + 1]
+                .blocks[header_index + chunk_size_in_blocks as usize + 1]
         );
 
-        
         // create the CHN with the correct number of pointer and value nodes
         let chn = Node::ChunkHeaderNode(ChunkHeaderNode {
             addr: current_chn_addr,
             byte_size: chunk_byte_size,
-            flags: header_flag,
+            flags: header_flags,
             is_free: next_chunk_header_flags.is_preceding_chunk_free(),
             nb_pointer_nodes: count_pointer_nodes,
             nb_value_nodes: count_value_nodes
@@ -289,7 +356,7 @@ impl GraphData {
             }
         }
         
-        return nb_blocks_in_chunk
+        return chunk_size_in_blocks
     }
 
     /// Parse a pointer node. Follow it until it point to a node that is not a pointer, and add the edge 

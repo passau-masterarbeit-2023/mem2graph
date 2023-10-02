@@ -83,6 +83,7 @@ fn test_hierarchy() {
             Node::PointerNode(_) => {
                 counter_pointer_nodes += 1;
             }
+            Node::FooterNode(_) => {}
         }
     }
     assert_eq!(counter_data_structure_nodes, 1);

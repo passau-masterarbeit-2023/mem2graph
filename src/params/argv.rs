@@ -47,6 +47,9 @@ pub struct Argv {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 /// control the annotation of the graph
+/// This specifies where we want the annotation to be
+/// By default the annotation is on the value node
+/// But we can also desire to annotate the chunk containing the annotation address (here as chunk header node)
 pub enum SelectAnnotationLocation {
     /// annotate the value node
     ValueNode,

@@ -11,6 +11,7 @@ pub enum Node {
     ValueNode(ValueNode),
     ChunkHeaderNode(ChunkHeaderNode),
     PointerNode(PointerNode),
+    FooterNode(FooterNode),
 }
 
 /// Header flags for a header block
@@ -36,8 +37,19 @@ impl HeaderFlags {
         HeaderFlags { p, m, a }
     }
 
+    /// Current flag P indicates if the previous chunk is in use (allocated by application) or free
     pub fn is_preceding_chunk_free(&self) -> bool {
         !self.p
+    }
+}
+
+/// Format flags as a string: flags: [a: 0, m: 0, p: 0]
+impl std::fmt::Display for HeaderFlags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f, "[a: {}, m: {}, p: {}]",
+            self.a as u8, self.m as u8, self.p as u8
+        )
     }
 }
 
@@ -139,7 +151,9 @@ impl SpecialNodeAnnotation {
             }
             Node::PointerNode(_) => {
                 "[label=\"PN\" color=\"orange\"];".to_string()
-                
+            }
+            Node::FooterNode(_) => {
+                "[label=\"FN\" color=\"purple\"];".to_string()
             }
         }
     }
@@ -228,6 +242,9 @@ impl Node {
             Node::PointerNode(base_pointer_node) => {
                 base_pointer_node.addr
             }
+            Node::FooterNode(footer_node) => {
+                footer_node.addr
+            }
         }
     }
 
@@ -258,6 +275,12 @@ impl Node {
                     base_pointer_node.addr,
                 )
             }
+            Node::FooterNode(footer_node) => {
+                format!(
+                    "FN({:#x})",
+                    footer_node.addr,
+                )
+            }
         }
     }
 
@@ -265,6 +288,14 @@ impl Node {
     pub fn is_pointer(&self) -> bool {
         match self {
             Node::PointerNode(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Check if a node is a footer node
+    pub fn is_footer(&self) -> bool {
+        match self {
+            Node::FooterNode(_) => true,
             _ => false,
         }
     }
@@ -325,39 +356,52 @@ impl Node {
             Node::PointerNode(base_pointer_node) => {
                 Some(base_pointer_node.chn_addr)
             }
+            Node::FooterNode(footer_node) => {
+                Some(footer_node.chn_addr)
+            }
             _ => None,
         }
     }
 }
 
-    /// return a formatted string of the node, for debugging purposes
+
 impl std::fmt::Debug for Node {
+    /// return a formatted string of the node, for debugging purposes
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Node::ChunkHeaderNode(chunk_header_node) => {
                 write!(
-                    f, "CHN: {} [VNs: {} PNs: {}]", 
-                    chunk_header_node.addr, chunk_header_node.nb_value_nodes, chunk_header_node.nb_pointer_nodes
+                    f, "CHN: {} [VNs: {}, PNs: {}, flags: {:?}]", 
+                    chunk_header_node.addr, 
+                    chunk_header_node.nb_value_nodes, 
+                    chunk_header_node.nb_pointer_nodes,
+                    chunk_header_node.flags
                 )
             }
             Node::ValueNode(base_value_node) => {
                 write!(
-                    f, "VN: {} [value=\"{}\"]", 
+                    f, "VN: {} [value: \"{}\"]", 
                     base_value_node.addr, hex::encode(&base_value_node.value)
                 )
             }
             Node::KeyNode(key_node) => {
                 write!(
-                    f, "KN: {} [found_key=\"{}\" json_key=\"{}\"]", 
+                    f, "KN: {} [found_key: \"{}\", json_key: \"{}\"]", 
                     key_node.addr, hex::encode(&key_node.key), hex::encode(&key_node.key_data.key) 
                 )
             }
             Node::PointerNode(base_pointer_node) => {
                 write!(
-                    f, "PN: {} [label=\"{}\"]", 
+                    f, "PN: {} [label: \"{}\"]", 
                     base_pointer_node.addr, base_pointer_node.points_to
                 )
                     
+            }
+            Node::FooterNode(footer_node) => {
+                write!(
+                    f, "FN: {} [size: {}, flags: {:?}]",
+                    footer_node.addr, footer_node.byte_size, footer_node.flags
+                )
             }
         }
     }
@@ -371,6 +415,14 @@ pub struct ChunkHeaderNode {
     pub is_free: bool,
     pub nb_pointer_nodes: usize,
     pub nb_value_nodes: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FooterNode {
+    pub addr: u64,
+    pub byte_size: usize,
+    pub flags: HeaderFlags,
+    pub chn_addr: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -462,6 +514,12 @@ impl std::fmt::Display for Node {
                 )
             }
             Node::PointerNode(_) => {
+                write!(
+                    f, "    {:?}",
+                    self.str_addr_and_type(),
+                )
+            }
+            Node::FooterNode(_) => {
                 write!(
                     f, "    {:?}",
                     self.str_addr_and_type(),
