@@ -34,6 +34,11 @@ pub struct Argv {
     #[arg(short = 'a', long, default_value = "value-node")]
     pub annotation: SelectAnnotationLocation,
 
+    /// If the embedding is filtered with the entropy of the firsts blocks of each chunk
+    /// NOTE : only used in the embedding pipeline
+    #[arg(short = 'e', long, default_value = "none")]
+    pub entropy_filter : EntropyFilter,
+
     /// if their is no value node or pointer node in the graph
     /// 
     /// NOTE : By default the graph contains value node and pointer node, 
@@ -60,11 +65,25 @@ pub enum SelectAnnotationLocation {
 }
 
 
+/// Filter the embedding with the entropy of the firsts blocks of each chunk
+/// NOTE : the entropy is computed on the firsts blocks of each chunk
+/// NOTE : the annotated blocks are not filtered
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+pub enum EntropyFilter {
+    /// don't filter the embedding
+    None,
+    /// filter the graph, keeping only the chunk with the max entropy
+    OnlyMaxEntropy,
+    /// filter the graph with the entropy with a minimum of x samples (defined by an env variable)
+    /// NOTE : If the entropy minimal to have x samples is Y, then all the chunk with Y entropy or more are kept
+    MinTresholdEntropy,
+}
+
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Pipeline {
     /// make the value embedding
-    ValueEmbedding,
+    ValueNodeEmbedding,
     /// make the graph and save it
     Graph,
     /// make a semantic embedding of the chunk

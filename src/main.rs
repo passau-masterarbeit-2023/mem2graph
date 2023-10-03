@@ -54,7 +54,7 @@ fn main() {
     // launch computations
     for path in input_path {
         match params::ARGV.pipeline {
-            params::argv::Pipeline::ValueEmbedding => {
+            params::argv::Pipeline::ValueNodeEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
                 run_value_embedding(path, output_folder.clone(), annotation)
             },
