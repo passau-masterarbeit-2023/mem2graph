@@ -5,7 +5,6 @@ use walkdir::WalkDir;
 pub mod value_embedding;
 pub mod graph_generation;
 pub mod chunk_semantic_embedding;
-pub mod extract_chunks_data;
 pub mod chunk_statistic_embedding;
 
 /// Takes a path as input.

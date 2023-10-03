@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use error_chain::error_chain;
 use serde_json::Value;
 
-use crate::params::{PTR_ENDIANNESS, get_n_gram_from_env};
+use crate::params::{PTR_ENDIANNESS, get_n_gram_from_env, BLOCK_BYTE_SIZE, CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY};
 use crate::graph_structs::{Node, PointerNode, ValueNode};
 
 /// convert an address to an index
@@ -365,4 +365,27 @@ pub fn shannon_entropy(data: &Vec<u8>) -> f64 {
     }
 
     entropy
+}
+
+pub fn compute_chunk_start_bytes_entropy(all_heap_blocks: &Vec<[u8; BLOCK_BYTE_SIZE]>, chunk_data_first_block_index: usize) -> f64 {
+    let mut start_data_bytes: Vec<u8> = Vec::new();
+    let nb_first_blocks_inf: usize = (*CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY ) / BLOCK_BYTE_SIZE;
+    let nb_bytes_in_last_block = *CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY % BLOCK_BYTE_SIZE;
+
+    // Make sure there are enough blocks
+    if all_heap_blocks.len() < nb_first_blocks_inf {
+        // Handle this case, e.g., by returning an error or a default value
+        return 0.0; 
+    }
+
+    for i in 0..nb_first_blocks_inf {
+        let block_index = chunk_data_first_block_index + i;
+        start_data_bytes.extend_from_slice(&all_heap_blocks[block_index]);
+    }
+    if nb_bytes_in_last_block > 0 {
+        let entropy_last_block_index = chunk_data_first_block_index + nb_first_blocks_inf;
+        start_data_bytes.extend_from_slice(&all_heap_blocks[entropy_last_block_index][0..nb_bytes_in_last_block]);
+    }
+    
+    shannon_entropy(&start_data_bytes)
 }

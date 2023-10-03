@@ -6,7 +6,7 @@ use crate::{params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS}, utils};
 
 pub mod annotations;
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub enum Node {
     ValueNode(ValueNode),
     ChunkHeaderNode(ChunkHeaderNode),
@@ -223,7 +223,7 @@ impl std::fmt::Debug for Node {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChunkHeaderNode {
     pub addr: u64,
     pub byte_size: usize,
@@ -231,6 +231,7 @@ pub struct ChunkHeaderNode {
     pub is_free: bool,
     pub nb_pointer_nodes: usize,
     pub nb_value_nodes: usize,
+    pub start_data_bytes_entropy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

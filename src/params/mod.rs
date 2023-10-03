@@ -169,13 +169,13 @@ lazy_static! {
         }
     };
 
-    pub static ref EXTRACT_NO_POINTER: bool = {
-        let val = std::env::var("EXTRACT_NO_POINTER");
+    pub static ref CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY: usize = {
+        let val = std::env::var("CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY");
         match val {
-            Ok(nb) => nb.parse::<bool>().unwrap(),
+            Ok(nb) => nb.parse::<usize>().unwrap(),
             Err(_) => {
-                println!("EXTRACT_NO_POINTER environment variable not set. Defaulting to false.");
-                return false;
+                println!("CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY environment variable not set. Defaulting to 10.");
+                return 0;
             },
         }
     };

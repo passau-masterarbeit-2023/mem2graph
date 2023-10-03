@@ -71,8 +71,6 @@ pub enum Pipeline {
     ChunkSemanticEmbedding,
     /// make a statistic embedding of the chunk
     ChunkStatisticEmbedding,
-    /// extract chunk information from the heap dump
-    ChunkExtraction,
 }
 
 pub fn get_program_args() -> Argv {

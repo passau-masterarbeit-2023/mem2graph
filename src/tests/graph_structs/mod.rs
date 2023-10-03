@@ -9,7 +9,8 @@ fn create_test_structs() -> Vec<Node> {
         flags: HeaderFlags{p : true, m : false, a : false},
         is_free: false,
         nb_pointer_nodes: 0,
-        nb_value_nodes: 0
+        nb_value_nodes: 0,
+        start_data_bytes_entropy: 0.0,
     });
 
     let base_value_node = Node::ValueNode(ValueNode {

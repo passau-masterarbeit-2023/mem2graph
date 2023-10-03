@@ -242,6 +242,7 @@ impl GraphData {
     /// If the chunk is not valid (for instance, size=0), panic
     fn parse_chunk(&mut self, header_index: usize) -> usize {
         check_heap_dump!(self);
+        let chunk_data_first_block_index = header_index + 1;
 
         // precondition: the block at header_addr is not the last block of the heap dump or after
         if header_index >= (self.heap_dump_data.as_ref().unwrap().blocks.len() - 1) {
@@ -341,7 +342,11 @@ impl GraphData {
             flags: header_flags,
             is_free: next_chunk_header_flags.is_preceding_chunk_free(),
             nb_pointer_nodes: count_pointer_nodes,
-            nb_value_nodes: count_value_nodes
+            nb_value_nodes: count_value_nodes,
+            start_data_bytes_entropy: utils::compute_chunk_start_bytes_entropy(
+                &self.heap_dump_data.as_ref().unwrap().blocks, 
+                chunk_data_first_block_index
+            )
         });
         self.add_node_wrapper(chn);
         
@@ -529,7 +534,8 @@ mod tests {
             flags: HeaderFlags{p : true, m : false, a : false},
             is_free: false,
             nb_pointer_nodes: 0,
-            nb_value_nodes: 0
+            nb_value_nodes: 0,
+             start_data_bytes_entropy: 0.0,
         });
         let base_value_node = Node::ValueNode(
             ValueNode {
