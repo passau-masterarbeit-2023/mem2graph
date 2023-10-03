@@ -4,10 +4,10 @@ use serde_derive::{Serialize, Deserialize};
 
 use crate::{params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS}, utils};
 
+pub mod annotations;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Node {
-    KeyNode(KeyNode),
     ValueNode(ValueNode),
     ChunkHeaderNode(ChunkHeaderNode),
     PointerNode(PointerNode),
@@ -69,164 +69,7 @@ pub fn parse_chunk_header(block: &[u8; BLOCK_BYTE_SIZE]) -> (usize, HeaderFlags)
     return (size, flags);
 }
 
-/// Anotations for special nodes used in graph_data.
-/// Allow labelling for embedding, and attribute and coloring for graph generation.
-/// NOTE : Take the address of the node as parameter, to permit to display it in the label.
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SpecialNodeAnnotation {
-    SessionStateNodeAnnotation(u64),
-    SshStructNodeAnnotation(u64),
-    /// combination of the SessionStateNodeAnnotation and SshStructNodeAnnotation (handle the superposition of the two annotations)
-    SessionStateAndSSHStructNodeAnnotation(u64),
-    KeyNodeAnnotation(u64),
-
-    /// combination of the SessionStateNodeAnnotation and KeyNodeAnnotation (handle the superposition of the two annotations)
-    KeyNodeAndSessionStateNodeAnnotation(u64),
-}
-
-impl SpecialNodeAnnotation {
-    fn get_name(&self) -> String {
-        match self {
-            SpecialNodeAnnotation::SessionStateNodeAnnotation(_) => {
-                "SSN".to_string()
-            }
-            SpecialNodeAnnotation::SshStructNodeAnnotation(_) => {
-                "SSHN".to_string()
-            }
-            SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(_) => {
-                "SSN_SSHN".to_string()
-            }
-            SpecialNodeAnnotation::KeyNodeAnnotation(_) => {
-                "KN".to_string()
-            }
-            SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(_) => {
-                "KN_SSN".to_string()
-            }
-        }
-    }
-
-    fn get_color(&self) -> String {
-        match self {
-            SpecialNodeAnnotation::SessionStateNodeAnnotation(_) => {
-                "red".to_string()
-            }
-            SpecialNodeAnnotation::SshStructNodeAnnotation(_) => {
-                "red".to_string()
-            }
-            SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(_) => {
-                "red".to_string()
-            }
-            SpecialNodeAnnotation::KeyNodeAnnotation(_) => {
-                "green".to_string()
-            }
-            SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(_) => {
-                "green".to_string()
-            }
-        }
-    }
-
-
-    /// get the dot attributes for the node
-    pub fn annotate_dot_attributes(&self) -> String {
-        format!(
-            "[label=\"{}\" color=\"{}\" style=filled];",
-            self.get_name(),
-            self.get_color(),
-        )
-    }
-
-
-    /// get the default dot attributes for the node
-    /// WARN : Key node should not be annotated with default attributes
-    pub fn get_default_dot_attributes(node : &Node) -> String {
-        match node {
-            Node::ChunkHeaderNode(_) => {
-                "[label=\"CHN\" color=\"black\"];".to_string()
-            }
-            Node::ValueNode(_) => {
-                "[label=\"VN\" color=\"grey\"];".to_string()
-            }
-            Node::KeyNode(_) => {
-                panic!("KeyNode should not be annotated with default attributes")
-            }
-            Node::PointerNode(_) => {
-                "[label=\"PN\" color=\"orange\"];".to_string()
-            }
-            Node::FooterNode(_) => {
-                "[label=\"FN\" color=\"purple\"];".to_string()
-            }
-        }
-    }
-
-    /// get the address of the node
-    pub fn get_address(&self) -> u64 {
-        match self {
-            SpecialNodeAnnotation::SessionStateNodeAnnotation(addr) => {
-                *addr
-            }
-            SpecialNodeAnnotation::SshStructNodeAnnotation(addr) => {
-                *addr
-            }
-            SpecialNodeAnnotation::KeyNodeAnnotation(addr) => {
-                *addr
-            }
-            SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(addr) => {
-                *addr
-            }
-            SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(addr) => {
-                *addr
-            }
-        }
-    }
-}
-
-impl Debug for SpecialNodeAnnotation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SpecialNodeAnnotation::SessionStateNodeAnnotation(addr) => {
-                write!(
-                    f, "SSN({:#x})", 
-                    addr,
-                )
-            }
-            SpecialNodeAnnotation::SshStructNodeAnnotation(addr) => {
-                write!(
-                    f, "SSHN({:#x})", 
-                    addr,
-                )
-            }
-            SpecialNodeAnnotation::KeyNodeAnnotation(addr) => {
-                write!(
-                    f, "KN({:#x})", 
-                    addr,
-                )
-            }
-            SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(addr) => {
-                write!(
-                    f, "SSN_SSHN({:#x})", 
-                    addr,
-                )
-            }
-            SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(addr) => {
-                write!(
-                    f, "KN_SSN({:#x})", 
-                    addr,
-                )
-            }
-        }
-    }
-}
-
 impl Node {
-    /// Check whether a node is important or not.
-    #[cfg(test)]
-    pub fn is_important(&self) -> bool {
-        match self {
-            Node::KeyNode(_) => true,
-            _ => false,
-        }
-    }
-
     /// NOTE: If you forget to match a new Node variant, this function will panic.
     pub fn get_address(&self) -> u64 {
         match self {
@@ -235,9 +78,6 @@ impl Node {
             }
             Node::ValueNode(base_value_node) => {
                 base_value_node.addr
-            }
-            Node::KeyNode(key_node) => {
-                key_node.addr
             }
             Node::PointerNode(base_pointer_node) => {
                 base_pointer_node.addr
@@ -261,12 +101,6 @@ impl Node {
                 format!(
                     "VN({:#x})",
                     base_value_node.addr,
-                )
-            }
-            Node::KeyNode(key_node) => {
-                format!(
-                    "KN_{}({:#x})", 
-                    key_node.key_data.name, key_node.addr
                 )
             }
             Node::PointerNode(base_pointer_node) => {
@@ -293,6 +127,7 @@ impl Node {
     }
 
     /// Check if a node is a footer node
+    #[allow(dead_code)]
     pub fn is_footer(&self) -> bool {
         match self {
             Node::FooterNode(_) => true,
@@ -316,13 +151,6 @@ impl Node {
         }
     }
 
-    pub fn is_key(&self) -> bool {
-        match self {
-            Node::KeyNode(_) => true,
-            _ => false,
-        }
-    }
-
     pub fn points_to(&self) -> Option<u64> {
         match self {
             Node::PointerNode(base_pointer_node) => {
@@ -337,9 +165,6 @@ impl Node {
             Node::ValueNode(base_value_node) => {
                 Some(base_value_node.value.clone())
             }
-            Node::KeyNode(key_node) => {
-                Some(key_node.value.clone())
-            }
             _ => None,
         }
     }
@@ -350,9 +175,6 @@ impl Node {
             Node::ValueNode(base_value_node) => {
                 Some(base_value_node.chn_addr)
             }
-            Node::KeyNode(key_node) => {
-                Some(key_node.chn_addr)                
-            },
             Node::PointerNode(base_pointer_node) => {
                 Some(base_pointer_node.chn_addr)
             }
@@ -382,12 +204,6 @@ impl std::fmt::Debug for Node {
                 write!(
                     f, "VN: {} [value: \"{}\"]", 
                     base_value_node.addr, hex::encode(&base_value_node.value)
-                )
-            }
-            Node::KeyNode(key_node) => {
-                write!(
-                    f, "KN: {} [found_key: \"{}\", json_key: \"{}\"]", 
-                    key_node.addr, hex::encode(&key_node.key), hex::encode(&key_node.key_data.key) 
                 )
             }
             Node::PointerNode(base_pointer_node) => {
@@ -439,25 +255,6 @@ pub struct PointerNode {
     pub chn_addr: u64,
 }
 
-// Key data from JSON file
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct KeyData {
-    pub name: String,
-    pub key: Vec<u8>,
-    pub addr: u64,
-    pub len: usize,
-    pub real_len: usize,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct KeyNode {
-    pub addr: u64,
-    pub chn_addr: u64,
-    pub value: [u8; BLOCK_BYTE_SIZE], // first block of key
-    pub key: Vec<u8>, // found in heap dump, full key (not just the first block)
-    pub key_data: KeyData, // found in JSON file
-}
-
 pub const DEFAULT_CHUNK_EDGE_WEIGHT: usize = 1;
 
 pub struct Edge {
@@ -502,12 +299,6 @@ impl std::fmt::Display for Node {
                 )
             }
             Node::ValueNode(_) => {
-                write!(
-                    f, "    {:?}", 
-                    self.str_addr_and_type(),
-                )
-            }
-            Node::KeyNode(_) => {
                 write!(
                     f, "    {:?}", 
                     self.str_addr_and_type(),

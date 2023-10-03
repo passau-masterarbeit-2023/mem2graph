@@ -1,8 +1,8 @@
 #[cfg(test)]
 use crate::graph_structs::*;
+
 #[cfg(test)]
 fn create_test_structs() -> Vec<Node> {
-
     let data_structure_node = Node::ChunkHeaderNode(ChunkHeaderNode {
         addr: 0,
         byte_size: 8,
@@ -24,26 +24,9 @@ fn create_test_structs() -> Vec<Node> {
         chn_addr: 0,
     });
 
-    let key_data = KeyData {
-        addr: 3,
-        name: "key1".to_string(),
-        key: vec![0, 1, 2, 3, 4, 5, 6, 7],
-        len: 4,
-        real_len: 4,
-    };
-
-    let key_node = Node::KeyNode(KeyNode {
-        addr: 4,
-        chn_addr: 0,
-        value: [0, 1, 2, 3, 4, 5, 6, 7],
-        key: vec![0, 1, 2, 3, 4, 5, 6, 7],
-        key_data,
-    });
-
     let nodes: Vec<Node> = vec![
         data_structure_node,
         base_value_node.clone(),
-        key_node.clone(),
         base_pointer_node.clone(),
     ];
 
@@ -77,9 +60,6 @@ fn test_hierarchy() {
             Node::ValueNode(_) => {
                 counter_value_nodes += 1;
             }
-            Node::KeyNode(_) => {
-                counter_value_nodes += 1;
-            }
             Node::PointerNode(_) => {
                 counter_pointer_nodes += 1;
             }
@@ -90,21 +70,6 @@ fn test_hierarchy() {
     assert_eq!(counter_value_nodes, 2);
     assert_eq!(counter_pointer_nodes, 1);
     
-}
-
-#[test]
-fn test_important_nodes() {
-    crate::tests::setup();
-    // test with Vec<Node>
-    let nodes = create_test_structs();
-
-    let mut counter_importants = 0;
-    for node in nodes {
-        if node.is_important() {
-            counter_importants += 1;
-        }
-    }
-    assert_eq!(counter_importants, 1);
 }
 
 #[test]

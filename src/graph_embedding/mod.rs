@@ -1,6 +1,6 @@
 #[cfg(test)]
 use crate::exe_pipeline::value_embedding::save_value_embeding;
-use crate::graph_structs::{Node, SpecialNodeAnnotation};
+use crate::graph_structs::Node;
 use crate::graph_annotate::GraphAnnotate;
 use crate::params::BLOCK_BYTE_SIZE;
 use crate::params::argv::SelectAnnotationLocation;
@@ -329,16 +329,10 @@ impl GraphEmbedding {
     /// SshStruct = 2,
     /// SessionStateStruct = 3
     fn get_node_label(&self, addr : u64) -> usize {
-        let annotation = self.graph_annotate.graph_data.special_node_to_annotation.get(&addr);
+        let annotation = self.graph_annotate.graph_data.node_addr_to_annotations.get(&addr);
         match annotation {
             Some(annotation) => {
-                match annotation {
-                    SpecialNodeAnnotation::KeyNodeAnnotation(_) => 1,
-                    SpecialNodeAnnotation::SshStructNodeAnnotation(_) => 2,
-                    SpecialNodeAnnotation::SessionStateNodeAnnotation(_) => 3,
-                    SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(_) => 4,
-                    SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(_) => 5,
-                }
+                annotation.annotation_set_embedding() as usize
             },
             None => 0,
         }

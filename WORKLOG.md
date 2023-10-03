@@ -1,7 +1,13 @@
 # Work logs
 
-* [ ] Refactoring: Put KeyData outside of Node. !!!
 * [ ] Create new embedding: embed just the first block of a chunk. Optionally, add a filtering based on entropy.
+* [ ] Split the file of embedding.
+* [ ] filtering by entropy
+
+### Tue 3 Oct 2023
+
+* [X] Refactoring: Put KeyData outside of Node. !!!
+* [X] Refactoring multi-annotation-embedding
 
 ### Mon 2 Oct 2023
 

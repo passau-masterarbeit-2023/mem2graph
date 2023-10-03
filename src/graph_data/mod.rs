@@ -7,8 +7,9 @@ use petgraph::visit::IntoEdgeReferences;
 pub mod heap_dump_data;
 
 use heap_dump_data::HeapDumpData;
-use crate::graph_structs::{self, Node, ChunkHeaderNode, Edge, EdgeType, DEFAULT_CHUNK_EDGE_WEIGHT, SpecialNodeAnnotation, parse_chunk_header, HeaderFlags, FooterNode};
-use crate::params::{BLOCK_BYTE_SIZE, MALLOC_HEADER_ENDIANNESS};
+use crate::graph_structs::{self, Node, ChunkHeaderNode, Edge, EdgeType, DEFAULT_CHUNK_EDGE_WEIGHT, parse_chunk_header, HeaderFlags, FooterNode};
+use crate::graph_structs::annotations::AnnotationSet;
+use crate::params::BLOCK_BYTE_SIZE;
 use crate::utils;
 
 /// macro for getting the heap_dump_data field unwrapped
@@ -30,8 +31,8 @@ pub struct GraphData {
     /// list of the addresses of the nodes that are pointers
     pub pointer_node_addrs: Vec<u64>,
 
-    /// special nodes are the ones that are not values (and not keys)
-    pub special_node_to_annotation: HashMap<u64, SpecialNodeAnnotation>, 
+    /// map from node address to annotations
+    pub node_addr_to_annotations: HashMap<u64, AnnotationSet>,
 
     /// if the graph doesn't contain value nodes
     pub no_value_node: bool,
@@ -56,7 +57,7 @@ impl GraphData {
             chn_addrs: Vec::new(),
             value_node_addrs: Vec::new(),
             pointer_node_addrs: Vec::new(),
-            special_node_to_annotation: HashMap::new(),
+            node_addr_to_annotations: HashMap::new(),
             no_value_node: without_pointer_node,
             heap_dump_data: Some(
                 HeapDumpData::new(
@@ -81,7 +82,7 @@ impl GraphData {
             chn_addrs: Vec::new(),
             value_node_addrs: Vec::new(),
             pointer_node_addrs: Vec::new(),
-            special_node_to_annotation: HashMap::new(),
+            node_addr_to_annotations: HashMap::new(),
             no_value_node: false,
             heap_dump_data: None,
         }
@@ -361,7 +362,6 @@ impl GraphData {
 
     /// Parse a pointer node. Follow it until it point to a node that is not a pointer, and add the edge 
     /// weightened by the number of intermediate pointer nodes.
-    /// TODO: testing needed, correction needed
     fn parse_pointer(&mut self, node_addr: &u64) {
         let node = self.addr_to_node.get(&node_addr).unwrap();
 
@@ -457,7 +457,7 @@ impl std::fmt::Display for GraphData {
             let node = self.addr_to_node.get(&addr).unwrap();
 
             // handle special nodes
-            match self.special_node_to_annotation.get(&addr) {
+            match self.node_addr_to_annotations.get(&addr) {
                 Some(annotation) => {
                     writeln!(
                         f, 
@@ -472,7 +472,7 @@ impl std::fmt::Display for GraphData {
                         f, 
                         "    \"{}\" {}", 
                         node.str_addr_and_type(), 
-                        SpecialNodeAnnotation::get_default_dot_attributes(node)
+                        AnnotationSet::get_default_dot_attributes(node)
                     )?;
                 }
             }

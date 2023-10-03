@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 
 use std::collections::HashMap;
 use std::convert::TryInto;
-use std::path::{PathBuf, Path};
+use std::path::PathBuf;
 use error_chain::error_chain;
 use serde_json::Value;
 

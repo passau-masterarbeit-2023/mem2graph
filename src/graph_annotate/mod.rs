@@ -1,5 +1,6 @@
 use crate::{graph_data::GraphData, utils::div_round_up, params::argv::SelectAnnotationLocation};
-use crate::graph_structs::{SpecialNodeAnnotation, Node, KeyNode};
+use crate::graph_structs::annotations::{NodeAnnotation, KeyAnnotation, AnnotationSet};
+use crate::graph_structs::Node;
 use std::path::PathBuf;
 
 pub struct GraphAnnotate {
@@ -50,13 +51,13 @@ impl GraphAnnotate {
                         
                         if !node.is_chn() {
                             if annotation == SelectAnnotationLocation::ChunkHeaderNode {
-                                self.annotate_node(SpecialNodeAnnotation::$annotation(node.get_parent_chn_addr().unwrap()));
+                                self.annotate_node(NodeAnnotation::$annotation(node.get_parent_chn_addr().unwrap()));
                             } else if annotation == SelectAnnotationLocation::ValueNode {
-                                self.annotate_node(SpecialNodeAnnotation::$annotation($addr));
+                                self.annotate_node(NodeAnnotation::$annotation($addr));
                             }
                         } else {
                             if annotation == SelectAnnotationLocation::ChunkHeaderNode {
-                                self.annotate_node(SpecialNodeAnnotation::$annotation($addr));
+                                self.annotate_node(NodeAnnotation::$annotation($addr));
                             } else if annotation == SelectAnnotationLocation::ValueNode {
                                 // NOTE: The case when we annotate a ChunkHeaderNode with a SessionStateNodeAnnotation
                                 // should never happen, since SessionStateNodeAnnotation are always pointing
@@ -152,31 +153,29 @@ impl GraphAnnotate {
                 if aggregated_key == key_data.key {
                     let chn_addr = node.unwrap().get_parent_chn_addr().unwrap();
 
-                    // replace the ValueNode with a KeyNode
-                    let key_node = Node::KeyNode(KeyNode {
-                        addr: *addr, // addr of first block of key
-                        chn_addr, // chn_addr of first block of key
-                        value: node.unwrap().get_value().unwrap(), // first block value of key
-                        key: aggregated_key, // found in heap dump, full key (not just the first block)
-                        key_data: key_data.clone(), // found in heap dump, key data
-                    });
-
-
-                    // annotate the chn node with the key node annotation
-
+                    // annotate the chn with the key node annotation
                     match which_annotation {
                         SelectAnnotationLocation::ChunkHeaderNode => {
-                            annotations.push(SpecialNodeAnnotation::KeyNodeAnnotation(chn_addr));
+                            let key_annotation = NodeAnnotation::KeyAnnotation(KeyAnnotation {
+                                addr: chn_addr, // addr of first block of key
+                                key: aggregated_key, // found in heap dump, full key (not just the first block)
+                                key_data: key_data.clone(), // found in heap dump, key data
+                            });
+                            annotations.push(key_annotation);
                         },
                         SelectAnnotationLocation::ValueNode => {
-                            annotations.push(SpecialNodeAnnotation::KeyNodeAnnotation(*addr));
+                            let key_annotation = NodeAnnotation::KeyAnnotation(KeyAnnotation {
+                                addr: *addr, // addr of first block of key
+                                key: aggregated_key, // found in heap dump, full key (not just the first block)
+                                key_data: key_data.clone(), // found in heap dump, key data
+                            });
+                            annotations.push(key_annotation);
                         },
                         _ => {
                             panic!("Cannot annotate graph with key data if annotation is None")
                         }
                     }
 
-                    self.graph_data.addr_to_node.insert(*addr, key_node);
                 } else {
                     log::warn!(
                         "key ({}) found in heap dump is not the same as the key found in the json file.  
@@ -196,54 +195,20 @@ impl GraphAnnotate {
     }
 
     /// annote a node
-    fn annotate_node(&mut self, annotation : SpecialNodeAnnotation) {
-        // check that the node isn't already annotated
-        let preceding_annotation = self.graph_data.special_node_to_annotation.get(&annotation.get_address());
-        if preceding_annotation.is_some() {
-            let preceding_annotation = preceding_annotation.unwrap();
-            // if the 2 are the same, then it's ok
-            if preceding_annotation == &annotation {
-                return;
-            }
-
-            // if the 2 are key nodes and session state, then superpose it
-            if (
-                matches!(preceding_annotation, SpecialNodeAnnotation::KeyNodeAnnotation(_)) && 
-                matches!(annotation, SpecialNodeAnnotation::SessionStateNodeAnnotation(_))) 
-                ||
-                (matches!(preceding_annotation, SpecialNodeAnnotation::SessionStateNodeAnnotation(_)) && 
-                matches!(annotation, SpecialNodeAnnotation::KeyNodeAnnotation(_))
-            ) {
-                self.graph_data.special_node_to_annotation.insert(
-                    annotation.get_address(),
-                    SpecialNodeAnnotation::KeyNodeAndSessionStateNodeAnnotation(annotation.get_address()),
+    fn annotate_node(&mut self, annotation : NodeAnnotation) {
+        let addr = annotation.get_address();
+        let old_annotations = self.graph_data.node_addr_to_annotations.get_mut(&addr);
+        match old_annotations {
+            Some(old_annotations) => {
+                old_annotations.add_annotation(annotation);
+            },
+            None => {
+                let new_annotation_set = AnnotationSet::new(annotation);
+                self.graph_data.node_addr_to_annotations.insert(
+                    addr, new_annotation_set
                 );
-                return;
             }
-
-            // if the 2 are ssh struct and session state, then superpose it
-            if (
-                matches!(preceding_annotation, SpecialNodeAnnotation::SshStructNodeAnnotation(_)) && 
-                matches!(annotation, SpecialNodeAnnotation::SessionStateNodeAnnotation(_))) 
-                ||
-                (matches!(preceding_annotation, SpecialNodeAnnotation::SessionStateNodeAnnotation(_)) && 
-                matches!(annotation, SpecialNodeAnnotation::SshStructNodeAnnotation(_))
-            ) {
-                self.graph_data.special_node_to_annotation.insert(
-                    annotation.get_address(),
-                    SpecialNodeAnnotation::SessionStateAndSSHStructNodeAnnotation(annotation.get_address()),
-                );
-                return;
-            }
-
-            panic!("🔴 Node at address {} is already annotated with {:?}, attempted to annotate : {:?}", annotation.get_address(), preceding_annotation, annotation);
         }
-
-
-        self.graph_data.special_node_to_annotation.insert(
-            annotation.get_address(),
-            annotation,
-        );
     }
 }
 
@@ -251,7 +216,6 @@ impl GraphAnnotate {
 mod tests {
     use super::*;
     use crate::params::{self};
-    use crate::graph_structs::Node;
     use crate::tests::{TEST_GRAPH_DOT_DIR_PATH, TEST_HEAP_DUMP_FILE_NUMBER};
 
     #[test]
@@ -266,20 +230,17 @@ mod tests {
         ).unwrap();
 
         // check that there is the SshStructNodeAnnotation
-        let ssh_struct_annotation = graph_annotate.graph_data.special_node_to_annotation.get(&*crate::tests::TEST_SSH_STRUCT_ADDR);
+        let ssh_struct_annotation = graph_annotate.graph_data.node_addr_to_annotations.get(&*crate::tests::TEST_SSH_STRUCT_ADDR);
         let ssh_struct_addr = &*crate::tests::TEST_SSH_STRUCT_ADDR;
         
         assert!(ssh_struct_annotation.is_some());
-        assert!(matches!(ssh_struct_annotation.unwrap(), SpecialNodeAnnotation::SshStructNodeAnnotation(_)));
+        assert!(ssh_struct_annotation.unwrap().is_ssh_struct_subclass());
         assert!(graph_annotate.graph_data.addr_to_node.get(ssh_struct_addr).is_some());
 
-        let session_state_annotation = graph_annotate.graph_data.special_node_to_annotation.get(&*crate::tests::TEST_SESSION_STATE_ADDR);
+        let session_state_annotation = graph_annotate.graph_data.node_addr_to_annotations.get(&*crate::tests::TEST_SESSION_STATE_ADDR);
         
         assert!(session_state_annotation.is_some());
-        assert!(matches!(session_state_annotation.unwrap(), SpecialNodeAnnotation::SessionStateNodeAnnotation(_)));
-        // TODO: we have no session state node in the graph ! 
-        //let session_state_addr = &*crate::tests::TEST_SESSION_STATE_ADDR;
-        // assert!(graph_annotate.graph_data.addr_to_node.get(session_state_addr).is_some());
+        assert!(session_state_annotation.unwrap().is_session_state_subclass());
     }
 
     #[test]
@@ -294,24 +255,14 @@ mod tests {
         ).unwrap();
 
         // check that there is at least one KeyNode
-        assert!(graph_annotate.graph_data.addr_to_node.values().any(|node| {
-            if let Node::KeyNode(_) = node {
-                true
-            } else {
-                false
+        let mut found_key_node = false;
+        for addr in graph_annotate.graph_data.node_addr_to_annotations.keys() {
+            if graph_annotate.graph_data.node_addr_to_annotations.get(addr).unwrap().is_key_subclass() {
+                found_key_node = true;
+                break;
             }
-        }));
-
-        // check the last key
-        let test_key_node = graph_annotate.graph_data.addr_to_node.get(&*crate::tests::TEST_KEY_F_ADDR).unwrap();
-        match test_key_node {
-            Node::KeyNode(key_node) => {
-                assert_eq!(key_node.key, *crate::tests::TEST_KEY_F_BYTES);
-                assert_eq!(key_node.key_data.name, *crate::tests::TEST_KEY_F_NAME);
-                assert_eq!(key_node.key_data.len, *crate::tests::TEST_KEY_F_LEN);
-            },
-            _ => panic!("Node is not a KeyNode"),
         }
+        assert!(found_key_node);
     }
 
     #[test]

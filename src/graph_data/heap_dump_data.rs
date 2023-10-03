@@ -4,7 +4,8 @@ use std::io::{BufReader, Read};
 use std::path::PathBuf;
 use std::collections::HashMap;
 
-use crate::graph_structs::KeyData;
+
+use crate::graph_structs::annotations::KeyDataJSON;
 use crate::utils::{self, json_value_to_addr, json_value_to_usize, json_value_for_key, ErrorKind};
 use crate::params::BLOCK_BYTE_SIZE;
 
@@ -15,7 +16,7 @@ pub struct HeapDumpData {
     pub min_addr: u64,
     pub max_addr: u64,
     pub json_data: Value,
-    pub addr_to_key_data: HashMap<u64, KeyData>,
+    pub addr_to_key_data: HashMap<u64, KeyDataJSON>,
 
     // special addresses
     pub addr_ssh_struct: Option<u64>,
@@ -137,12 +138,12 @@ impl HeapDumpData {
 /// dict keys are addresses of the keys (first block of the key)
 fn generate_key_data_from_json( 
     json_data: &Value,
-) -> Result<HashMap<u64, KeyData>, ErrorKind> {
-    let mut addr_key_pairs: HashMap<u64, KeyData> = HashMap::new();
+) -> Result<HashMap<u64, KeyDataJSON>, ErrorKind> {
+    let mut addr_key_pairs: HashMap<u64, KeyDataJSON> = HashMap::new();
 
     for (json_key, _) in json_data.as_object().unwrap().iter() {
         if json_key.starts_with("KEY_") && json_key.len() == 5 {
-            let key_data: KeyData = generate_key_data_for_a_key(&json_data, json_key)?;
+            let key_data: KeyDataJSON = generate_key_data_for_a_key(&json_data, json_key)?;
 
             addr_key_pairs.insert(key_data.addr, key_data);
         }
@@ -156,7 +157,7 @@ fn generate_key_data_from_json(
 fn generate_key_data_for_a_key(
     json_data: &Value,
     key_name: &str,
-) -> Result<KeyData, ErrorKind> {
+) -> Result<KeyDataJSON, ErrorKind> {
     let key_value = json_value_for_key(&json_data, key_name.to_string())?;
     let key_hex: &str = key_value.as_str().unwrap();
 
@@ -166,7 +167,7 @@ fn generate_key_data_for_a_key(
     let key_size = json_value_to_usize(json_value_for_key(&json_data, (key_name.to_owned() + "_LEN").to_string())?);
     let real_key_len = json_value_to_usize(json_value_for_key(&json_data, (key_name.to_owned() + "_REAL_LEN").to_string())?);
 
-    Ok(KeyData {
+    Ok(KeyDataJSON {
         name: key_name.to_string(),
         key: key_bytes,
         addr: real_key_addr,
