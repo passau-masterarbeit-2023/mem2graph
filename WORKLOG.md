@@ -9,6 +9,7 @@
 * [X] Refactoring: Put KeyData outside of Node. !!!
 * [X] Refactoring multi-annotation-embedding
 
+
 ### Mon 2 Oct 2023
 
 Refactored `chunk_step` and check it was correct. Added new `FooterNode` integration. Fixed the SSH_STRUCT warning which was misleading and wrong.

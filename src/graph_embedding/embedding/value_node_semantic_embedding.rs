@@ -2,19 +2,22 @@ use crate::{graph_structs::Node, graph_embedding::{GraphEmbedding, utils_embeddi
 
 
 /// generate semantic embedding of the nodes
-/// Samples [
-///     [0.3233, ..., 0.1234],
-///     [0.1234, ..., 0.1234],
-///     [0.1234, ..., 0.1234],
-///     ... 
-/// ]
+///     - parent chn address
+///     - position in the chunk
+///     - nb pointer
+///     - nb value
 /// 
+///     - ancestor (in order of depth, alternate CHN/PTR)
 /// Labels [0.0, 1.0, ..., 0.0],
 pub fn generate_value_node_semantic_embedding(graph_embedding : &GraphEmbedding) -> (Vec<Vec<usize>>, Vec<usize>) {
     let mut samples = Vec::new();
     let mut labels = Vec::new();
 
     for addr in graph_embedding.graph_annotate.graph_data.value_node_addrs.iter() {
+        if graph_embedding.is_entropy_filtered_addr(addr) {
+            continue;
+        }
+
         let sample = generate_value_sample(graph_embedding, *addr);
         let label = get_node_label(graph_embedding, *addr);
 

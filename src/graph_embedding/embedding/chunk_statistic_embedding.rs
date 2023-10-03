@@ -14,6 +14,9 @@ use crate::{utils::{compute_statistics, shannon_entropy, get_bin_to_index_size, 
 pub fn generate_chunk_statistic_embedding(graph_embedding : &GraphEmbedding, n_gram : &Vec<usize>, block_size : usize) -> Vec<(Vec<usize>, Vec<f64>)> {
     let mut samples = Vec::new();
     for chn_addr in graph_embedding.graph_annotate.graph_data.chn_addrs.iter() {
+        if graph_embedding.is_entropy_filtered_addr(chn_addr) {
+            continue;
+        }
         let sample = generate_chunk_statistic_samples(graph_embedding, *chn_addr, n_gram, block_size);
         samples.push(sample);
     }

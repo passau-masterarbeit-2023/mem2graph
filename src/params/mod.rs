@@ -180,6 +180,17 @@ lazy_static! {
         }
     };
 
+    pub static ref MIN_NB_OF_CHUNKS_TO_KEEP: usize = {
+        let val = std::env::var("MIN_NB_OF_CHUNKS_TO_KEEP");
+        match val {
+            Ok(nb) => nb.parse::<usize>().unwrap(),
+            Err(_) => {
+                println!("MIN_NB_OF_CHUNKS_TO_KEEP environment variable not set. Defaulting to 10.");
+                return 0;
+            },
+        }
+    };
+
 }
 
 /// Check if a path exists. If not, panic.

@@ -14,6 +14,9 @@ pub fn generate_chunk_semantic_embedding(graph_embedding : &GraphEmbedding) -> V
     let mut samples = Vec::new();
     // get chunk :
     for chn_addr in graph_embedding.graph_annotate.graph_data.chn_addrs.iter() {
+        if graph_embedding.is_entropy_filtered_addr(chn_addr) {
+            continue;
+        }
         let sample = generate_semantic_samples_of_a_chunk(graph_embedding, *chn_addr);
         samples.push(sample);
     }

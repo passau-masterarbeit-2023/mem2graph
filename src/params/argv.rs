@@ -74,9 +74,9 @@ pub enum EntropyFilter {
     None,
     /// filter the graph, keeping only the chunk with the max entropy
     OnlyMaxEntropy,
-    /// filter the graph with the entropy with a minimum of x samples (defined by an env variable)
-    /// NOTE : If the entropy minimal to have x samples is Y, then all the chunk with Y entropy or more are kept
-    MinTresholdEntropy,
+    /// filter the graph with the entropy with a minimum of x chunks (defined by an env variable)
+    /// NOTE : If the entropy minimal to have x chunks is Y, then all the chunk with Y entropy or more are kept
+    MinOfChunkTresholdEntropy,
 }
 
 

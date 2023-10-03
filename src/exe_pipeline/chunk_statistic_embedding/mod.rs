@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf};
 
-use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::{N_GRAM, BLOCK_BYTE_SIZE, argv::SelectAnnotationLocation}, utils::{generate_bit_combinations, truncate_path_to_last_n_dirs}};
+use crate::{graph_embedding::GraphEmbedding, exe_pipeline::progress_bar, params::{N_GRAM, BLOCK_BYTE_SIZE, argv::{SelectAnnotationLocation, EntropyFilter}}, utils::{generate_bit_combinations, truncate_path_to_last_n_dirs}};
 
 use super::get_raw_file_or_files_from_path;
 /// Takes a directory or a file
@@ -9,7 +9,7 @@ use super::get_raw_file_or_files_from_path;
 /// that are of type "-heap.raw", and their corresponding ".json" files.
 /// Then do the sample and label generation for each of those files.
 /// return: all samples and labels for all thoses files.
-pub fn run_chunk_statistics_embedding(path: PathBuf, output_folder: PathBuf, annotation : SelectAnnotationLocation) {
+pub fn run_chunk_statistics_embedding(path: PathBuf, output_folder: PathBuf, annotation : SelectAnnotationLocation, entropy_filter : EntropyFilter) {
     // start timer
     let start_time = Instant::now();
 
@@ -65,6 +65,7 @@ pub fn run_chunk_statistics_embedding(path: PathBuf, output_folder: PathBuf, ann
                     heap_dump_raw_file_path.clone(),
                     crate::params::BLOCK_BYTE_SIZE,
                     *crate::params::EMBEDDING_DEPTH,
+                    entropy_filter,
                     annotation,
                     false
                 );

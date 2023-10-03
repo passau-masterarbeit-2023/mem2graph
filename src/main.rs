@@ -50,23 +50,24 @@ fn main() {
     // annotation of the graph
     let annotation = params::ARGV.annotation;
     let no_value_node = params::ARGV.no_value_node;
+    let entropy_filter = params::ARGV.entropy_filter;
 
     // launch computations
     for path in input_path {
         match params::ARGV.pipeline {
             params::argv::Pipeline::ValueNodeEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
-                run_value_embedding(path, output_folder.clone(), annotation)
+                run_value_embedding(path, output_folder.clone(), annotation, entropy_filter)
             },
             params::argv::Pipeline::Graph => {
                 run_graph_generation(path, output_folder.clone(), annotation, no_value_node)
             },
             params::argv::Pipeline::ChunkSemanticEmbedding => {
-                run_chunk_semantic_embedding(path, output_folder.clone(), annotation, no_value_node)
+                run_chunk_semantic_embedding(path, output_folder.clone(), annotation, no_value_node, entropy_filter)
             },
             params::argv::Pipeline::ChunkStatisticEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
-                run_chunk_statistics_embedding(path, output_folder.clone(), annotation)
+                run_chunk_statistics_embedding(path, output_folder.clone(), annotation, entropy_filter)
             },
         }
     }

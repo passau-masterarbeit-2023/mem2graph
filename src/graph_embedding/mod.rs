@@ -4,10 +4,14 @@ mod embedding;
 mod utils_embedding;
 mod neighboring;
 
+use std::cmp::Ordering;
+
 #[cfg(test)]
 use crate::exe_pipeline::value_embedding::save_value_embeding;
 use crate::graph_annotate::GraphAnnotate;
-use crate::params::argv::SelectAnnotationLocation;
+use crate::graph_structs::Node;
+use crate::params::MIN_NB_OF_CHUNKS_TO_KEEP;
+use crate::params::argv::{SelectAnnotationLocation, EntropyFilter};
 
 use std::path::PathBuf;
 
@@ -18,6 +22,8 @@ use self::embedding::value_node_semantic_embedding::generate_value_node_semantic
 pub struct GraphEmbedding {
     graph_annotate: GraphAnnotate,
     depth: usize,
+
+    entropy_treshold: Option<f64>,
 }
 
 impl GraphEmbedding {
@@ -25,15 +31,110 @@ impl GraphEmbedding {
         heap_dump_raw_file_path: PathBuf, 
         pointer_byte_size: usize,
         depth: usize,
+        entropy_filter : EntropyFilter,
         annotation : SelectAnnotationLocation,
         without_value_node : bool,
     ) -> Result<GraphEmbedding, crate::utils::ErrorKind> {
         let graph_annotate = GraphAnnotate::new(heap_dump_raw_file_path, pointer_byte_size, annotation, without_value_node)?;
-        
-        Ok(GraphEmbedding {
+        let mut graph_embedding = GraphEmbedding {
             graph_annotate,
             depth,
-        })
+            entropy_treshold: None,
+        };
+
+        graph_embedding.entropy_treshold = graph_embedding.calculate_entropy_treshold(entropy_filter);
+
+        Ok(graph_embedding)
+    }
+
+    /// calculate the minimum entropy for a chunk node or a parent chunk node of data node to be kept
+    fn calculate_entropy_treshold(&self, entropy_filter : EntropyFilter) -> Option<f64>{
+        match entropy_filter {
+            EntropyFilter::None => None,
+            EntropyFilter::OnlyMaxEntropy => {
+                // get the max entropy
+                let mut max_entropy = f64::MIN;
+                for addr in self.graph_annotate.graph_data.chn_addrs.iter() {
+                    let chunk_header_node = self.graph_annotate.graph_data.addr_to_node.get(addr).unwrap();
+                    match chunk_header_node {
+                        Node::ChunkHeaderNode(chn) => {
+                            if chn.start_data_bytes_entropy > max_entropy {
+                                max_entropy = chn.start_data_bytes_entropy;
+                            }
+                        }
+                        _ => panic!("the vector self.graph_annotate.graph_data.chn_addrs should only contains chunk header node"),
+                    }
+
+                }
+                Some(max_entropy)
+            },
+
+            EntropyFilter::MinOfChunkTresholdEntropy => {
+                let mut entropy_ordonned_chn_addr = self.graph_annotate.graph_data.chn_addrs.clone();
+
+                // sort the vector by entropy descending
+                entropy_ordonned_chn_addr.sort_by(|addr_a, addr_b| {
+                    let node_a = self.graph_annotate.graph_data.addr_to_node.get(addr_a).unwrap();
+                    let node_b = self.graph_annotate.graph_data.addr_to_node.get(addr_b).unwrap();
+
+                    let entropy_a = match node_a {
+                        Node::ChunkHeaderNode(chn) => chn.start_data_bytes_entropy,
+                        _ => panic!("the vector self.graph_annotate.graph_data.chn_addrs should only contains chunk header node"),
+                    };
+
+                    let entropy_b = match node_b {
+                        Node::ChunkHeaderNode(chn) => chn.start_data_bytes_entropy,
+                        _ => panic!("the vector self.graph_annotate.graph_data.chn_addrs should only contains chunk header node"),
+                    };
+
+                    entropy_b.partial_cmp(&entropy_a).unwrap_or(Ordering::Equal) // descending order
+                });
+
+                // get the entropy treshold with the min of chunk
+
+                let nb_chunks = *MIN_NB_OF_CHUNKS_TO_KEEP;
+
+                let chn_addr = 
+                    if nb_chunks >= entropy_ordonned_chn_addr.len() {
+                        entropy_ordonned_chn_addr[entropy_ordonned_chn_addr.len() - 1]
+                    }else{
+                        entropy_ordonned_chn_addr[nb_chunks]
+                    };
+
+                let node = self.graph_annotate.graph_data.addr_to_node.get(&chn_addr).unwrap();
+                match node {
+                    Node::ChunkHeaderNode(chn) => Some(chn.start_data_bytes_entropy),
+                    _ => panic!("the vector self.graph_annotate.graph_data.chn_addrs should only contains chunk header node"),
+                }
+            },
+        }
+    }
+
+    /// return true if the node is in a chunk filtered by the entropy treshold
+    /// if the node is annotated, return false (no filter)
+    /// if the entropy treshold is None, return false (no filter)
+    pub fn is_entropy_filtered_addr(&self, addr : &u64) -> bool {
+        if self.graph_annotate.graph_data.node_addr_to_annotations.contains_key(addr) {
+            return false;
+        }
+        match self.entropy_treshold {
+            None => false,
+            Some(entropy_treshold) => {
+                let node = self.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
+                match node {
+                    Node::ChunkHeaderNode(chn) => chn.start_data_bytes_entropy < entropy_treshold,
+                    _ => { // get the parent entropy
+                        let parent_chn_addr = node.get_parent_chn_addr().expect("The chn addr should be set");
+                        let parent_chn_node = self.graph_annotate.graph_data.addr_to_node.get(&parent_chn_addr).unwrap();
+
+                        match parent_chn_node {
+                            Node::ChunkHeaderNode(chn) => chn.start_data_bytes_entropy < entropy_treshold,
+                            _ => panic!("the parent of a value node should be a chunk header node"),
+                        }
+                    }
+                }
+            },
+        }
     }
 
     #[cfg(test)]
@@ -75,14 +176,13 @@ impl GraphEmbedding {
 
     // ----------------------------- value embedding -----------------------------//
 
-    /// generate semantic embedding of the value nodes only
-    /// Samples [
-    ///     [0.3233, ..., 0.1234],
-    ///     [0.1234, ..., 0.1234],
-    ///     [0.1234, ..., 0.1234],
-    ///     ... 
-    /// ]
+    /// generate semantic embedding of the nodes
+    ///     - parent chn address
+    ///     - position in the chunk
+    ///     - nb pointer
+    ///     - nb value
     /// 
+    ///     - ancestor (in order of depth, alternate CHN/PTR)
     /// Labels [0.0, 1.0, ..., 0.0],
     pub fn generate_semantic_block_embedding(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
         generate_value_node_semantic_embedding(&self)
@@ -102,6 +202,7 @@ mod tests {
             params::TEST_HEAP_DUMP_FILE_PATH.clone(), 
             crate::params::BLOCK_BYTE_SIZE,
             5,
+            EntropyFilter::None,
             SelectAnnotationLocation::ValueNode,
             false,
         ).unwrap();
