@@ -139,8 +139,7 @@ pub fn save_value_embeding(samples: Vec<Vec<usize>>, labels: Vec<usize>, csv_pat
     header.push("f_position_in_parent_chunk".to_string());
     header.push("f_parent_chunk_ptrs".to_string());
     header.push("f_parent_chunk_vns".to_string());
-    // start at 1 since 0 is a ValueNode (so always [0, 0])
-    for i in 1..embedding_depth {
+    for i in 0..embedding_depth {
         header.push(format!("f_chns_ancestor_{}", i));
         header.push(format!("f_ptrs_ancestor_{}", i));
     }

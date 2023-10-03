@@ -129,11 +129,11 @@ pub fn run_chunk_semantic_embedding(path: PathBuf, output_folder: PathBuf, annot
 /// NOTE: saving empty files allow so that we don't have to recompute the samples and labels
 /// for broken files (missing JSON key, etc.)
 fn save_chunk_semantic_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, csv_path: PathBuf, embedding_depth: usize) {
+    assert!(samples.len() == paths.len());
     let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
     let mut csv_writer = csv::Writer::from_path(csv_path).unwrap_or_else(
         |_| panic!("{}", csv_error_message)
     );
-
     // header of CSV
     let mut header = Vec::new();
     header.push("file_path".to_string());
@@ -159,6 +159,8 @@ fn save_chunk_semantic_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, c
         let mut row: Vec<String> = Vec::new();
         row.push(path.to_string());
         row.extend(sample.iter().map(|value| value.to_string()));
+
+        log::info!("row: {:?}", row);
 
         csv_writer.write_record(&row).unwrap();
     }

@@ -12,7 +12,7 @@ pub fn get_neighbors(graph_embedding : &GraphEmbedding, addrs: HashSet<u64>, dir
     let mut current_node_addrs: HashSet<u64>;
     let mut ancestor_addrs: HashSet<u64> = addrs;
 
-    for i in 0..graph_embedding.depth {
+    for _ in 0..graph_embedding.depth {
         // swap current and next ancestors
         current_node_addrs = ancestor_addrs;
         ancestor_addrs = HashSet::new();
@@ -38,10 +38,8 @@ pub fn get_neighbors(graph_embedding : &GraphEmbedding, addrs: HashSet<u64>, dir
             }
         }
         
-        if i > 0 { // skip the first value (always the same case)
-            result.push(nb_chn); // add number of chns
-            result.push(nb_ptr);  // add number of ptrs
-        }
+        result.push(nb_chn); // add number of chns
+        result.push(nb_ptr);  // add number of ptrs
     }
 
     result
