@@ -1,6 +1,4 @@
-use crate::utils::{compute_statistics, shannon_entropy, get_bin_to_index_size, get_bin_to_index};
-
-use super::{GraphEmbedding, utils_embedding::{extract_chunk_data_as_bytes, extract_chunk_data_as_bits, get_node_label}};
+use crate::{utils::{compute_statistics, shannon_entropy, get_bin_to_index_size, get_bin_to_index}, graph_embedding::{GraphEmbedding, utils_embedding::{get_node_label, extract_chunk_data_as_bytes, extract_chunk_data_as_bits}}};
 
 /// generate statistic embedding of all chunks
 /// in order :

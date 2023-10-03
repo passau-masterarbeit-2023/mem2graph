@@ -1,4 +1,5 @@
-use super::{GraphEmbedding, utils_embedding::{get_chunk_basics_informations, get_node_label}, neighboring::generate_samples_for_neighbor_nodes_of_the_chunk};
+use crate::graph_embedding::{GraphEmbedding, utils_embedding::{get_chunk_basics_informations, get_node_label}, neighboring::generate_samples_for_neighbor_nodes_of_the_chunk};
+
 
 /// generate semantic embedding of all the chunks
 /// in order :

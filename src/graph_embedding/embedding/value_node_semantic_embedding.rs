@@ -1,6 +1,5 @@
-use crate::graph_structs::Node;
+use crate::{graph_structs::Node, graph_embedding::{GraphEmbedding, utils_embedding::get_node_label, neighboring::get_neighbors}};
 
-use super::{GraphEmbedding, utils_embedding::get_node_label, neighboring::get_neighbors};
 
 /// generate semantic embedding of the nodes
 /// Samples [

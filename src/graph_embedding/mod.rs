@@ -1,6 +1,6 @@
-mod chunk_statistic_embedding;
-mod chunk_semantic_embedding;
-mod value_node_semantic_embedding;
+mod embedding;
+
+
 mod utils_embedding;
 mod neighboring;
 
@@ -11,9 +11,9 @@ use crate::params::argv::SelectAnnotationLocation;
 
 use std::path::PathBuf;
 
-use self::chunk_semantic_embedding::generate_chunk_semantic_embedding;
-use self::chunk_statistic_embedding::generate_chunk_statistic_embedding;
-use self::value_node_semantic_embedding::generate_value_node_semantic_embedding;
+use self::embedding::chunk_semantic_embedding::generate_chunk_semantic_embedding;
+use self::embedding::chunk_statistic_embedding::generate_chunk_statistic_embedding;
+use self::embedding::value_node_semantic_embedding::generate_value_node_semantic_embedding;
 
 pub struct GraphEmbedding {
     graph_annotate: GraphAnnotate,
@@ -75,7 +75,7 @@ impl GraphEmbedding {
 
     // ----------------------------- value embedding -----------------------------//
 
-    /// generate semantic embedding of the nodes
+    /// generate semantic embedding of the value nodes only
     /// Samples [
     ///     [0.3233, ..., 0.1234],
     ///     [0.1234, ..., 0.1234],
