@@ -160,8 +160,6 @@ fn save_chunk_semantic_embeding(samples: Vec<Vec<usize>>, paths : Vec<String>, c
         row.push(path.to_string());
         row.extend(sample.iter().map(|value| value.to_string()));
 
-        log::info!("row: {:?}", row);
-
         csv_writer.write_record(&row).unwrap();
     }
 
