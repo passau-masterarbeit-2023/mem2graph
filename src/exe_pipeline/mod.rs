@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, collections::HashMap};
+use csv::Writer;
 use walkdir::WalkDir;
 
 pub mod pipeline;
@@ -40,4 +41,85 @@ fn progress_bar(current: usize, total: usize, length: usize) -> String {
     let empty_len = length - filled_len;
 
     format!("|{}{}| {:.2?}%", "█".repeat(filled_len), " ".repeat(empty_len), (ratio * 100.0))
+}
+
+
+/// Save the samples and labels to a CSV file.
+pub fn save_embedding(samples: Vec<HashMap<String, usize>>, labels: Vec<usize>, csv_path: PathBuf) {
+    assert!(!samples.is_empty(), "Samples cannot be empty for CSV header extraction.");
+
+    let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
+    let mut csv_writer = Writer::from_path(&csv_path).unwrap_or_else(
+        |_| panic!("{}", csv_error_message)
+    );
+
+    // Assuming all HashMaps have the same set of keys
+    let headers: Vec<String> = samples[0].keys().cloned().collect();
+    
+    let mut all_headers = headers.clone();
+    all_headers.push("label".to_string());
+
+    csv_writer.write_record(&all_headers).unwrap();
+
+    // save samples and labels to CSV
+    for (sample, &label) in samples.iter().zip(&labels) {
+        // Check if all headers are present in the current sample
+        if headers.iter().any(|h| !sample.contains_key(h)) {
+            panic!("Headers mismatch between samples!");
+        }
+
+        let mut row: Vec<String> = headers.iter()
+            .map(|header| sample.get(header).unwrap().to_string()) // unwrap is safe here since we've checked keys
+            .collect();
+
+        row.push(label.to_string());
+
+        csv_writer.write_record(&row).unwrap();
+    }
+
+    csv_writer.flush().unwrap();
+}
+
+
+/// Save the samples and labels to a CSV file.
+pub fn save_embedding_with_f64(
+    samples: Vec<(HashMap<String, usize>, HashMap<String, f64>)>, 
+    labels: Vec<usize>, 
+    csv_path: PathBuf
+) {
+    assert!(!samples.is_empty(), "Samples cannot be empty for CSV header extraction.");
+
+    let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
+    let mut csv_writer = Writer::from_path(&csv_path).unwrap_or_else(
+        |_| panic!("{}", csv_error_message)
+    );
+
+    // Assuming all HashMaps have the same set of keys
+    let usize_headers: Vec<String> = samples[0].0.keys().cloned().collect();
+    let f64_headers: Vec<String> = samples[0].1.keys().cloned().collect();
+    
+    let mut all_headers = usize_headers.clone();
+    all_headers.extend(f64_headers.iter().cloned());
+    all_headers.push("label".to_string());
+
+    csv_writer.write_record(&all_headers).unwrap();
+
+    // Save samples and labels to CSV
+    for ((usize_sample, f64_sample), &label) in samples.iter().zip(&labels) {
+        // Check if all headers are present in the current sample
+        if usize_headers.iter().any(|h| !usize_sample.contains_key(h)) || f64_headers.iter().any(|h| !f64_sample.contains_key(h)) {
+            panic!("Headers mismatch between samples!");
+        }
+
+        let mut row: Vec<String> = usize_headers.iter()
+            .map(|header| usize_sample.get(header).unwrap().to_string()) // unwrap is safe here since we've checked keys
+            .chain(f64_headers.iter().map(|header| f64_sample.get(header).unwrap().to_string())) // similarly safe unwrap
+            .collect();
+
+        row.push(label.to_string());
+
+        csv_writer.write_record(&row).unwrap();
+    }
+
+    csv_writer.flush().unwrap();
 }

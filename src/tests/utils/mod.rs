@@ -292,7 +292,6 @@ fn test_u64_to_bytes_max_value() {
 }
 
 
-
 #[test]
 fn test_compute_statistics_empty_data() {
     let data = Vec::new();
@@ -300,22 +299,23 @@ fn test_compute_statistics_empty_data() {
 
     println!("{:?}", result);
 
-    // For an empty dataset, all values should be NaN (Not a Number)
-    assert!(result.0.is_nan());
-    assert!(result.1.is_nan());
-    assert!(result.2.is_nan());
-    assert!(result.3.is_nan());
-    assert!(result.4.is_nan());
+    // For an empty dataset, the values for mean, MAD, and std_dev would be NaN, and skew and kurtosis should also be NaN.
+    assert!(result.get("mean").unwrap().is_nan());
+    assert!(result.get("mad").unwrap().is_nan());
+    assert!(result.get("std_dev").unwrap().is_nan());
+    assert!(result.get("skew").unwrap().is_nan());
+    assert!(result.get("kurt").unwrap().is_nan());
 }
 
 #[test]
 fn test_compute_statistics_single_byte_data() {
     let data = vec![5];
-    let (mean, mad, std_dev, skew, kurt) = compute_statistics(&data);
+    let result = compute_statistics(&data);
 
-    assert_eq!(mean, 5.0);
-    assert_eq!(mad, 0.0);
-    assert_eq!(std_dev, 0.0);
-    assert!(skew.is_nan()); // Skewness is not defined for single data point
-    assert!(kurt.is_nan()); // Kurtosis is not defined for single data point
+    // For a single byte, the mean is the value itself, MAD and std_dev are 0, and skew and kurtosis are NaN.
+    assert_eq!(*result.get("mean").unwrap(), 5.0);
+    assert_eq!(*result.get("mad").unwrap(), 0.0);
+    assert_eq!(*result.get("std_dev").unwrap(), 0.0);
+    assert!(result.get("skew").unwrap().is_nan());
+    assert!(result.get("kurt").unwrap().is_nan());
 }

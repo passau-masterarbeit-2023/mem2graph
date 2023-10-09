@@ -5,9 +5,10 @@ mod utils_embedding;
 mod neighboring;
 
 use std::cmp::Ordering;
+use std::collections::HashMap;
 
 #[cfg(test)]
-use crate::exe_pipeline::value_embedding::save_value_embeding;
+use crate::exe_pipeline::save_embedding;
 use crate::graph_annotate::GraphAnnotate;
 use crate::graph_structs::Node;
 use crate::params::MIN_NB_OF_CHUNKS_TO_KEEP;
@@ -20,7 +21,7 @@ use self::embedding::chunk_statistic_embedding::generate_chunk_statistic_embeddi
 use self::embedding::chunk_top_vn_semantic_embedding::generate_chunk_top_vn_semantic_embedding;
 use self::embedding::value_node_semantic_embedding::generate_value_node_semantic_embedding;
 
-type SamplesAndLabels = (Vec<Vec<usize>>, Vec<usize>);
+type SamplesAndLabels = (Vec<HashMap<String, usize>>, Vec<usize>);
 
 pub struct GraphEmbedding {
     graph_annotate: GraphAnnotate,
@@ -144,11 +145,11 @@ impl GraphEmbedding {
     #[cfg(test)]
     fn save_samples_and_labels_to_csv(&self, csv_path: PathBuf) {
         let (samples, labels) = self.generate_value_node_semantic_embedding();
-        save_value_embeding(samples, labels, csv_path, self.depth);
+        save_embedding(samples, labels, csv_path);
     }
 
     // ----------------------------- statistic chunk embedding -----------------------------//
-    pub fn generate_statistic_samples_for_all_chunks(&self, n_gram : &Vec<usize>, block_size : usize) -> Vec<(Vec<usize>, Vec<f64>)> {
+    pub fn generate_statistic_samples_for_all_chunks(&self, n_gram : &Vec<usize>, block_size : usize) -> (Vec<(HashMap<String, usize>, HashMap<String, f64>)>, Vec<usize>) {
         generate_chunk_statistic_embedding(&self, n_gram, block_size)
     }
 

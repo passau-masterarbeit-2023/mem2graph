@@ -131,17 +131,6 @@ lazy_static! {
         path
     };
 
-    pub static ref REMOVE_TRIVIAL_ZERO_SAMPLES: bool = {
-        let remove_trivial_zero_samples = std::env::var("REMOVE_TRIVIAL_ZERO_SAMPLES");
-        match remove_trivial_zero_samples {
-            Ok(mode) => mode == "true",
-            Err(_) => {
-                println!("REMOVE_TRIVIAL_ZERO_SAMPLES environment variable not set. Defaulting to 'false'.");
-                return false;
-            },
-        }
-    };
-
     pub static ref DEFAULT_DATA_DIR_PATH: PathBuf = {
         let testing_data_dir_path = std::env::var("DEFAULT_DATA_DIR_PATH")
             .expect("DEFAULT_DATA_DIR_PATH environment variable must be set").to_string();

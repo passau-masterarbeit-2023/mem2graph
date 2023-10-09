@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::graph_embedding::GraphEmbedding;
 use crate::graph_embedding::utils_embedding::get_node_label;
 use crate::graph_structs::Node;
@@ -21,7 +23,7 @@ use super::value_node_semantic_embedding::generate_value_sample;
 ///     3. If yes, generate the embedding
 pub fn generate_chunk_top_vn_semantic_embedding(
     graph_embedding : &GraphEmbedding
-) -> (Vec<Vec<usize>>, Vec<usize>) {
+) -> (Vec<HashMap<String, usize>>, Vec<usize>) {
     let mut samples = Vec::new();
     let mut labels = Vec::new();
 

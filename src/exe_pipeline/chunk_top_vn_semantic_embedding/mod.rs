@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::graph_embedding::GraphEmbedding;
 
-use super::value_embedding::save_value_embeding;
+use super::save_embedding;
 
 /// Value node semantic embedding, for value nodes that are first 
 /// blocks of the user data section of a chunk. 
@@ -24,11 +24,10 @@ pub fn gen_and_save_chunk_top_vn_semantic_embedding(
     let samples_length = samples.len();
     
     // save the value embedding to CSV
-    save_value_embeding(
+    save_embedding(
         samples, 
         labels, 
-        output_file_path, 
-        *crate::params::EMBEDDING_DEPTH
+        output_file_path
     );
 
     return samples_length;

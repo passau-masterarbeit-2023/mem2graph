@@ -234,17 +234,15 @@ pub fn string_to_usize_vec(string: &str) -> Vec<usize> {
 
 
 lazy_static! {
-    /// generate all possible bit combinations from n_gram in ascending order and associate the 
-    /// corresponding index in a vector
-    static ref BIN_TO_INDEX : HashMap<String, usize> = {
+    /// generate all possible bit combinations from n_gram, and associate them to 0.
+    /// NOTE : accelerate map generation with clone
+    static ref BIN_TO_NB_STARTING : HashMap<String, usize> = {
         let mut bin_to_index = HashMap::new();
-        let mut index = 0;
         let n_gram: Vec<usize> = get_n_gram_from_env();
         for n in n_gram {
             let i_gram_names = generate_bit_combinations(n);
             for name in i_gram_names {
-                bin_to_index.insert(name, index);
-                index += 1;
+                bin_to_index.insert(name, 0);
             }
         }
         bin_to_index
@@ -253,15 +251,15 @@ lazy_static! {
 }
 
 /// get the size of the vector of all possible bit combinations in N_gram
-pub fn get_bin_to_index_size() -> usize {
-    BIN_TO_INDEX.len()
+pub fn get_bin_to_nb_starting_size() -> usize {
+    BIN_TO_NB_STARTING.len()
 }
 
-/// get the index of a binary in the vector of all possible bit combinations in N_gram
-pub fn get_bin_to_index(bin : &String) -> usize {
-    BIN_TO_INDEX.get(bin).unwrap().clone()
-}
 
+/// clone the map of all possible bit combinations in N_gram to their count
+pub fn get_bin_to_nb_starting() -> HashMap<String, usize> {
+    BIN_TO_NB_STARTING.clone()
+}
 
 /// generate all possible bit combinations of size n
 /// bitwise order
@@ -307,24 +305,29 @@ pub fn u64_to_bytes(value: u64) -> [u8; 8] {
 ///
 /// * `data` - A reference to a vector of bytes (`Vec<u8>`) for which the statistics are to be computed.
 ///
-/// # Returns
-///
-/// A tuple containing five `f64` values representing the mean byte value, MAD, standard deviation, skewness, and kurtosis, respectively.
-pub fn compute_statistics(data: &Vec<u8>) -> (f64, f64, f64, f64, f64) {
+/// # Returns an HashMap with the keys corresponding to the name of the statistics and the values corresponding to the value of the statistics
+pub fn compute_statistics(data: &Vec<u8>) -> HashMap<String, f64> {
+    let mut statistics = HashMap::new();
+
+
     let mean = {
         let sum: u64 = data.iter().map(|&x| u64::from(x)).sum();
         sum as f64 / data.len() as f64
     };
+    statistics.insert("mean".to_string(), mean);
 
     let mad = {
         let sum: f64 = data.iter().map(|&x| (x as f64 - mean).abs()).sum();
         sum / data.len() as f64
     };
+    statistics.insert("mad".to_string(), mad);
 
     let std_dev = {
         let variance: f64 = data.iter().map(|&x| (x as f64 - mean).powi(2)).sum::<f64>() / data.len() as f64;
         variance.sqrt()
     };
+    statistics.insert("std_dev".to_string(), std_dev);
+
     // WARN : at least 4 byte needed
     let skew = {
         if data.len() < 4 {
@@ -335,6 +338,7 @@ pub fn compute_statistics(data: &Vec<u8>) -> (f64, f64, f64, f64, f64) {
             (n / ((n - 1.0) * (n - 2.0))) * sum
         }
     };
+    statistics.insert("skew".to_string(), skew);
     // WARN : at least 4 byte needed
     let kurt = {
         if data.len() < 4 {
@@ -345,8 +349,9 @@ pub fn compute_statistics(data: &Vec<u8>) -> (f64, f64, f64, f64, f64) {
             (n * (n + 1.0) / ((n - 1.0) * (n - 2.0) * (n - 3.0))) * sum - (3.0 * (n - 1.0).powi(2) / ((n - 2.0) * (n - 3.0)))
         }
     };
+    statistics.insert("kurt".to_string(), kurt);
 
-    (mean, mad, std_dev, skew, kurt)
+    statistics
 }
 
 /// compute the shannon entropy of a vector of bytes

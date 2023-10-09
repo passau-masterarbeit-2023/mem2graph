@@ -11,7 +11,7 @@ use crate::{graph_structs::Node, graph_embedding::{GraphEmbedding, utils_embeddi
 /// 
 ///     - ancestor (in order of depth, alternate CHN/PTR)
 /// Labels [0.0, 1.0, ..., 0.0],
-pub fn generate_value_node_semantic_embedding(graph_embedding : &GraphEmbedding) -> (Vec<Vec<usize>>, Vec<usize>) {
+pub fn generate_value_node_semantic_embedding(graph_embedding : &GraphEmbedding) -> (Vec<HashMap<String, usize>>, Vec<usize>) {
     let mut samples = Vec::new();
     let mut labels = Vec::new();
 
@@ -22,14 +22,6 @@ pub fn generate_value_node_semantic_embedding(graph_embedding : &GraphEmbedding)
 
         let sample = generate_value_sample(graph_embedding, *addr);
         let label = get_node_label(graph_embedding, *addr);
-
-        // skip trivial samples (if param is set)
-        if *crate::params::REMOVE_TRIVIAL_ZERO_SAMPLES &&
-            sample.ends_with(&vec![0; ((graph_embedding.depth - 1) * 2) - 1]) && 
-            label == 0
-        {
-            continue;
-        }
 
         samples.push(sample);
         labels.push(label);
@@ -68,7 +60,7 @@ pub fn generate_value_sample(
 ) -> HashMap<String, usize> {
     let mut named_features_from_parent_chunk = 
         add_features_from_parent_chunk(graph_embedding, addr);
-    let mut named_features_from_ancestors = get_neighbors(graph_embedding, vec![addr].into_iter().collect(), petgraph::Direction::Incoming);
+    let named_features_from_ancestors = get_neighbors(graph_embedding, vec![addr].into_iter().collect(), petgraph::Direction::Incoming);
     
     // combine the two features hashmaps
     named_features_from_parent_chunk.extend(

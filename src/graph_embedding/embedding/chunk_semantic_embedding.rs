@@ -1,4 +1,4 @@
-use std::hash::Hash;
+use std::collections::HashMap;
 
 use crate::graph_embedding::{GraphEmbedding, utils_embedding::{get_chunk_basics_informations, get_node_label}, neighboring::generate_samples_for_neighbor_nodes_of_the_chunk};
 
@@ -14,7 +14,7 @@ use crate::graph_embedding::{GraphEmbedding, utils_embedding::{get_chunk_basics_
 ///     - label (if the chunk contains a key, or is the ssh or sessionState)
 pub fn generate_chunk_semantic_embedding(
     graph_embedding : &GraphEmbedding
-) -> (Vec<Vec<usize>>, Vec<usize>) {
+) -> (Vec<HashMap<String, usize>>, Vec<usize>) {
     let mut samples = Vec::new();
     let mut labels = Vec::new();
 
@@ -36,28 +36,22 @@ pub fn generate_chunk_semantic_embedding(
 fn generate_semantic_samples_of_a_chunk(
     graph_embedding : &GraphEmbedding, 
     chn_addr: u64
-) -> Vec<usize> {
+) -> HashMap<String, usize> {
 
     let mut named_features = 
         get_chunk_basics_informations(graph_embedding, chn_addr);
 
     // add ancestors
-    let mut ancestors = generate_samples_for_neighbor_nodes_of_the_chunk(
+    let ancestors = generate_samples_for_neighbor_nodes_of_the_chunk(
         graph_embedding, chn_addr, petgraph::Direction::Incoming
     );
-    named_features.append(&mut ancestors);
+    named_features.extend( ancestors);
 
     // add children
-    let mut children = generate_samples_for_neighbor_nodes_of_the_chunk(
+    let children = generate_samples_for_neighbor_nodes_of_the_chunk(
         graph_embedding, chn_addr, petgraph::Direction::Outgoing
     );
-    named_features.append(&mut children);
-    
-
-    
-
-    // add label
-    named_features.push(get_node_label(graph_embedding, chn_addr));
+    named_features.extend(children);
 
     named_features
 }
