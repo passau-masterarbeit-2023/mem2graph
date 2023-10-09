@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use exe_pipeline::chunk_semantic_embedding::gen_and_save_chunk_semantic_embedding;
-use exe_pipeline::chunk_statistic_embedding::run_chunk_statistics_embedding;
+use exe_pipeline::chunk_statistic_embedding::gen_and_save_chunk_statistic_embedding;
 use exe_pipeline::chunk_top_vn_semantic_embedding::gen_and_save_chunk_top_vn_semantic_embedding;
-use exe_pipeline::graph_generation::run_graph_generation;
-use exe_pipeline::pipeline::embedding_pipeline;
+use exe_pipeline::graph_generation::gen_and_save_memory_graph;
+use exe_pipeline::pipeline::{embedding_pipeline, embedding_pipeline_to_csv};
 use exe_pipeline::value_embedding::gen_and_save_value_node_embedding;
 use params::argv::Pipeline;
 
@@ -61,38 +61,54 @@ fn main() {
         match params::ARGV.pipeline {
             params::argv::Pipeline::ValueNodeEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
-                embedding_pipeline(
+                embedding_pipeline_to_csv(
                     path, 
                     output_folder.clone(), 
                     annotation, 
-                    entropy_filter, 
+                    entropy_filter,
+                    false,
                     gen_and_save_value_node_embedding
                 )
             },
             params::argv::Pipeline::Graph => {
-                run_graph_generation(path, output_folder.clone(), annotation, no_value_node)
-            },
-            params::argv::Pipeline::ChunkSemanticEmbedding => {
-                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
                 embedding_pipeline(
                     path, 
                     output_folder.clone(), 
                     annotation, 
+                    entropy_filter,
+                    no_value_node,
+                    gen_and_save_memory_graph,
+                    "dot.gv",
+                )
+            },
+            params::argv::Pipeline::ChunkSemanticEmbedding => {
+                embedding_pipeline_to_csv(
+                    path, 
+                    output_folder.clone(), 
+                    annotation, 
                     entropy_filter, 
+                    no_value_node,
                     gen_and_save_chunk_semantic_embedding
                 )
             },
             params::argv::Pipeline::ChunkStatisticEmbedding => {
-                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
-                run_chunk_statistics_embedding(path, output_folder.clone(), annotation, entropy_filter)
-            },
-            params::argv::Pipeline::ChunkTopVnSemanticEmbedding => {
-                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
-                embedding_pipeline(
+                embedding_pipeline_to_csv(
                     path, 
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter, 
+                    no_value_node,
+                    gen_and_save_chunk_statistic_embedding,
+                )
+            },
+            params::argv::Pipeline::ChunkTopVnSemanticEmbedding => {
+                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
+                embedding_pipeline_to_csv(
+                    path, 
+                    output_folder.clone(), 
+                    annotation, 
+                    entropy_filter,
+                    false,
                     gen_and_save_chunk_top_vn_semantic_embedding
                 )
             },

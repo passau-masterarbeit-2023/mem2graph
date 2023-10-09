@@ -250,12 +250,6 @@ lazy_static! {
     
 }
 
-/// get the size of the vector of all possible bit combinations in N_gram
-pub fn get_bin_to_nb_starting_size() -> usize {
-    BIN_TO_NB_STARTING.len()
-}
-
-
 /// clone the map of all possible bit combinations in N_gram to their count
 pub fn get_bin_to_nb_starting() -> HashMap<String, usize> {
     BIN_TO_NB_STARTING.clone()

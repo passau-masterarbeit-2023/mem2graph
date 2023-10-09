@@ -94,7 +94,7 @@ fn generate_n_gram_for_chunk(
             }
 
             // increment the counter of the window
-            let mut x = n_gram_result.get_mut(&window).unwrap();
+            let x = n_gram_result.get_mut(&window).unwrap();
             *x += 1;
         }
     }

@@ -24,7 +24,7 @@ use self::embedding::value_node_semantic_embedding::generate_value_node_semantic
 type SamplesAndLabels = (Vec<HashMap<String, usize>>, Vec<usize>);
 
 pub struct GraphEmbedding {
-    graph_annotate: GraphAnnotate,
+    pub graph_annotate: GraphAnnotate,
     depth: usize,
 
     entropy_treshold: Option<f64>,
@@ -149,7 +149,7 @@ impl GraphEmbedding {
     }
 
     // ----------------------------- statistic chunk embedding -----------------------------//
-    pub fn generate_statistic_samples_for_all_chunks(&self, n_gram : &Vec<usize>, block_size : usize) -> (Vec<(HashMap<String, usize>, HashMap<String, f64>)>, Vec<usize>) {
+    pub fn generate_chunk_statistic_embedding(&self, n_gram : &Vec<usize>, block_size : usize) -> (Vec<(HashMap<String, usize>, HashMap<String, f64>)>, Vec<usize>) {
         generate_chunk_statistic_embedding(&self, n_gram, block_size)
     }
 

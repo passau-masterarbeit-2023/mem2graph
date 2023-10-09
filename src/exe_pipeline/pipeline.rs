@@ -4,6 +4,26 @@ use std::{time::Instant, path::PathBuf};
 use crate::{graph_embedding::GraphEmbedding, params::argv::{SelectAnnotationLocation, EntropyFilter}, utils::truncate_path_to_last_n_dirs};
 use super::get_raw_file_or_files_from_path;
 
+/// Wrapper for the embedding pipeline, with the CSV saving.
+pub fn embedding_pipeline_to_csv(
+    path: PathBuf, 
+    output_folder: PathBuf, 
+    annotation : SelectAnnotationLocation, 
+    entropy_filter : EntropyFilter,
+    no_value_node : bool,
+    gen_and_save_embedding: fn(PathBuf, &GraphEmbedding) -> usize,
+) {
+    embedding_pipeline(
+        path, 
+        output_folder, 
+        annotation, 
+        entropy_filter, 
+        no_value_node,
+        gen_and_save_embedding,
+        "csv"
+    );
+}
+
 /// Generic pipeline function for embedding generation.
 /// 
 /// > Prepare the data:
@@ -29,7 +49,9 @@ pub fn embedding_pipeline(
     output_folder: PathBuf, 
     annotation : SelectAnnotationLocation, 
     entropy_filter : EntropyFilter,
+    no_value_node : bool,
     gen_and_save_embedding: fn(PathBuf, &GraphEmbedding) -> usize,
+    save_file_extension: &str,
 ) {
     // start timer
     let start_time = Instant::now();
@@ -71,10 +93,11 @@ pub fn embedding_pipeline(
             let file_name = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap();
             let csv_pipeline_prefix = "chunk_top_vn_semantic";
             let csv_file_name = format!(
-                "{}_{}_{}_samples.csv", 
+                "{}_{}_{}_{}", 
                 csv_pipeline_prefix, 
                 dir_path_end_str.replace("/", "_"),
                 file_name,
+                save_file_extension
             );
             let output_file_path = output_folder.clone().join(csv_file_name.clone());
             if output_file_path.exists() {
@@ -93,7 +116,7 @@ pub fn embedding_pipeline(
                 *crate::params::EMBEDDING_DEPTH,
                 entropy_filter,
                 annotation,
-                false
+                no_value_node,
             );
             match graph_embedding {
                 Ok(_) => {},

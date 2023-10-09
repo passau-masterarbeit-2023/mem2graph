@@ -34,16 +34,6 @@ fn get_raw_file_or_files_from_path(path: PathBuf) -> Vec<PathBuf> {
     return raw_file_paths;
 }
 
-
-fn progress_bar(current: usize, total: usize, length: usize) -> String {
-    let ratio = current as f64 / total as f64;
-    let filled_len = (ratio * length as f64).round() as usize;
-    let empty_len = length - filled_len;
-
-    format!("|{}{}| {:.2?}%", "█".repeat(filled_len), " ".repeat(empty_len), (ratio * 100.0))
-}
-
-
 /// Save the samples and labels to a CSV file.
 pub fn save_embedding(samples: Vec<HashMap<String, usize>>, labels: Vec<usize>, csv_path: PathBuf) {
     assert!(!samples.is_empty(), "Samples cannot be empty for CSV header extraction.");
