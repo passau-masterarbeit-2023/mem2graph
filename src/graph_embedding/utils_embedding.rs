@@ -1,3 +1,5 @@
+use std::{hash::Hash, collections::HashMap};
+
 use crate::{graph_structs::Node, params::BLOCK_BYTE_SIZE, utils::{to_n_bits_binary, u64_to_bytes}};
 
 use super::GraphEmbedding;
@@ -86,19 +88,50 @@ pub fn get_node_label(graph_embedding : &GraphEmbedding, addr : u64) -> usize {
 }
 
 /// extract the basics information of the chunk
-/// Return [addr, size, nb_pointer]
-pub fn get_chunk_basics_informations(graph_embedding : &GraphEmbedding, addr: u64) -> Vec<usize> {
-    let mut info = Vec::new();
+/// Return [
+///     ("chn_addr", addr), 
+///     ("chunk_byte_size", byte_size),
+///     ("chunk_ptrs", nb_pointer_nodes),
+/// ]
+pub fn get_chunk_basics_informations(
+    graph_embedding : &GraphEmbedding, 
+    addr: u64,
+) -> HashMap<String, usize> {
+    let mut named_features = HashMap::new();
     let node: &Node = graph_embedding.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
 
     // add features from parent chn node
     match node {
         Node::ChunkHeaderNode(chunk_header_node) => {
-            info.push(chunk_header_node.addr.try_into().expect("addr overflow in embedding")); // WARN : can be overflow !!!!!!
-            info.push(chunk_header_node.byte_size);
-            info.push(chunk_header_node.nb_pointer_nodes);
+            named_features.insert(
+                "chn_addr".to_string(),
+                chunk_header_node.addr as usize
+            );
+
+            let block_position_in_chunk = (
+                (node.get_address() - chunk_header_node.addr) / crate::params::BLOCK_BYTE_SIZE as u64
+            ) as usize;
+            named_features.insert(
+                "block_position_in_chunk".to_string(),
+                block_position_in_chunk
+            );
+
+            named_features.insert(
+                "chunk_byte_size".to_string(),
+                chunk_header_node.byte_size as usize
+            );
+
+            named_features.insert(
+                "chunk_ptrs".to_string(),
+                chunk_header_node.nb_pointer_nodes as usize
+            );
+
+            named_features.insert(
+                "chunk_vns".to_string(),
+                chunk_header_node.nb_value_nodes as usize
+            );
         },
         _ => panic!("Node is not a chunk"),
     }
-    info
+    named_features
 }

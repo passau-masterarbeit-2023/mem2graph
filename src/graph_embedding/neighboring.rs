@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use crate::graph_structs::Node;
 
@@ -6,8 +6,12 @@ use super::GraphEmbedding;
 
 /// get the children/ancestor (given direction) of a node
 /// in order : chn_depth_1, ptr_depth_1, chn_depth_2, ptr_depth_2, ... , chn_depth_n, ptr_depth_n
-pub fn get_neighbors(graph_embedding : &GraphEmbedding, addrs: HashSet<u64>, dir : petgraph::Direction) -> Vec<usize> {
-    let mut result : Vec<usize> = Vec::new();
+pub fn get_neighbors(
+    graph_embedding : &GraphEmbedding, 
+    addrs: HashSet<u64>, 
+    direction : petgraph::Direction,
+) -> HashMap<String, usize> {
+    let mut result = HashMap::new();
     // vectorize ancestors
     let mut current_node_addrs: HashSet<u64>;
     let mut ancestor_addrs: HashSet<u64> = addrs;
@@ -37,7 +41,7 @@ pub fn get_neighbors(graph_embedding : &GraphEmbedding, addrs: HashSet<u64>, dir
 
             // get the next ancestors
             for neighbor in graph_embedding.graph_annotate.graph_data.graph.edges_directed(
-                *ancestor_addr, dir
+                *ancestor_addr, direction
             ) {
                 let edge_weight = neighbor.2;
                 let neighbor_addr = neighbor.1;
@@ -57,8 +61,22 @@ pub fn get_neighbors(graph_embedding : &GraphEmbedding, addrs: HashSet<u64>, dir
             }
         }
         
-        result.push(nb_chn); // add number of chns for this depth
-        result.push(nb_ptr);  // add number of ptrs for this depth
+        let feature_direction_name = match direction {
+            petgraph::Direction::Incoming => "ancestor",
+            petgraph::Direction::Outgoing => "children",
+        };
+
+        // add number of chns for this depth
+        let feature_name_chn = format!(
+            "chns_{}_{}", feature_direction_name, i + 1
+        );
+        result.insert(feature_name_chn, nb_chn);
+
+        // add number of ptrs for this depth
+        let feature_name_ptr = format!(
+            "ptrs_{}_{}", feature_direction_name, i + 1
+        );
+        result.insert(feature_name_ptr, nb_ptr);
     }
 
     result
@@ -75,15 +93,15 @@ pub fn get_neighbors(graph_embedding : &GraphEmbedding, addrs: HashSet<u64>, dir
 pub fn generate_samples_for_neighbor_nodes_of_the_chunk(
     graph_embedding : &GraphEmbedding, 
     chn_addr : u64, 
-    dir : petgraph::Direction
-) -> Vec<usize> {
+    direction : petgraph::Direction
+) -> HashMap<String, usize> {
     // get the children for starting the algorithm
     let mut ancestor_addrs: HashSet<u64> = HashSet::new();
 
     if graph_embedding.graph_annotate.graph_data.no_value_node {
         // if we have no value node, we begin from the chn node directly
         ancestor_addrs.insert(chn_addr);
-    }else{
+    } else {
         // else we begin from the children of the chn node
         let children = 
         graph_embedding.graph_annotate.graph_data.graph.neighbors_directed(
@@ -94,5 +112,5 @@ pub fn generate_samples_for_neighbor_nodes_of_the_chunk(
         }
     }
     
-    get_neighbors(graph_embedding, ancestor_addrs, dir)
+    get_neighbors(graph_embedding, ancestor_addrs, direction)
 }

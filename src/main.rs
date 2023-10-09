@@ -1,8 +1,11 @@
 use std::path::PathBuf;
 
+use exe_pipeline::chunk_semantic_embedding::gen_and_save_chunk_semantic_embedding;
 use exe_pipeline::chunk_statistic_embedding::run_chunk_statistics_embedding;
-use exe_pipeline::chunk_top_vn_semantic_embedding::run_chunk_top_vn_semantic_embedding;
-use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation, chunk_semantic_embedding::run_chunk_semantic_embedding};
+use exe_pipeline::chunk_top_vn_semantic_embedding::gen_and_save_chunk_top_vn_semantic_embedding;
+use exe_pipeline::graph_generation::run_graph_generation;
+use exe_pipeline::pipeline::embedding_pipeline;
+use exe_pipeline::value_embedding::gen_and_save_value_node_embedding;
 use params::argv::Pipeline;
 
 // link modules
@@ -58,13 +61,26 @@ fn main() {
         match params::ARGV.pipeline {
             params::argv::Pipeline::ValueNodeEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
-                run_value_embedding(path, output_folder.clone(), annotation, entropy_filter)
+                embedding_pipeline(
+                    path, 
+                    output_folder.clone(), 
+                    annotation, 
+                    entropy_filter, 
+                    gen_and_save_value_node_embedding
+                )
             },
             params::argv::Pipeline::Graph => {
                 run_graph_generation(path, output_folder.clone(), annotation, no_value_node)
             },
             params::argv::Pipeline::ChunkSemanticEmbedding => {
-                run_chunk_semantic_embedding(path, output_folder.clone(), annotation, no_value_node, entropy_filter)
+                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
+                embedding_pipeline(
+                    path, 
+                    output_folder.clone(), 
+                    annotation, 
+                    entropy_filter, 
+                    gen_and_save_chunk_semantic_embedding
+                )
             },
             params::argv::Pipeline::ChunkStatisticEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
@@ -72,13 +88,22 @@ fn main() {
             },
             params::argv::Pipeline::ChunkTopVnSemanticEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
-                run_chunk_top_vn_semantic_embedding(path, output_folder.clone(), annotation, entropy_filter)
+                embedding_pipeline(
+                    path, 
+                    output_folder.clone(), 
+                    annotation, 
+                    entropy_filter, 
+                    gen_and_save_chunk_top_vn_semantic_embedding
+                )
             },
         }
     }
 }
 
 /// This function is call if the flag '-v' is used on a pipeline that doesn't use it
+/// 
+/// NOTE: The flag '-v' is used to remove the value node and the pointer node
+/// This function ensure that this is not done on a pipeline that use value nodes.
 fn no_arg_no_value_and_pointer_node(pipeline : Pipeline) {
     if params::ARGV.no_value_node {
         panic!("🚩 The flag '-v' is used with the wrong pipeline : {:?}", pipeline);

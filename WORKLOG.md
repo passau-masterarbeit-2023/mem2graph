@@ -1,11 +1,15 @@
 # Work logs
 
+* [ ] Decouverte: verify and quantify the average number of connected chunk per heap dump.
 * [ ] Create new embedding: embed just the first block of a chunk. Optionally, add a filtering based on entropy.
 * [ ] Finish entropy filtering. Fix, since some keys are missing.
 * [ ] Test the pipelines and debug
+* [ ] Add in chunk semantic embedding, and chunk top vn embedding, the chunk number in the heap dump (0, 1, 2, 3...)
+* [ ] Factorise CSV header (static list of factory function)
 
 ### Mon 9 Oct 2023
 
+Added new pipeline `chunk_top_vn_semantic_embedding`.
 
 ### Fri 4 Oct 2023
 

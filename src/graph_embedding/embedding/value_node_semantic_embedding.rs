@@ -1,4 +1,6 @@
-use crate::{graph_structs::Node, graph_embedding::{GraphEmbedding, utils_embedding::get_node_label, neighboring::get_neighbors}};
+use std::collections::HashMap;
+
+use crate::{graph_structs::Node, graph_embedding::{GraphEmbedding, utils_embedding::{get_node_label, get_chunk_basics_informations}, neighboring::get_neighbors}};
 
 
 /// generate semantic embedding of the nodes
@@ -37,9 +39,10 @@ pub fn generate_value_node_semantic_embedding(graph_embedding : &GraphEmbedding)
 }
 
 /// get the semantics data from the parent chunk of a node
-fn add_features_from_parent_chunk(graph_embedding : &GraphEmbedding, addr: u64) -> Vec<usize> {
-    let mut feature: Vec<usize> = Vec::new();
-
+fn add_features_from_parent_chunk(
+    graph_embedding : &GraphEmbedding, 
+    addr: u64,
+) -> HashMap<String, usize> {
     let node: &Node = graph_embedding.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
     let parent_chn_node: &Node = graph_embedding.graph_annotate.graph_data.addr_to_node.get(
         &node.get_parent_chn_addr().unwrap_or_else(
@@ -52,26 +55,24 @@ fn add_features_from_parent_chunk(graph_embedding : &GraphEmbedding, addr: u64) 
     ).unwrap();
 
     // add features from parent chn node
-    match parent_chn_node {
-        Node::ChunkHeaderNode(chunk_header_node) => {
-            feature.push(chunk_header_node.byte_size);
-            feature.push(((node.get_address() - chunk_header_node.addr) / crate::params::BLOCK_BYTE_SIZE as u64) as usize);
-            feature.push(chunk_header_node.nb_pointer_nodes);
-            feature.push(chunk_header_node.nb_value_nodes);
-        },
-        _ => // if the node is not in a chunk, we return a vector of 0
-            feature.append(&mut vec![0; 3]),
-    }
-
-    feature
+    get_chunk_basics_informations(
+        graph_embedding, 
+        parent_chn_node.get_address(),
+    )
 }
 
 /// generate the value embedding of a value node
-pub fn generate_value_sample(graph_embedding : &GraphEmbedding, addr: u64) -> Vec<usize> {
-    let mut feature: Vec<usize> = add_features_from_parent_chunk(graph_embedding, addr);
-    let mut ancestor_features = get_neighbors(graph_embedding, vec![addr].into_iter().collect(), petgraph::Direction::Incoming);
+pub fn generate_value_sample(
+    graph_embedding : &GraphEmbedding, 
+    addr: u64
+) -> HashMap<String, usize> {
+    let mut named_features_from_parent_chunk = 
+        add_features_from_parent_chunk(graph_embedding, addr);
+    let mut named_features_from_ancestors = get_neighbors(graph_embedding, vec![addr].into_iter().collect(), petgraph::Direction::Incoming);
     
-
-    feature.append(&mut ancestor_features); // ancestor_feature is left empty
-    feature
+    // combine the two features hashmaps
+    named_features_from_parent_chunk.extend(
+        named_features_from_ancestors
+    );
+    named_features_from_parent_chunk
 }

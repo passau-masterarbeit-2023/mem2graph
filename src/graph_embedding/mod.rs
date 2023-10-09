@@ -20,6 +20,8 @@ use self::embedding::chunk_statistic_embedding::generate_chunk_statistic_embeddi
 use self::embedding::chunk_top_vn_semantic_embedding::generate_chunk_top_vn_semantic_embedding;
 use self::embedding::value_node_semantic_embedding::generate_value_node_semantic_embedding;
 
+type SamplesAndLabels = (Vec<Vec<usize>>, Vec<usize>);
+
 pub struct GraphEmbedding {
     graph_annotate: GraphAnnotate,
     depth: usize,
@@ -141,7 +143,7 @@ impl GraphEmbedding {
 
     #[cfg(test)]
     fn save_samples_and_labels_to_csv(&self, csv_path: PathBuf) {
-        let (samples, labels) = self.generate_semantic_block_embedding();
+        let (samples, labels) = self.generate_value_node_semantic_embedding();
         save_value_embeding(samples, labels, csv_path, self.depth);
     }
 
@@ -151,17 +153,17 @@ impl GraphEmbedding {
     }
 
     // ----------------------------- semantic chunk embedding -----------------------------//
-    pub fn generate_semantic_samples_for_all_chunks(&self) -> Vec<Vec<usize>> {
+    pub fn generate_chunk_semantic_embedding(&self) -> SamplesAndLabels {
         generate_chunk_semantic_embedding(&self)
     }
 
     // ----------------------------- value embedding -----------------------------//
-    pub fn generate_semantic_block_embedding(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
+    pub fn generate_value_node_semantic_embedding(&self) -> SamplesAndLabels {
         generate_value_node_semantic_embedding(&self)
     }
 
     // ----------------------------- chunk top value node embedding -----------------------------//
-    pub fn generate_chunk_top_vn_semantic_embedding(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
+    pub fn generate_chunk_top_vn_semantic_embedding(&self) -> SamplesAndLabels {
         generate_chunk_top_vn_semantic_embedding(&self)
     }
 

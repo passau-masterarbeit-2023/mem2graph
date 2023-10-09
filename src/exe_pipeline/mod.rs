@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
-
+pub mod pipeline;
 pub mod value_embedding;
 pub mod graph_generation;
 pub mod chunk_semantic_embedding;
@@ -40,14 +40,4 @@ fn progress_bar(current: usize, total: usize, length: usize) -> String {
     let empty_len = length - filled_len;
 
     format!("|{}{}| {:.2?}%", "█".repeat(filled_len), " ".repeat(empty_len), (ratio * 100.0))
-}
-
-/// Wrapper. Since we are using the term "chunk" everywhere,
-/// there is a real need to hide the built-in "chunk" batching
-/// function. Keep programmer's sanity.
-pub fn get_file_batches<'a>(
-    files: &'a Vec<PathBuf>,
-    batch_size: usize
-) -> std::slice::Chunks<'a, PathBuf> {
-    files.chunks(batch_size)
 }
