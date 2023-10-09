@@ -40,6 +40,9 @@ fn generate_semantic_samples_of_a_chunk(graph_embedding : &GraphEmbedding, chn_a
         graph_embedding, chn_addr, petgraph::Direction::Outgoing
     );
     feature.append(&mut children);
+    
+
+    
 
     // add label
     feature.push(get_node_label(graph_embedding, chn_addr));
