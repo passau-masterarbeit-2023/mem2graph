@@ -84,6 +84,8 @@ pub enum EntropyFilter {
 pub enum Pipeline {
     /// make the value embedding
     ValueNodeEmbedding,
+    /// make chunk top value node semantic embedding
+    ChunkTopVnSemanticEmbedding,
     /// make the graph and save it
     Graph,
     /// make a semantic embedding of the chunk

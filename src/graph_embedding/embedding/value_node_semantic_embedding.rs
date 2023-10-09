@@ -42,7 +42,13 @@ fn add_features_from_parent_chunk(graph_embedding : &GraphEmbedding, addr: u64) 
 
     let node: &Node = graph_embedding.graph_annotate.graph_data.addr_to_node.get(&addr).unwrap();
     let parent_chn_node: &Node = graph_embedding.graph_annotate.graph_data.addr_to_node.get(
-        &node.get_parent_chn_addr().unwrap()
+        &node.get_parent_chn_addr().unwrap_or_else(
+            || panic!(
+                "The chn addr should be set, for node at address {:#x}, for file {}", 
+                addr, 
+                graph_embedding.graph_annotate.graph_data.heap_dump_data.as_ref().unwrap().heap_dump_raw_file_path.to_str().unwrap()
+            )
+        )
     ).unwrap();
 
     // add features from parent chn node
@@ -61,7 +67,7 @@ fn add_features_from_parent_chunk(graph_embedding : &GraphEmbedding, addr: u64) 
 }
 
 /// generate the value embedding of a value node
-fn generate_value_sample(graph_embedding : &GraphEmbedding, addr: u64) -> Vec<usize> {
+pub fn generate_value_sample(graph_embedding : &GraphEmbedding, addr: u64) -> Vec<usize> {
     let mut feature: Vec<usize> = add_features_from_parent_chunk(graph_embedding, addr);
     let mut ancestor_features = get_neighbors(graph_embedding, vec![addr].into_iter().collect(), petgraph::Direction::Incoming);
     

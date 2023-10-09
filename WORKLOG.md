@@ -1,14 +1,21 @@
 # Work logs
 
 * [ ] Create new embedding: embed just the first block of a chunk. Optionally, add a filtering based on entropy.
-* [ ] Split the file of embedding.
-* [ ] filtering by entropy
+* [ ] Finish entropy filtering. Fix, since some keys are missing.
+* [ ] Test the pipelines and debug
+
+### Mon 9 Oct 2023
+
+
+### Fri 4 Oct 2023
+
+* [X] Split the file of embedding.
+* [X] filtering by entropy
 
 ### Tue 3 Oct 2023
 
 * [X] Refactoring: Put KeyData outside of Node. !!!
 * [X] Refactoring multi-annotation-embedding
-
 
 ### Mon 2 Oct 2023
 

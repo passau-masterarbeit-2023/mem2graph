@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use exe_pipeline::chunk_statistic_embedding::run_chunk_statistics_embedding;
+use exe_pipeline::chunk_top_vn_semantic_embedding::run_chunk_top_vn_semantic_embedding;
 use exe_pipeline::{value_embedding::run_value_embedding, graph_generation::run_graph_generation, chunk_semantic_embedding::run_chunk_semantic_embedding};
 use params::argv::Pipeline;
 
@@ -68,6 +69,10 @@ fn main() {
             params::argv::Pipeline::ChunkStatisticEmbedding => {
                 no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
                 run_chunk_statistics_embedding(path, output_folder.clone(), annotation, entropy_filter)
+            },
+            params::argv::Pipeline::ChunkTopVnSemanticEmbedding => {
+                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
+                run_chunk_top_vn_semantic_embedding(path, output_folder.clone(), annotation, entropy_filter)
             },
         }
     }

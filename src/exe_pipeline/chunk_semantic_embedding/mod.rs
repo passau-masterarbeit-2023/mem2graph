@@ -21,7 +21,7 @@ pub fn run_chunk_semantic_embedding(path: PathBuf, output_folder: PathBuf, annot
     let heap_dump_raw_file_paths: Vec<PathBuf> = get_raw_file_or_files_from_path(path.clone());
 
     let nb_files = heap_dump_raw_file_paths.len();
-    let chunk_size = crate::params::NB_FILES_PER_CHUNK.clone();
+    let chunk_size = crate::params::NB_FILES_PER_FILE_BATCH.clone();
     let mut chunck_index = 0;
 
     // test if there is at least one file

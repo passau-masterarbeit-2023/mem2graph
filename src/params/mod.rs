@@ -158,7 +158,7 @@ lazy_static! {
         path
     };
 
-    pub static ref NB_FILES_PER_CHUNK: usize = {
+    pub static ref NB_FILES_PER_FILE_BATCH: usize = {
         let nb_files_per_chunk = std::env::var("NB_FILES_PER_CHUNK");
         match nb_files_per_chunk {
             Ok(nb) => nb.parse::<usize>().unwrap(),

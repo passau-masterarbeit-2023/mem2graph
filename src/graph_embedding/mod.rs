@@ -17,6 +17,7 @@ use std::path::PathBuf;
 
 use self::embedding::chunk_semantic_embedding::generate_chunk_semantic_embedding;
 use self::embedding::chunk_statistic_embedding::generate_chunk_statistic_embedding;
+use self::embedding::chunk_top_vn_semantic_embedding::generate_chunk_top_vn_semantic_embedding;
 use self::embedding::value_node_semantic_embedding::generate_value_node_semantic_embedding;
 
 pub struct GraphEmbedding {
@@ -73,6 +74,7 @@ impl GraphEmbedding {
                 let mut entropy_ordonned_chn_addr = self.graph_annotate.graph_data.chn_addrs.clone();
 
                 // sort the vector by entropy descending
+                // TODO: Finish the algo
                 entropy_ordonned_chn_addr.sort_by(|addr_a, addr_b| {
                     let node_a = self.graph_annotate.graph_data.addr_to_node.get(addr_a).unwrap();
                     let node_b = self.graph_annotate.graph_data.addr_to_node.get(addr_b).unwrap();
@@ -144,49 +146,25 @@ impl GraphEmbedding {
     }
 
     // ----------------------------- statistic chunk embedding -----------------------------//
-    /// generate statistic embedding of all chunks
-    /// in order :
-    ///    - CHN addresse (not really usefull for learning, but can bu usefull to further analyse the data)
-    ///    - N-gram of the chunk data (in number of bit, ascending order, bitwise order)
-    /// Common statistic (f64)
-    ///    - Mean Byte Value
-    ///    - Mean Absolute Deviation (MAD)
-    ///    - Standard Deviation
-    ///    - Skewness
-    ///    - Kurtosis
-    ///    - Shannon entropy
     pub fn generate_statistic_samples_for_all_chunks(&self, n_gram : &Vec<usize>, block_size : usize) -> Vec<(Vec<usize>, Vec<f64>)> {
         generate_chunk_statistic_embedding(&self, n_gram, block_size)
     }
 
     // ----------------------------- semantic chunk embedding -----------------------------//
-    /// generate semantic embedding of all the chunks
-    /// in order :
-    ///     - chunk header addresse (not really usefull for learning, but can bu usefull to further analyse the data)
-    ///     - chunk size
-    ///     - nb pointer
-    /// 
-    ///     - ancestor (in order of depth, alternate CHN/PTR)
-    ///     - children (same)
-    ///     - label (if the chunk contains a key, or is the ssh or sessionState)
     pub fn generate_semantic_samples_for_all_chunks(&self) -> Vec<Vec<usize>> {
         generate_chunk_semantic_embedding(&self)
     }
 
-
     // ----------------------------- value embedding -----------------------------//
-
-    /// generate semantic embedding of the nodes
-    ///     - parent chn address
-    ///     - position in the chunk
-    ///     - nb pointer
-    ///     - nb value
-    /// 
-    ///     - ancestor (in order of depth, alternate CHN/PTR)
-    /// Labels [0.0, 1.0, ..., 0.0],
     pub fn generate_semantic_block_embedding(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
         generate_value_node_semantic_embedding(&self)
     }
+
+    // ----------------------------- chunk top value node embedding -----------------------------//
+    pub fn generate_chunk_top_vn_semantic_embedding(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
+        generate_chunk_top_vn_semantic_embedding(&self)
+    }
+
 }
 
 #[cfg(test)]

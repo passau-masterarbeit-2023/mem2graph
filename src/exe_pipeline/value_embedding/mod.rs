@@ -13,7 +13,7 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : S
     // start timer
     let start_time = Instant::now();
 
-    // cut the path to just after "phdtrack_data"
+    // cut the path
     let dir_path_ = path.clone();
     let dir_path_end = truncate_path_to_last_n_dirs(&dir_path_, 5);
     let dir_path_end_str = dir_path_end.to_str().unwrap(); 
@@ -21,8 +21,8 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : S
     let heap_dump_raw_file_paths: Vec<PathBuf> = get_raw_file_or_files_from_path(path.clone());
 
     let nb_files = heap_dump_raw_file_paths.len();
-    let chunk_size = crate::params::NB_FILES_PER_CHUNK.clone();
-    let mut chunck_index = 0;
+    let batch_size = crate::params::NB_FILES_PER_FILE_BATCH.clone();
+    let mut batch_index = 0;
 
     // test if there is at least one file
     if nb_files == 0 {
@@ -30,22 +30,23 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : S
     }
 
     // run the sample and label generation for each file by chunks
-    for chunk in heap_dump_raw_file_paths.chunks(chunk_size) {
+    let batches: std::slice::Chunks<'_, PathBuf> = heap_dump_raw_file_paths.chunks(batch_size);
+    for batch in batches {
         // chunk time
         let chunk_start_time = Instant::now();
 
         // check save
-        let csv_file_name = format!("{}_chunck_idx-{}_samples.csv", dir_path_end_str.replace("/", "_"), chunck_index);
+        let csv_file_name = format!("{}_chunck_idx-{}_samples.csv", dir_path_end_str.replace("/", "_"), batch_index);
         let csv_path = output_folder.clone().join(csv_file_name.clone());
         if csv_path.exists() {
             log::info!(" 🔵 [N°{}-{} / {} files] [id: {}] already saved (csv: {}).", 
-                chunck_index*chunk_size,
-                chunck_index*chunk_size + chunk_size - 1,
+                batch_index*batch_size,
+                batch_index*batch_size + batch_size - 1,
                 nb_files, 
-                chunck_index,
+                batch_index,
                 csv_file_name.as_str()
             );
-            chunck_index += 1;
+            batch_index += 1;
             continue;
         }
 
@@ -57,10 +58,10 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : S
 
         // generate samples and labels
         let results: Vec<_> = pool.install(|| {
-            chunk.par_iter().enumerate().map(|(i, heap_dump_raw_file_path)| {
+            batch.par_iter().enumerate().map(|(i, heap_dump_raw_file_path)| {
                 let current_thread = std::thread::current();
                 let thread_name = current_thread.name().unwrap_or("<unnamed>");
-                let global_idx = i + chunk_size*chunck_index;
+                let global_idx = i + batch_size*batch_index;
 
                 let graph_embedding = GraphEmbedding::new(
                     heap_dump_raw_file_path.clone(),
@@ -112,7 +113,7 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : S
         // log time
         let chunk_duration = chunk_start_time.elapsed();
         let total_duration = start_time.elapsed();
-        let progress = progress_bar(chunck_index * chunk_size, nb_files, 20);
+        let progress = progress_bar(batch_index * batch_size, nb_files, 20);
         log::info!(
             " ⏱️  [chunk: {:.2?} / total: {:.2?}] {}",
             chunk_duration,
@@ -120,7 +121,7 @@ pub fn run_value_embedding(path: PathBuf, output_folder: PathBuf, annotation : S
             progress
         );
 
-        chunck_index += 1;
+        batch_index += 1;
     }
 
 }
