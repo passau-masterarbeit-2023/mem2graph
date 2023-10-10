@@ -230,7 +230,10 @@ mod tests {
         ).unwrap();
 
         // check that there is the SshStructNodeAnnotation
-        let ssh_struct_annotation = graph_annotate.graph_data.node_addr_to_annotations.get(&*crate::tests::TEST_SSH_STRUCT_ADDR);
+        let ssh_struct_annotation
+         = graph_annotate.graph_data.node_addr_to_annotations.get(
+            &*crate::tests::TEST_SSH_STRUCT_ADDR
+        );
         let ssh_struct_addr = &*crate::tests::TEST_SSH_STRUCT_ADDR;
         
         assert!(ssh_struct_annotation.is_some());

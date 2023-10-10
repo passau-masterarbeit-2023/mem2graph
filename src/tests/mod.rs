@@ -32,7 +32,7 @@ pub fn setup() {
 }
 
 lazy_static! {
-    // all data comes from: data/302-1644391327-heap.raw
+    // all data comes from: ~~data/302-1644391327-heap.raw~~ -> data/17016-1643962152-heap.raw (cleaned)
     // and its associated json file
     // WARN: Beware of Endianness, not the same between addr indexes and addr values
     // xxd example:
@@ -43,50 +43,47 @@ lazy_static! {
     // NOTE: pointer representation is in little endian, and ends with 00 00
     
     // WARN: HEAP_START is in big endian!!!
-    // test range: [620_599_085_909 ... 620_599_085_909 + 282_624 = 620_599_368_533]
-    // Big endian HEAP_START range [94_058_013_691_904 ]
-    // 94_058_013_692_960 not in range
-    // 19291223004192 not in range
     
-    pub static ref TEST_MIN_ADDR: u64 = hex_str_to_addr("55a6d2356000", Endianness::Big).unwrap(); // HEAP_START
-    pub static ref TEST_MAX_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00045000", Endianness::Big).unwrap(); // HEAP_START + HEAP_SIZE
+    pub static ref TEST_HEAP_START_ADDR: u64 = hex_str_to_addr("558343d1a000", Endianness::Big).unwrap(); // HEAP_START
+    static ref TEST_HEAP_SIZE: u64 = 135168; // heap size obtained with command: stat -c %s test/17016-1643962152-heap.raw
+    pub static ref TEST_HEAP_END_ADDR: u64 = *TEST_HEAP_START_ADDR + *TEST_HEAP_SIZE; // HEAP_START + HEAP_SIZE
 
-    pub static ref TEST_PTR_1_VALUE_STR: String = "206435d2a6550000".to_string();
+    pub static ref TEST_PTR_1_VALUE_STR: String = "d061d24383550000".to_string();
     pub static ref TEST_PTR_1_VALUE: u64 = hex_str_to_addr(&*TEST_PTR_1_VALUE_STR.as_str(), Endianness::Little).unwrap();
     pub static ref TEST_PTR_1_VALUE_BYTES: [u8; BLOCK_BYTE_SIZE] = hex_str_to_block_bytes(TEST_PTR_1_VALUE_STR.as_str());
-    pub static ref TEST_PTR_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000300", Endianness::Big).unwrap();
+    pub static ref TEST_PTR_1_ADDR: u64 = *TEST_HEAP_START_ADDR + hex_str_to_addr("00000050", Endianness::Big).unwrap();
     
-    pub static ref TEST_PTR_2_VALUE_STR: String = "206435d2a6550000".to_string();
+    pub static ref TEST_PTR_2_VALUE_STR: String = "306bd24383550000".to_string();
     pub static ref TEST_PTR_2_VALUE: u64 = hex_str_to_addr(&*TEST_PTR_2_VALUE_STR.as_str(), Endianness::Little).unwrap();
-    pub static ref TEST_PTR_2_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000308", Endianness::Big).unwrap();
+    pub static ref TEST_PTR_2_ADDR: u64 = *TEST_HEAP_START_ADDR + hex_str_to_addr("00000060", Endianness::Big).unwrap();
     pub static ref TEST_PTR_2_VALUE_BYTES: [u8; BLOCK_BYTE_SIZE] = hex_str_to_block_bytes(TEST_PTR_2_VALUE_STR.as_str());
 
-    pub static ref TEST_VAL_1_VALUE_STR: String = "47e000340039ab01".to_string();
+    pub static ref TEST_VAL_1_VALUE_STR: String = "2f746d702f737368".to_string();
     pub static ref TEST_VAL_1_VALUE: u64 = hex_str_to_addr(&*TEST_VAL_1_VALUE_STR.as_str(), Endianness::Little).unwrap();
-    pub static ref TEST_VAL_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000310", Endianness::Big).unwrap();
+    pub static ref TEST_VAL_1_ADDR: u64 = *TEST_HEAP_START_ADDR + hex_str_to_addr("000002a0", Endianness::Big).unwrap();
     pub static ref TEST_VAL_1_VALUE_BYTES: [u8; BLOCK_BYTE_SIZE] = hex_str_to_block_bytes(TEST_VAL_1_VALUE_STR.as_str());
 
     // data structure
     // 00000290:00000000000000002100000000000000........!.......
     // 000002a0:2f746d702f7373686400000000000000/tmp/sshd.......
-    pub static ref TEST_MALLOC_HEADER_1_DTS_STR: String = "2100000000000000".to_string();
-    pub static ref TEST_MALLOC_HEADER_1_DTS_SIZE: usize = hex_str_to_addr(&*TEST_MALLOC_HEADER_1_DTS_STR.as_str(), params::MALLOC_HEADER_ENDIANNESS).unwrap() as usize;
-    pub static ref TEST_MALLOC_HEADER_1_ADDR: u64 = *TEST_MIN_ADDR + hex_str_to_addr("00000298", Endianness::Big).unwrap();
+    pub static ref TEST_MALLOC_HEADER_1_CHUNK_STR: String = "5102000000000000".to_string();
+    pub static ref TEST_MALLOC_HEADER_1_CHUNK_SIZE: usize = hex_str_to_addr(&*TEST_MALLOC_HEADER_1_CHUNK_STR.as_str(), params::MALLOC_HEADER_ENDIANNESS).unwrap() as usize;
+    pub static ref TEST_MALLOC_HEADER_1_ADDR: u64 = *TEST_HEAP_START_ADDR + hex_str_to_addr("00000008", Endianness::Big).unwrap();
 
-    pub static ref TEST_GRAPH_DOT_DIR_PATH: String = "graphs/graphs/".to_string();
-    pub static ref TEST_HEAP_DUMP_FILE_NUMBER: String = "302-1644391327".to_string(); // 302-1644391327-heap.raw
+    pub static ref TEST_GRAPH_DOT_DIR_PATH: String = "test/graphs/".to_string();
+    pub static ref TEST_HEAP_DUMP_FILE_NUMBER: String = "17016-1643962152".to_string(); // 17016-1643962152-heap.raw
 
     // key F 
-    pub static ref TEST_KEY_F_ADDR_STR: String = "55a6d2364240".to_string();
+    pub static ref TEST_KEY_F_ADDR_STR: String = "558343d20e90".to_string();
     pub static ref TEST_KEY_F_ADDR: u64 = hex_str_to_addr(&*TEST_KEY_F_ADDR_STR.as_str(), Endianness::Big).unwrap();
-    pub static ref TEST_KEY_F_BYTES: Vec<u8> = hex::decode("0368f2c029ff3c35355688214e0237d7").unwrap();
+    pub static ref TEST_KEY_F_BYTES: Vec<u8> = hex::decode("60a2915bc3bedc7b58b763f2ea0c8b85").unwrap();
     pub static ref TEST_KEY_F_NAME: String = "KEY_F".to_string();
     pub static ref TEST_KEY_F_LEN: usize = TEST_KEY_F_BYTES.len();
 
     // special nodes
-    pub static ref TEST_SSH_STRUCT_ADDR_STR: String = "55a6d2363630".to_string();
+    pub static ref TEST_SSH_STRUCT_ADDR_STR: String = "558343d2aec0".to_string();
     pub static ref TEST_SSH_STRUCT_ADDR: u64 = hex_str_to_addr(&*TEST_SSH_STRUCT_ADDR_STR.as_str(), Endianness::Big).unwrap();
-    pub static ref TEST_SESSION_STATE_ADDR_STR: String = "55a6d2364940".to_string();
+    pub static ref TEST_SESSION_STATE_ADDR_STR: String = "558343d2a620".to_string();
     pub static ref TEST_SESSION_STATE_ADDR: u64 = hex_str_to_addr(&*TEST_SESSION_STATE_ADDR_STR.as_str(), Endianness::Big).unwrap();
 
 }

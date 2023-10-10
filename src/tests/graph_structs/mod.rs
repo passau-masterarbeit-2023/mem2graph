@@ -50,13 +50,13 @@ fn test_hierarchy() {
     crate::tests::setup();
     let nodes = create_test_structs();
 
-    let mut counter_data_structure_nodes = 0;
+    let mut counter_chns = 0;
     let mut counter_value_nodes = 0;
     let mut counter_pointer_nodes = 0;
     for node in nodes {
         match node {
             Node::ChunkHeaderNode(_) => {
-                counter_data_structure_nodes += 1;
+                counter_chns += 1;
             }
             Node::ValueNode(_) => {
                 counter_value_nodes += 1;
@@ -67,8 +67,8 @@ fn test_hierarchy() {
             Node::FooterNode(_) => {}
         }
     }
-    assert_eq!(counter_data_structure_nodes, 1);
-    assert_eq!(counter_value_nodes, 2);
+    assert_eq!(counter_chns, 1);
+    assert_eq!(counter_value_nodes, 1);
     assert_eq!(counter_pointer_nodes, 1);
     
 }

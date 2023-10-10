@@ -7,6 +7,14 @@
 * [ ] Factorise CSV header (static list of factory function). >NEED TESTING
 * [ ] Write a pipeline launcher, one by one, for all pipelines.
 
+### Tue 10 Oct 2023
+
+List of commands
+
+```shell
+
+```
+
 ### Mon 9 Oct 2023
 
 Added new pipeline `chunk_top_vn_semantic_embedding`.

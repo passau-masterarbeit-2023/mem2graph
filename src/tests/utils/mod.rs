@@ -92,8 +92,8 @@ fn test_hex_str_to_block_bytes() {
 #[test]
 fn test_is_pointer() {
     crate::tests::setup();
-    let min_addr: u64 = *TEST_MIN_ADDR; // HEAP_START
-    let max_addr: u64 = *TEST_MAX_ADDR; // HEAP_START + HEAP_SIZE
+    let min_addr: u64 = *TEST_HEAP_START_ADDR; // HEAP_START
+    let max_addr: u64 = *TEST_HEAP_END_ADDR; // HEAP_START + HEAP_SIZE
 
     let test_cases = vec![
         // pointers, in little endian
@@ -138,8 +138,8 @@ fn test_create_node_from_bytes() {
         &pointer_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
         *TEST_MALLOC_HEADER_1_ADDR,
-        *TEST_MIN_ADDR, 
-        *TEST_MAX_ADDR, 
+        *TEST_HEAP_START_ADDR, 
+        *TEST_HEAP_END_ADDR, 
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     log::debug!("node1: {:?}, data: {:?}", node, pointer_block_of_8_bytes);
@@ -152,8 +152,8 @@ fn test_create_node_from_bytes() {
         &value_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
         *TEST_MALLOC_HEADER_1_ADDR,
-        *TEST_MIN_ADDR, 
-        *TEST_MAX_ADDR, 
+        *TEST_HEAP_START_ADDR, 
+        *TEST_HEAP_END_ADDR, 
     );
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
     assert!(node.is_value());
@@ -165,8 +165,8 @@ fn test_create_node_from_bytes() {
         &pointer_block_of_8_bytes, 
         *TEST_PTR_1_ADDR, 
         *TEST_MALLOC_HEADER_1_ADDR,
-        *TEST_MIN_ADDR, 
-        *TEST_MAX_ADDR, 
+        *TEST_HEAP_START_ADDR, 
+        *TEST_HEAP_END_ADDR, 
     );
     log::debug!("node2: {:?}, data: {:?}", node, pointer_block_of_8_bytes);
     assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);
