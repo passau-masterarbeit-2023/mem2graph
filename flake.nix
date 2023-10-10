@@ -30,6 +30,7 @@
         pythonPackages.python
 
         # python packages
+        pythonPackages.tqdm
       ];
 
       RUST_BACKTRACE = "1";

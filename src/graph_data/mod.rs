@@ -205,11 +205,14 @@ impl GraphData {
         
         // discover chunks and iterate over them
         let mut block_index = 0;
+        let mut chunk_number_in_heap = 0;
         while block_index < self.heap_dump_data.as_ref().unwrap().blocks.len() {
             block_index = self.pass_null_blocks(block_index);
 
             // get the chunk
-            let chunk_size_in_blocks = self.parse_chunk(block_index);
+            let chunk_size_in_blocks = self.parse_chunk(
+                block_index, chunk_number_in_heap
+            );
 
             // In DEBUG mode, print chunk info
             #[cfg(debug_assertions)]
@@ -229,6 +232,7 @@ impl GraphData {
 
             // update the block index by leaping over the chunk (size includes header, footer and data)
             block_index += chunk_size_in_blocks;
+            chunk_number_in_heap += 1;
         }
 
     }
@@ -240,7 +244,7 @@ impl GraphData {
     /// :return: The size of the chunk, in blocks. This includes the header, footer and data.
     /// 
     /// If the chunk is not valid (for instance, size=0), panic
-    fn parse_chunk(&mut self, header_index: usize) -> usize {
+    fn parse_chunk(&mut self, header_index: usize, chunk_number_in_heap: usize) -> usize {
         check_heap_dump!(self);
         let chunk_data_first_block_index = header_index + 1;
 
@@ -346,7 +350,8 @@ impl GraphData {
             start_data_bytes_entropy: utils::compute_chunk_start_bytes_entropy(
                 &self.heap_dump_data.as_ref().unwrap().blocks, 
                 chunk_data_first_block_index
-            )
+            ),
+            chunk_number_in_heap: chunk_number_in_heap,
         });
         self.add_node_wrapper(chn);
         
@@ -535,7 +540,8 @@ mod tests {
             is_free: false,
             nb_pointer_nodes: 0,
             nb_value_nodes: 0,
-             start_data_bytes_entropy: 0.0,
+            start_data_bytes_entropy: 0.0,
+            chunk_number_in_heap: 0,
         });
         let base_value_node = Node::ValueNode(
             ValueNode {

@@ -232,6 +232,7 @@ pub struct ChunkHeaderNode {
     pub nb_pointer_nodes: usize,
     pub nb_value_nodes: usize,
     pub start_data_bytes_entropy: f64,
+    pub chunk_number_in_heap: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

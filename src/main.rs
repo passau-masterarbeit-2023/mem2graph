@@ -92,12 +92,13 @@ fn main() {
                 )
             },
             params::argv::Pipeline::ChunkStatisticEmbedding => {
+                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
                 embedding_pipeline_to_csv(
                     path, 
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter, 
-                    no_value_node,
+                    false,
                     gen_and_save_chunk_statistic_embedding,
                 )
             },

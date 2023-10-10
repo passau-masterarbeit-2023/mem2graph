@@ -11,6 +11,7 @@ fn create_test_structs() -> Vec<Node> {
         nb_pointer_nodes: 0,
         nb_value_nodes: 0,
         start_data_bytes_entropy: 0.0,
+        chunk_number_in_heap: 0,
     });
 
     let base_value_node = Node::ValueNode(ValueNode {

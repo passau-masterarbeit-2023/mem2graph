@@ -18,14 +18,18 @@ pub fn extract_chunk_data_as_bytes(graph_embedding : &GraphEmbedding, addr: u64,
             for _ in 1..(chunk_header_node.byte_size/8) {
                 // get the node at the current address
                 let node: &Node = graph_embedding.graph_annotate.graph_data.addr_to_node.get(&current_addr).unwrap();
-                // if the block is a pointer
-                if node.is_pointer() {
-                    let bits = u64_to_bytes(node.points_to().unwrap());
-                    data.extend_from_slice(&bits);
-                    
-                } else {
-                    let current_block = node.get_value().unwrap();
-                    data.extend_from_slice(&current_block);
+            
+                match node {
+                    Node::PointerNode(_) => {
+                        let bits = u64_to_bytes(node.points_to().unwrap());
+                        data.extend_from_slice(&bits);
+                    },
+                    Node::ValueNode(_) => {
+                        let current_block = node.get_value().unwrap();
+                        data.extend_from_slice(&current_block);
+                    },
+                    Node::FooterNode(_) => {},
+                    _ => panic!("Node is not a pointer nor a value node"),
                 }
                 
                 current_addr += block_size as u64;
@@ -52,20 +56,24 @@ pub fn extract_chunk_data_as_bits(graph_embedding : &GraphEmbedding, addr: u64) 
             for _ in 1..(chunk_header_node.byte_size/8) {
                 // get the node at the current address
                 let node: &Node = graph_embedding.graph_annotate.graph_data.addr_to_node.get(&current_addr).unwrap();
-                // if the block is a pointer
-                if node.is_pointer() {
-                    let mut bits = to_n_bits_binary(node.points_to().unwrap(), block_size_bit).chars().collect();
-                    data.append(&mut bits);
-                    
-                } else {
-                    let current_block = node.get_value().unwrap();
-                    
-                    // convert the block to binary
-                    for i in 0..BLOCK_BYTE_SIZE {
-                        // each value of the array are bytes, so 8 bit long
-                        let mut bits = to_n_bits_binary(current_block[i] as u64, 8).chars().collect();
-                        data.append(&mut bits);
-                    }
+
+                match node {
+                    Node::PointerNode(_) => {
+                        let bits: Vec<char> = to_n_bits_binary(node.points_to().unwrap(), block_size_bit).chars().collect();
+                        data.extend_from_slice(&bits);
+                    },
+                    Node::ValueNode(_) => {
+                        let current_block = node.get_value().unwrap();
+                        
+                        // convert the block to binary
+                        for i in 0..BLOCK_BYTE_SIZE {
+                            // each value of the array are bytes, so 8 bit long
+                            let bits: Vec<char> = to_n_bits_binary(current_block[i] as u64, 8).chars().collect();
+                            data.extend_from_slice(&bits);
+                        }
+                    },
+                    Node::FooterNode(_) => {},
+                    _ => panic!("Node is not a pointer nor a value node"),
                 }
                 
                 current_addr += BLOCK_BYTE_SIZE as u64;
@@ -129,6 +137,11 @@ pub fn get_chunk_basics_informations(
             named_features.insert(
                 "chunk_vns".to_string(),
                 chunk_header_node.nb_value_nodes as usize
+            );
+
+            named_features.insert(
+                "chunk_number_in_heap".to_string(),
+                chunk_header_node.chunk_number_in_heap as usize
             );
         },
         _ => panic!("Node is not a chunk"),
