@@ -22,7 +22,7 @@ pub struct Argv {
     pub files_input: Option<Vec<String>>, 
 
     /// The pipeline to run
-    #[arg(value_enum, short, long, default_value = "value-embedding")]
+    #[arg(value_enum, short, long, default_value = "value-node-embedding")]
     pub pipeline: Pipeline,
 
     /// The directory to output the results

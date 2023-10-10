@@ -154,7 +154,19 @@ impl AnnotationSet {
             AnnotationSubclass::is_session_state_subclass(class),
         ) {
             (true, false, false) => {
-                "Key".to_string()
+                // return key with its name (A, B, ...)
+                // first, get the key annotation
+                for annotation in self.annotations.iter() {
+                    match annotation {
+                        NodeAnnotation::KeyAnnotation(key_annotation) => {
+                            return key_annotation.key_data.name.clone();
+                        }
+                        _ => {
+                            continue;
+                        }
+                    }
+                }
+                panic!("No key annotation found in the set!");
             }
             (false, true, false) => {
                 "Ssh".to_string()

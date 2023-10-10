@@ -42,11 +42,28 @@ def remove_vn_lines(input_file, output_dir):
     # Read input file and remove lines containing "VN"
     with open(input_file, 'r') as f:
         lines = f.readlines()
-        
-        def is_vn_line(line):
-            return "VN" in line
 
-        filtered_lines = [line for line in lines if not is_vn_line(line)]
+        important_addresses = set()
+
+        def is_important_address_in_line(line):
+            for important_addr in important_addresses:
+                if important_addr in line:
+                    return True
+            return False
+        
+        LIST_ITEMS_TO_KEEP = ["KEY", "Ssh", "SST"]
+        def is_line_to_skip(line):
+            for item_to_keep in LIST_ITEMS_TO_KEEP:
+                if item_to_keep in line:
+                    important_addr = line.strip().split(" ")[0].replace("\"", "")
+                    important_addresses.add(
+                        important_addr
+                    )
+                    return False
+            
+            return "VN" in line and not is_important_address_in_line(line)
+
+        filtered_lines = [line for line in lines if not is_line_to_skip(line)]
 
     # Save the new file in the output directory
     output_file = os.path.join(output_dir, os.path.basename(input_file)).replace(".gv", "_no_vn.gv")
