@@ -127,7 +127,7 @@ lazy_static! {
         let test_csv_embedding_file_path = std::env::var("TEST_CSV_EMBEDDING_FILE_PATH")
             .expect("TEST_CSV_EMBEDDING_FILE_PATH environment variable must be set").to_string();
         let path: PathBuf = PROJECT_BASE_DIR.join(&test_csv_embedding_file_path);
-        check_path(&path);
+        // WARN: do NOT check_path(&path); This is because this file is created by the program.
         path
     };
 
@@ -145,17 +145,6 @@ lazy_static! {
         let path: PathBuf = PathBuf::from(samples_and_labels_data_dir_path);
         check_path(&path);
         path
-    };
-
-    pub static ref NB_FILES_PER_FILE_BATCH: usize = {
-        let nb_files_per_chunk = std::env::var("NB_FILES_PER_CHUNK");
-        match nb_files_per_chunk {
-            Ok(nb) => nb.parse::<usize>().unwrap(),
-            Err(_) => {
-                println!("NB_FILES_PER_CHUNK environment variable not set. Defaulting to '10'.");
-                return 10;
-            },
-        }
     };
 
     pub static ref CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY: usize = {

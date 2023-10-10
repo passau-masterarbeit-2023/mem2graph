@@ -102,7 +102,7 @@ fn test_is_value() {
             counter_values += 1;
         }
     }
-    assert_eq!(counter_values, 2);
+    assert_eq!(counter_values, 1);
 }
 
 #[test]

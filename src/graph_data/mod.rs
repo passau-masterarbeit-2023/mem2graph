@@ -688,7 +688,7 @@ mod tests {
         ).unwrap();
         let node = graph_data.create_node_from_bytes_wrapper_index(
             &*TEST_PTR_1_VALUE_BYTES, 
-            (utils::hex_str_to_addr("00000300", utils::Endianness::Big).unwrap() / BLOCK_BYTE_SIZE as u64) as usize,
+            ((*TEST_PTR_1_ADDR - *TEST_HEAP_START_ADDR) / BLOCK_BYTE_SIZE as u64) as usize,
             *TEST_MALLOC_HEADER_1_ADDR
         );
         assert_eq!(node.get_address(), *TEST_PTR_1_ADDR);

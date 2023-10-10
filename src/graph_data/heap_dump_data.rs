@@ -184,7 +184,7 @@ mod tests {
     use crate::{params::{
         BLOCK_BYTE_SIZE, 
         TEST_HEAP_DUMP_FILE_PATH
-    }, utils::{hex_str_to_addr, Endianness}};
+    }, tests::TEST_HEAP_START_ADDR};
 
     #[test]
     fn test_object_creation() {
@@ -210,9 +210,8 @@ mod tests {
         assert!(json_data.is_object());
         assert!(json_data["HEAP_START"].is_string());
         let heap_start = json_value_to_addr(&json_data["HEAP_START"]);
-        let test_heap_addr = "55a6d2356000";
-        let test_heap_addr_converted = hex_str_to_addr(test_heap_addr, Endianness::Big).unwrap();
-        assert!(heap_start == test_heap_addr_converted);
+        let test_heap_addr = *TEST_HEAP_START_ADDR;
+        assert!(heap_start == test_heap_addr);
     }
 
     #[test]
