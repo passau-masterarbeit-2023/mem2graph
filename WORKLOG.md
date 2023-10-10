@@ -23,6 +23,7 @@ Fixed rust test.
 * [X] Test the pipelines and debug
 * [X] Factorise CSV header (static list of factory function). >NEED TESTING
 * [X] Add in chunk semantic embedding, and chunk top vn embedding, the chunk number in the heap dump (0, 1, 2, 3...)
+* [X] Added script to launch all pipelines with necessary cli arguments.
 
 ### Mon 9 Oct 2023
 
