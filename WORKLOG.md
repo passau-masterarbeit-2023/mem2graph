@@ -1,10 +1,7 @@
 # Work logs
 
 * [ ] Decouverte: verify and quantify the average number of connected chunk per heap dump.
-* [ ] Finish entropy filtering. Fix, since some keys are missing. >NEED TESTING
-* [ ] Test the pipelines and debug
 * [ ] Add in chunk semantic embedding, and chunk top vn embedding, the chunk number in the heap dump (0, 1, 2, 3...)
-* [ ] Factorise CSV header (static list of factory function). >NEED TESTING
 * [ ] Write a pipeline launcher, one by one, for all pipelines.
 
 ### Tue 10 Oct 2023
@@ -14,7 +11,18 @@ List of commands
 ```shell
 cargo run -- -d /home/onyr/code/phdtrack/phdtrack_data_clean -o /home/onyr/code/phdtrack/mem2graph/data/memory_graphs -p graph
 cargo run -- -d /home/onyr/code/phdtrack/phdtrack_data_clean -o /home/onyr/code/phdtrack/mem2graph/data/memory_graphs_no_vn_chn_annotations -p graph -v -a chunk-header-node
+cargo run -- -d /home/onyr/code/phdtrack/phdtrack_data_clean -o /home/onyr/code/phdtrack/mem2graph/data/chunk_semantic_embedding_no_vn_max_chunk -p chunk-semantic-embedding -e only-max-entropy -v -a chunk-header-node
+cargo run -- -d /home/onyr/code/phdtrack/phdtrack_data_clean -o /home/onyr/code/phdtrack/mem2graph/data/chunk_semantic_embedding_no_vn_max_chunk -p chunk-semantic-embedding -e only-max-entropy -v -a chunk-header-node
+cargo run -- -d /home/onyr/code/phdtrack/phdtrack_data_clean -o /home/onyr/code/phdtrack/mem2graph/data/chunk_semantic_embedding_no_vn_threshold_entropy -p chunk-semantic-embedding -e min-of-chunk-treshold-entropy -v -a chunk-header-node
 ```
+
+Fixed memory graph to image python script.
+
+Fixed rust test.
+
+* [X] Finish entropy filtering. Fix, since some keys are missing. >NEED TESTING
+* [X] Test the pipelines and debug
+* [X] Factorise CSV header (static list of factory function). >NEED TESTING
 
 ### Mon 9 Oct 2023
 

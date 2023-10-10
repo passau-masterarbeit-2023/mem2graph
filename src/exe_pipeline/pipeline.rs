@@ -20,7 +20,7 @@ pub fn embedding_pipeline_to_csv(
         entropy_filter, 
         no_value_node,
         gen_and_save_embedding,
-        "csv"
+        ".csv"
     );
 }
 
