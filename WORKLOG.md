@@ -12,7 +12,8 @@
 List of commands
 
 ```shell
-
+cargo run -- -d /home/onyr/code/phdtrack/phdtrack_data_clean -o /home/onyr/code/phdtrack/mem2graph/data/memory_graphs -p graph
+cargo run -- -d /home/onyr/code/phdtrack/phdtrack_data_clean -o /home/onyr/code/phdtrack/mem2graph/data/memory_graphs_no_vn_chn_annotations -p graph -v -a chunk-header-node
 ```
 
 ### Mon 9 Oct 2023
