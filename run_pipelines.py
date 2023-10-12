@@ -4,14 +4,19 @@ import tqdm
 
 INPUT_FILE_DIR_PATH = "/home/onyr/code/phdtrack/phdtrack_data_clean"
 
-PIPELINES_NAMES_TO_ADDITIONAL_ARGS: dict[str, list[str]] = {
-    "value-node-embedding": [],
-    "chunk-top-vn-semantic-embedding": [],
-    "graph": [],
-    "graph": ["-v", "-a", "chunk-header-node"],
-    "chunk-semantic-embedding": ["-v", "-a", "chunk-header-node"],
-    "chunk-statistic-embedding": ["-a", "chunk-header-node"], 
-}
+PIPELINES_NAMES_TO_ADDITIONAL_ARGS_ENTROPY: list[tuple[str, list[str]]] = [
+    ("value-node-embedding", []),
+    ("chunk-top-vn-semantic-embedding", []),
+    ("chunk-semantic-embedding", ["-v", "-a", "chunk-header-node"]),
+    ("chunk-statistic-embedding", ["-a", "chunk-header-node"]), 
+]
+
+PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_ENTROPY: list[tuple[str, list[str]]] = [
+    ("graph", []),
+    ("graph", ["-a", "none"]),
+    ("graph", ["-v", "-a", "chunk-header-node"]),
+    ("graph", ["-v", "-a", "none"]),
+]
 
 LIST_ENTROPY_FILTERING_FLAGS = [
     "none",
@@ -47,6 +52,12 @@ class CLIArguments:
             '--dry-run',
             action='store_true',
             help="Run in dry mode, without running commands."
+        )
+        # no delete old output files
+        parser.add_argument(
+            '--keep-old-output',
+            action='store_true',
+            help="Keep old output files."
         )
         # add file path or directory path argument
         parser.add_argument(
@@ -85,7 +96,23 @@ class CLIArguments:
                 arg, getattr(self.args, arg)
             ))
 
-def build_arg_compute_instances():
+def create_or_clear_output_dir(output_dir_path: str, remove_old_files: bool) -> None:
+    """
+    Create the output dir if it does not exist.
+    If it exists, remove all ".csv" and ".gv" files, if remove_old_files is True.
+    """
+    # create output dir if it does not exist
+    if not os.path.exists(output_dir_path):
+        os.makedirs(output_dir_path)
+    else:
+        if remove_old_files:
+            # remove all ".csv" an ".gv" files in the output dir
+            for filename in os.listdir(output_dir_path):
+                if filename.endswith(".csv") or filename.endswith(".gv"):
+                    os.remove(os.path.join(output_dir_path, filename))
+                    print(f" 󰆴 -> Removed {filename} in {output_dir_path}")
+
+def build_arg_compute_instances(cli: CLIArguments) -> list[list[str]]:
     """
     Create a list of CLI commands with arguments to run the executables.
     """
@@ -93,21 +120,14 @@ def build_arg_compute_instances():
     # create a list of arguments to run the executables
     arg_compute_instances: list[list[str]] = []
 
-    for pipeline_name in PIPELINES_NAMES_TO_ADDITIONAL_ARGS.keys():
+    # create args with entropy
+    for (pipeline_name, additional_agrs) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_ENTROPY:
         for entropy_filtering_flag in LIST_ENTROPY_FILTERING_FLAGS:      
             # output dir preparation
             current_dir = os.getcwd()
             output_dir_path = current_dir + "/data/" + pipeline_name.replace("-", "_") + "_-e_" + entropy_filtering_flag
             
-            # create output dir if it does not exist
-            if not os.path.exists(output_dir_path):
-                os.makedirs(output_dir_path)
-            else:
-                # remove all ".csv" files in the output dir
-                for filename in os.listdir(output_dir_path):
-                    if filename.endswith(".csv"):
-                        os.remove(os.path.join(output_dir_path, filename))
-                        print(f" 󰆴 -> Removed {filename} in {output_dir_path}")
+            create_or_clear_output_dir(output_dir_path, not cli.args.keep_old_output)
             
             # prepare arguments
             args = [
@@ -119,11 +139,37 @@ def build_arg_compute_instances():
             ]
 
             # append additional arguments
-            if len(PIPELINES_NAMES_TO_ADDITIONAL_ARGS[pipeline_name]) > 0:
-                args.extend(PIPELINES_NAMES_TO_ADDITIONAL_ARGS[pipeline_name])
+            if len(additional_agrs) > 0:
+                args.extend(additional_agrs)
 
             arg_compute_instances.append(args)
+    
+    # create args without entropy
+    for (pipeline_name, additional_agrs) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_ENTROPY:
+        # output dir preparation
+        current_dir = os.getcwd()
+        additional_param_list_as_str = "_".join(
+            additional_agrs
+        )
+        output_dir_path = current_dir + "/data/" + pipeline_name.replace("-", "_") + "_-e_none_" + additional_param_list_as_str
         
+        create_or_clear_output_dir(output_dir_path, not cli.args.keep_old_output)
+        
+        # prepare arguments
+        args = [
+            "cargo", "run", "--",
+            "-d", INPUT_FILE_DIR_PATH,
+            "-o", output_dir_path, 
+            "-p", pipeline_name,
+            "-e", "none",
+        ]
+
+        # append additional arguments
+        if len(additional_agrs) > 0:
+            args.extend(additional_agrs)
+        
+        arg_compute_instances.append(args)
+
     return arg_compute_instances
 
 
@@ -162,9 +208,13 @@ def run_executables(cli: CLIArguments, arg_compute_instances: list[list[str]]) -
         # run compute instances
         for args in tqdm.tqdm(arg_compute_instances):
             with subprocess.Popen(args, stdout=subprocess.PIPE) as popen:
-                for line in iter(popen.stdout.readline, b''):
-                    print(line.decode().strip())
-                popen.wait()
+                if popen.stdout is not None:
+                    for line in iter(popen.stdout.readline, b''):
+                        print(line.decode().strip())
+                    popen.wait()
+                else:
+                    print(f"🔴 Failed compute instance: {args}")
+                    exit()
 
                 args_str = " ".join(args)
                 print(f"🟢 Finished compute instance: {args_str}")
@@ -182,7 +232,7 @@ def run_executables(cli: CLIArguments, arg_compute_instances: list[list[str]]) -
 if __name__ == "__main__":
     cli = CLIArguments()
 
-    arg_compute_instances = build_arg_compute_instances()
+    arg_compute_instances = build_arg_compute_instances(cli)
 
     # print the commands with their arguments
     print(f"Number of compute instances: {len(arg_compute_instances)}")
