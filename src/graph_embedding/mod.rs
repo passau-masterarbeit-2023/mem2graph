@@ -17,6 +17,7 @@ use crate::params::argv::{SelectAnnotationLocation, EntropyFilter};
 use std::path::PathBuf;
 
 use self::embedding::chunk_semantic_embedding::generate_chunk_semantic_embedding;
+use self::embedding::chunk_start_bytes_embedding::generate_chunk_start_bytes_embedding;
 use self::embedding::chunk_statistic_embedding::generate_chunk_statistic_embedding;
 use self::embedding::chunk_top_vn_semantic_embedding::generate_chunk_top_vn_semantic_embedding;
 use self::embedding::value_node_semantic_embedding::generate_value_node_semantic_embedding;
@@ -166,6 +167,11 @@ impl GraphEmbedding {
     // ----------------------------- chunk top value node embedding -----------------------------//
     pub fn generate_chunk_top_vn_semantic_embedding(&self) -> SamplesAndLabels {
         generate_chunk_top_vn_semantic_embedding(&self)
+    }
+
+    // ----------------------------- chunk start bytes embedding -----------------------------//
+    pub fn generate_chunk_start_bytes_embedding(&self) -> SamplesAndLabels {
+        generate_chunk_start_bytes_embedding(&self)
     }
 
 }

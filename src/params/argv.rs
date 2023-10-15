@@ -92,6 +92,9 @@ pub enum Pipeline {
     ChunkSemanticEmbedding,
     /// make a statistic embedding of the chunk
     ChunkStatisticEmbedding,
+
+    /// make an embeding with the beginning of each chunk (the number of bytes is controlled by CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY)
+    ChunkStartBytesEmbedding,
 }
 
 pub fn get_program_args() -> Argv {

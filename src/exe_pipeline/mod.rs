@@ -8,6 +8,8 @@ pub mod graph_generation;
 pub mod chunk_semantic_embedding;
 pub mod chunk_statistic_embedding;
 pub mod chunk_top_vn_semantic_embedding;
+pub mod chunk_start_bytes_embedding;
+
 
 /// Takes a path as input.
 /// This path can be a file or a directory.
@@ -47,6 +49,7 @@ pub fn save_embedding(samples: Vec<HashMap<String, usize>>, labels: Vec<usize>, 
     let headers: Vec<String> = samples[0].keys().cloned().collect();
     
     let mut all_headers = headers.clone();
+    all_headers.sort();
     all_headers.push("label".to_string());
 
     csv_writer.write_record(&all_headers).unwrap();
@@ -90,6 +93,7 @@ pub fn save_embedding_with_f64(
     
     let mut all_headers = usize_headers.clone();
     all_headers.extend(f64_headers.iter().cloned());
+    all_headers.sort();
     all_headers.push("label".to_string());
 
     csv_writer.write_record(&all_headers).unwrap();

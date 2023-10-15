@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use exe_pipeline::chunk_semantic_embedding::gen_and_save_chunk_semantic_embedding;
+use exe_pipeline::chunk_start_bytes_embedding::gen_and_save_chunk_start_bytes_embedding;
 use exe_pipeline::chunk_statistic_embedding::gen_and_save_chunk_statistic_embedding;
 use exe_pipeline::chunk_top_vn_semantic_embedding::gen_and_save_chunk_top_vn_semantic_embedding;
 use exe_pipeline::graph_generation::gen_and_save_memory_graph;
@@ -111,6 +112,17 @@ fn main() {
                     entropy_filter,
                     false,
                     gen_and_save_chunk_top_vn_semantic_embedding
+                )
+            },
+            params::argv::Pipeline::ChunkStartBytesEmbedding => {
+                no_arg_no_value_and_pointer_node(params::ARGV.pipeline);
+                embedding_pipeline_to_csv(
+                    path, 
+                    output_folder.clone(), 
+                    annotation, 
+                    entropy_filter,
+                    false,
+                    gen_and_save_chunk_start_bytes_embedding
                 )
             },
         }
