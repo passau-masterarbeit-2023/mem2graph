@@ -1,5 +1,9 @@
 # Work logs
 
+### Sun 15 Oct 2023
+
+* [X] Fixed error with output file naming. It was keeping the filepath of the input, and not the real one from files.
+
 ### Tue 10 Oct 2023
 
 List of commands

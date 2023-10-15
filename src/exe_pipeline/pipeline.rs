@@ -65,12 +65,7 @@ pub fn embedding_pipeline(
             "The file doesn't exist or the directory doesn't contain any .raw file: {}", 
             path.to_str().unwrap()
         );
-    }
-
-    // cut the path
-    let dir_path_ = path.clone();
-    let dir_path_end = truncate_path_to_last_n_dirs(&dir_path_, 5);
-    let dir_path_end_str = dir_path_end.to_str().unwrap(); 
+    } 
 
     // |> File per file processing:
     // Create a thread pool with named threads
@@ -88,6 +83,11 @@ pub fn embedding_pipeline(
         {
             let current_thread = std::thread::current();
             let thread_name = current_thread.name().unwrap_or("<unnamed>");
+
+            // cut the path
+            let dir_path_ = heap_dump_raw_file_path.clone();
+            let dir_path_end = truncate_path_to_last_n_dirs(&dir_path_, 5);
+            let dir_path_end_str = dir_path_end.to_str().unwrap();
 
             // check if CSV file already exists, in that case skip
             let file_name = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap();
