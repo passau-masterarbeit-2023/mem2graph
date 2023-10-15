@@ -227,6 +227,13 @@ pub fn string_to_usize_vec(string: &str) -> Vec<usize> {
     string.split(',').filter_map(|s| s.parse::<usize>().ok()).collect()
 }
 
+/// get the string representation as hexa from a vector of bytes (u8)
+pub fn bytes_to_hex_string(bytes: &Vec<u8>) -> String {
+    bytes.iter()
+         .map(|byte| format!("{:02x}", byte))
+         .collect()
+}
+
 // ------------------------------------ binaries utils ------------------------------------
 
 

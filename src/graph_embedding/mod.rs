@@ -16,6 +16,7 @@ use crate::params::argv::{SelectAnnotationLocation, EntropyFilter};
 
 use std::path::PathBuf;
 
+use self::embedding::chunk_extract::generate_chunk_extract;
 use self::embedding::chunk_semantic_embedding::generate_chunk_semantic_embedding;
 use self::embedding::chunk_start_bytes_embedding::generate_chunk_start_bytes_embedding;
 use self::embedding::chunk_statistic_embedding::generate_chunk_statistic_embedding;
@@ -172,6 +173,14 @@ impl GraphEmbedding {
     // ----------------------------- chunk start bytes embedding -----------------------------//
     pub fn generate_chunk_start_bytes_embedding(&self) -> SamplesAndLabels {
         generate_chunk_start_bytes_embedding(&self)
+    }
+
+
+    // ----------------------------------------------------------------------------------------//
+    // ------------------------------------ chunk extraction --------------------------------------------//
+
+    pub fn generate_chunk_extract(&self) -> (Vec<HashMap<String, String>>, Vec<usize>) {
+        generate_chunk_extract(&self)
     }
 
 }

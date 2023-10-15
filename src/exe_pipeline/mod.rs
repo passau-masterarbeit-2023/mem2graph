@@ -9,6 +9,7 @@ pub mod chunk_semantic_embedding;
 pub mod chunk_statistic_embedding;
 pub mod chunk_top_vn_semantic_embedding;
 pub mod chunk_start_bytes_embedding;
+pub mod chunk_extract;
 
 
 /// Takes a path as input.
@@ -63,6 +64,43 @@ pub fn save_embedding(samples: Vec<HashMap<String, usize>>, labels: Vec<usize>, 
 
         let mut row: Vec<String> = headers.iter()
             .map(|header| sample.get(header).unwrap().to_string()) // unwrap is safe here since we've checked keys
+            .collect();
+
+        row.push(label.to_string());
+
+        csv_writer.write_record(&row).unwrap();
+    }
+
+    csv_writer.flush().unwrap();
+}
+
+/// Save the samples and labels to a CSV file.
+pub fn save_embedding_with_string(samples: Vec<HashMap<String, String>>, labels: Vec<usize>, csv_path: PathBuf) {
+    assert!(!samples.is_empty(), "Samples cannot be empty for CSV header extraction.");
+
+    let csv_error_message = format!("Cannot create csv file: {:?}, no such file.", csv_path);
+    let mut csv_writer = Writer::from_path(&csv_path).unwrap_or_else(
+        |_| panic!("{}", csv_error_message)
+    );
+
+    // Assuming all HashMaps have the same set of keys
+    let headers: Vec<String> = samples[0].keys().cloned().collect();
+    
+    let mut all_headers = headers.clone();
+    all_headers.sort();
+    all_headers.push("label".to_string());
+
+    csv_writer.write_record(&all_headers).unwrap();
+
+    // save samples and labels to CSV
+    for (sample, &label) in samples.iter().zip(&labels) {
+        // Check if all headers are present in the current sample
+        if headers.iter().any(|h| !sample.contains_key(h)) {
+            panic!("Headers mismatch between samples!");
+        }
+
+        let mut row: Vec<String> = headers.iter()
+            .map(|header| sample.get(header).unwrap().clone()) // unwrap is safe here since we've checked keys
             .collect();
 
         row.push(label.to_string());
