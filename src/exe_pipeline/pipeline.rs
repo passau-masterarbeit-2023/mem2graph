@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf};
 
-use crate::{graph_embedding::GraphEmbedding, params::argv::{SelectAnnotationLocation, EntropyFilter}, utils::truncate_path_to_last_n_dirs};
+use crate::{graph_embedding::GraphEmbedding, params::{argv::{SelectAnnotationLocation, EntropyFilter}, ARGV}, utils::truncate_path_to_last_n_dirs};
 use super::get_raw_file_or_files_from_path;
 
 /// Wrapper for the embedding pipeline, with the CSV saving.
@@ -67,6 +67,8 @@ pub fn embedding_pipeline(
         );
     } 
 
+    let csv_pipeline_prefix = format!("{:?}", ARGV.pipeline);
+
     // |> File per file processing:
     // Create a thread pool with named threads
     let pool = rayon::ThreadPoolBuilder::new()
@@ -91,7 +93,6 @@ pub fn embedding_pipeline(
 
             // check if CSV file already exists, in that case skip
             let file_name = heap_dump_raw_file_path.file_name().unwrap().to_str().unwrap();
-            let csv_pipeline_prefix = "chunk_top_vn_semantic";
             let csv_file_name = format!(
                 "{}_{}_{}_{}", 
                 csv_pipeline_prefix, 
