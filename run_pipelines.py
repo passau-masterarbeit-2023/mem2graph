@@ -8,7 +8,9 @@ PIPELINES_NAMES_TO_ADDITIONAL_ARGS_ENTROPY: list[tuple[str, list[str]]] = [
     ("value-node-embedding", []),
     ("chunk-top-vn-semantic-embedding", []),
     ("chunk-semantic-embedding", ["-v", "-a", "chunk-header-node"]),
-    ("chunk-statistic-embedding", ["-a", "chunk-header-node"]), 
+    ("chunk-statistic-embedding", ["-a", "chunk-header-node"]),
+    ("chunk-start-bytes-embedding", ["-a", "chunk-header-node"]),
+    ("chunk-extraction", ["-a", "chunk-header-node"]),
 ]
 
 PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_ENTROPY: list[tuple[str, list[str]]] = [
