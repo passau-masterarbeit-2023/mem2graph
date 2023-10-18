@@ -1,5 +1,4 @@
-mod embedding;
-
+pub mod embedding;
 
 mod utils_embedding;
 mod neighboring;

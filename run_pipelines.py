@@ -18,6 +18,11 @@ PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_ENTROPY: list[tuple[str, list[str]]] = [
     ("graph", ["-a", "none"]),
     ("graph", ["-v", "-a", "chunk-header-node"]),
     ("graph", ["-v", "-a", "none"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "none"]),
+    ("graph-with-embedding-comments", ["-a", "chunk-header-node"]),
+    ("graph-with-embedding-comments", ["-a", "-a", "none"]),
+    ("graph-with-embedding-comments", []),
 ]
 
 LIST_ENTROPY_FILTERING_FLAGS = [

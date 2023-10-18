@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 pub struct GraphAnnotate {
     pub graph_data: GraphData,
+    pub annotation: SelectAnnotationLocation,
 }
 
 impl GraphAnnotate {
@@ -17,7 +18,7 @@ impl GraphAnnotate {
         let graph_data = GraphData::new(heap_dump_raw_file_path, pointer_byte_size, annotation != SelectAnnotationLocation::None, without_value_nodes)?;
         
         let mut graph_annotate = GraphAnnotate {
-            graph_data,
+            graph_data, annotation
         };
         if annotation != SelectAnnotationLocation::None {
             graph_annotate.annotate(annotation);

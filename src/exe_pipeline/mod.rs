@@ -5,6 +5,7 @@ use walkdir::WalkDir;
 pub mod pipeline;
 pub mod value_embedding;
 pub mod graph_generation;
+pub mod graph_generation_with_embedding;
 pub mod chunk_semantic_embedding;
 pub mod chunk_statistic_embedding;
 pub mod chunk_top_vn_semantic_embedding;

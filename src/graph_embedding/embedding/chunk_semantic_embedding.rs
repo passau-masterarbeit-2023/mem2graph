@@ -33,7 +33,7 @@ pub fn generate_chunk_semantic_embedding(
     (samples, labels)
 }
 
-fn generate_semantic_samples_of_a_chunk(
+pub fn generate_semantic_samples_of_a_chunk(
     graph_embedding : &GraphEmbedding, 
     chn_addr: u64
 ) -> HashMap<String, usize> {

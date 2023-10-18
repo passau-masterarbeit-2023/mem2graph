@@ -6,6 +6,7 @@ use exe_pipeline::chunk_start_bytes_embedding::gen_and_save_chunk_start_bytes_em
 use exe_pipeline::chunk_statistic_embedding::gen_and_save_chunk_statistic_embedding;
 use exe_pipeline::chunk_top_vn_semantic_embedding::gen_and_save_chunk_top_vn_semantic_embedding;
 use exe_pipeline::graph_generation::gen_and_save_memory_graph;
+use exe_pipeline::graph_generation_with_embedding::gen_and_save_memory_graph_with_embedding_comments;
 use exe_pipeline::pipeline::{embedding_pipeline, embedding_pipeline_to_csv};
 use exe_pipeline::value_embedding::gen_and_save_value_node_embedding;
 use params::argv::Pipeline;
@@ -83,6 +84,17 @@ fn main() {
                     "dot.gv",
                 )
             },
+            Pipeline::GraphWithEmbeddingComments => {
+                embedding_pipeline(
+                    path, 
+                    output_folder.clone(), 
+                    annotation, 
+                    entropy_filter,
+                    no_value_node,
+                    gen_and_save_memory_graph_with_embedding_comments,
+                    "dot.gv",
+                )
+            },
             params::argv::Pipeline::ChunkSemanticEmbedding => {
                 embedding_pipeline_to_csv(
                     path, 
@@ -136,7 +148,7 @@ fn main() {
                     false,
                     gen_and_save_chunk_extract
                 )
-            }
+            },
         }
     }
 }

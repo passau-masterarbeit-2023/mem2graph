@@ -457,33 +457,61 @@ impl GraphData {
         }
     }
 
-}
+    //////////////////////////////////////////////////////////////////////////////
+    /// CUSTOM FORMATTER FOR SPECIFIC GRAPH DISPLAYS /////////////////////////////
 
-/// custom dot format for the graph
-impl std::fmt::Display for GraphData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "digraph {{")?;
+    /// Generate a string following a dot format.
+    /// NOTE: This function can take additional parameters to add comments
+    /// to the graphs and individual nodes.
+    fn generate_gv_str(
+        &self,
+        graph_header_comment: Option<String>,
+        hashmap: Option<&HashMap<u64, String>>,
+    ) -> String {
+        let mut dot_gv_str = String::new();
+
+        dot_gv_str.push_str("digraph {{\n");
+        if graph_header_comment.is_some() {
+            dot_gv_str.push_str(
+                format!("    comment=\"{}\"\n", graph_header_comment.unwrap())
+                    .as_str()
+            );
+        }
+
         for addr in self.graph.nodes() {
             let node = self.addr_to_node.get(&addr).unwrap();
+
+            // get the comment
+            let node_comment = match hashmap {
+                Some(hashmap) => {
+                    match hashmap.get(&node.get_address()) {
+                        Some(comment) => {
+                            format!(" comment=\"{}\"", comment).to_string()
+                        },
+                        None => "".to_string(),
+                    }
+                },
+                None => "".to_string(),
+            };
 
             // handle special nodes
             match self.node_addr_to_annotations.get(&addr) {
                 Some(annotation) => {
-                    writeln!(
-                        f, 
-                        "    \"{}\" {}", 
+                    dot_gv_str.push_str(format!(
+                        "    \"{}\" [{}{}];\n", 
                         node.str_addr_and_type(), 
-                        annotation.annotate_dot_attributes()
-                    )?;
+                        annotation.annotate_dot_attributes(),
+                        node_comment
+                    ).to_string().as_str());
                 },
                 None => {
                     // anote with default annotation
-                    writeln!(
-                        f, 
-                        "    \"{}\" {}", 
+                    dot_gv_str.push_str(format!(
+                        "    \"{}\" [{}{}];\n",
                         node.str_addr_and_type(), 
-                        AnnotationSet::get_default_dot_attributes(node)
-                    )?;
+                        AnnotationSet::get_default_dot_attributes(node),
+                        node_comment,
+                    ).to_string().as_str());
                 }
             }
         }
@@ -494,10 +522,35 @@ impl std::fmt::Display for GraphData {
         for (from_addr, to_addr, edge) in self.graph.edge_references() {
             let from = self.addr_to_node.get(&from_addr).unwrap();
             let to = self.addr_to_node.get(&to_addr).unwrap();
-            writeln!(f, "    \"{}\" -> \"{}\" [label=\"{}({})\" weight={}]", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight, edge.weight)?;
+            dot_gv_str.push_str(
+                format!(
+                            "    \"{}\" -> \"{}\" [label=\"{}({})\" weight={}];\n", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight, edge.weight
+                ).to_string().as_str()
+            );
         }
 
-        writeln!(f, "}}")?;
+        dot_gv_str.push_str("}}\n");
+        dot_gv_str
+    }
+
+    pub fn stringify_with_comment_hashmap(
+        &self,
+        graph_header_comment: String,
+        hashmap: &HashMap<u64, String>
+    ) -> String {
+        self.generate_gv_str(
+            Some(graph_header_comment), 
+            Some(hashmap)
+        )
+    }
+
+}
+
+/// custom dot format for the graph
+/// NOTE: This formatter is called when saving the graph to a dot file
+impl std::fmt::Display for GraphData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.generate_gv_str(None, None))?;
         Ok(())
     }
 }

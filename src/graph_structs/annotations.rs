@@ -220,7 +220,7 @@ impl AnnotationSet {
     /// get the dot attributes for the node
     pub fn annotate_dot_attributes(&self) -> String {
         format!(
-            "[label=\"{}\" color=\"{}\" style=filled];",
+            "label=\"{}\" color=\"{}\" style=filled",
             self.get_name(),
             self.get_color(),
         )
@@ -232,16 +232,16 @@ impl AnnotationSet {
     pub fn get_default_dot_attributes(node : &Node) -> String {
         match node {
             Node::ChunkHeaderNode(_) => {
-                "[label=\"CHN\" color=\"black\"];".to_string()
+                "label=\"CHN\" color=\"black\";".to_string()
             }
             Node::ValueNode(_) => {
-                "[label=\"VN\" color=\"grey\"];".to_string()
+                "label=\"VN\" color=\"grey\";".to_string()
             }
             Node::PointerNode(_) => {
-                "[label=\"PN\" color=\"orange\"];".to_string()
+                "label=\"PN\" color=\"orange\";".to_string()
             }
             Node::FooterNode(_) => {
-                "[label=\"FN\" color=\"purple\"];".to_string()
+                "label=\"FN\" color=\"purple\";".to_string()
             }
         }
     }

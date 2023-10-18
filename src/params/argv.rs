@@ -88,6 +88,8 @@ pub enum Pipeline {
     ChunkTopVnSemanticEmbedding,
     /// make the graph and save it
     Graph,
+    /// make the graph and save it with the embedding on nodes as comment
+    GraphWithEmbeddingComments,
     /// make a semantic embedding of the chunk
     ChunkSemanticEmbedding,
     /// make a statistic embedding of the chunk
