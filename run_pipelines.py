@@ -132,7 +132,8 @@ def build_arg_compute_instances(cli: CLIArguments) -> list[list[str]]:
         for entropy_filtering_flag in LIST_ENTROPY_FILTERING_FLAGS:      
             # output dir preparation
             current_dir = os.getcwd()
-            output_dir_path = current_dir + "/data/" + pipeline_name.replace("-", "_") + "_-e_" + entropy_filtering_flag
+            compute_instance_index = len(arg_compute_instances)
+            output_dir_path = current_dir + "/data/" + str(compute_instance_index) + "_" + pipeline_name.replace("-", "_") + "_-e_" + entropy_filtering_flag
             
             create_or_clear_output_dir(output_dir_path, not cli.args.keep_old_output)
             
@@ -158,7 +159,8 @@ def build_arg_compute_instances(cli: CLIArguments) -> list[list[str]]:
         additional_param_list_as_str = "_".join(
             additional_agrs
         )
-        output_dir_path = current_dir + "/data/" + pipeline_name.replace("-", "_") + "_-e_none_" + additional_param_list_as_str
+        compute_instance_index = len(arg_compute_instances)
+        output_dir_path = current_dir + "/data/" + str(compute_instance_index) + "_" + pipeline_name.replace("-", "_") + "_-e_none_" + additional_param_list_as_str
         
         create_or_clear_output_dir(output_dir_path, not cli.args.keep_old_output)
         

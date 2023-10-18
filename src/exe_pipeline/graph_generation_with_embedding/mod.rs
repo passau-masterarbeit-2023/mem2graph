@@ -11,7 +11,6 @@ pub fn gen_and_save_memory_graph_with_embedding_comments(
     output_file_path: PathBuf, 
     graph_embedding: &GraphEmbedding,
 ) -> usize {
-    // TODO: Add entropy in embeddings
     // parse each node of the graph to generate its embedding
     let graph =  &graph_embedding.graph_annotate.graph_data;
 
@@ -80,7 +79,7 @@ pub fn gen_and_save_memory_graph_with_embedding_comments(
         
         node_addr_to_embedding_str.insert(
             *node_addr, 
-            node_embedding_str,
+            format!("[{}]", node_embedding_str).to_string(),
         );
     }
 

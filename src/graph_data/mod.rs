@@ -470,7 +470,7 @@ impl GraphData {
     ) -> String {
         let mut dot_gv_str = String::new();
 
-        dot_gv_str.push_str("digraph {{\n");
+        dot_gv_str.push_str("digraph {\n");
         if graph_header_comment.is_some() {
             dot_gv_str.push_str(
                 format!("    comment=\"{}\"\n", graph_header_comment.unwrap())
@@ -498,7 +498,7 @@ impl GraphData {
             match self.node_addr_to_annotations.get(&addr) {
                 Some(annotation) => {
                     dot_gv_str.push_str(format!(
-                        "    \"{}\" [{}{}];\n", 
+                        "    \"{}\" [{}{}]\n", 
                         node.str_addr_and_type(), 
                         annotation.annotate_dot_attributes(),
                         node_comment
@@ -507,7 +507,7 @@ impl GraphData {
                 None => {
                     // anote with default annotation
                     dot_gv_str.push_str(format!(
-                        "    \"{}\" [{}{}];\n",
+                        "    \"{}\" [{}{}]\n",
                         node.str_addr_and_type(), 
                         AnnotationSet::get_default_dot_attributes(node),
                         node_comment,
@@ -524,12 +524,12 @@ impl GraphData {
             let to = self.addr_to_node.get(&to_addr).unwrap();
             dot_gv_str.push_str(
                 format!(
-                            "    \"{}\" -> \"{}\" [label=\"{}({})\" weight={}];\n", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight, edge.weight
+                            "    \"{}\" -> \"{}\" [label=\"{}({})\" weight={}]\n", from.str_addr_and_type(), to.str_addr_and_type(), edge.edge_type, edge.weight, edge.weight
                 ).to_string().as_str()
             );
         }
 
-        dot_gv_str.push_str("}}\n");
+        dot_gv_str.push_str("}\n");
         dot_gv_str
     }
 
