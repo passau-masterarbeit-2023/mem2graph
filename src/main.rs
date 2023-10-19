@@ -58,6 +58,7 @@ fn main() {
     let annotation = params::ARGV.annotation;
     let no_value_node = params::ARGV.no_value_node;
     let entropy_filter = params::ARGV.entropy_filter;
+    let chunk_byte_size_filter = params::ARGV.chunk_byte_size_filter;
 
     // launch computations
     for path in input_path {
@@ -69,6 +70,7 @@ fn main() {
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter,
+                    chunk_byte_size_filter,
                     false,
                     gen_and_save_value_node_embedding
                 )
@@ -79,6 +81,7 @@ fn main() {
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter,
+                    chunk_byte_size_filter,
                     no_value_node,
                     gen_and_save_memory_graph,
                     "dot.gv",
@@ -90,6 +93,7 @@ fn main() {
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter,
+                    chunk_byte_size_filter,
                     no_value_node,
                     gen_and_save_memory_graph_with_embedding_comments,
                     "dot.gv",
@@ -101,6 +105,7 @@ fn main() {
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter, 
+                    chunk_byte_size_filter,
                     no_value_node,
                     gen_and_save_chunk_semantic_embedding
                 )
@@ -112,6 +117,7 @@ fn main() {
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter, 
+                    chunk_byte_size_filter,
                     false,
                     gen_and_save_chunk_statistic_embedding,
                 )
@@ -123,6 +129,7 @@ fn main() {
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter,
+                    chunk_byte_size_filter,
                     false,
                     gen_and_save_chunk_top_vn_semantic_embedding
                 )
@@ -134,6 +141,7 @@ fn main() {
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter,
+                    chunk_byte_size_filter,
                     false,
                     gen_and_save_chunk_start_bytes_embedding
                 )
@@ -145,6 +153,7 @@ fn main() {
                     output_folder.clone(), 
                     annotation, 
                     entropy_filter,
+                    chunk_byte_size_filter,
                     false,
                     gen_and_save_chunk_extract
                 )

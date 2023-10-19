@@ -30,7 +30,7 @@ pub fn generate_chunk_top_vn_semantic_embedding(
     for chn_addr in graph_embedding.graph_annotate.graph_data.chn_addrs.iter() {
 
         // entropy filter
-        if graph_embedding.is_entropy_filtered_addr(chn_addr) {
+        if graph_embedding.is_filtered_addr(chn_addr) {
             continue;
         }
 

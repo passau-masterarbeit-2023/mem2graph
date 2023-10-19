@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::{time::Instant, path::PathBuf};
 
-use crate::{graph_embedding::GraphEmbedding, params::{argv::{SelectAnnotationLocation, EntropyFilter}, ARGV}, utils::truncate_path_to_last_n_dirs};
+use crate::{graph_embedding::GraphEmbedding, params::{argv::{SelectAnnotationLocation, EntropyFilter, ChunkByteSizeFilter}, ARGV}, utils::truncate_path_to_last_n_dirs};
 use super::get_raw_file_or_files_from_path;
 
 /// Wrapper for the embedding pipeline, with the CSV saving.
@@ -10,6 +10,7 @@ pub fn embedding_pipeline_to_csv(
     output_folder: PathBuf, 
     annotation : SelectAnnotationLocation, 
     entropy_filter : EntropyFilter,
+    chunk_byte_size_filter : ChunkByteSizeFilter,
     no_value_node : bool,
     gen_and_save_embedding: fn(PathBuf, &GraphEmbedding) -> usize,
 ) {
@@ -18,6 +19,7 @@ pub fn embedding_pipeline_to_csv(
         output_folder, 
         annotation, 
         entropy_filter, 
+        chunk_byte_size_filter,
         no_value_node,
         gen_and_save_embedding,
         ".csv"
@@ -49,6 +51,7 @@ pub fn embedding_pipeline(
     output_folder: PathBuf, 
     annotation : SelectAnnotationLocation, 
     entropy_filter : EntropyFilter,
+    chunk_byte_size_filter : ChunkByteSizeFilter,
     no_value_node : bool,
     gen_and_save_embedding: fn(PathBuf, &GraphEmbedding) -> usize,
     save_file_extension: &str,
@@ -116,6 +119,7 @@ pub fn embedding_pipeline(
                 crate::params::BLOCK_BYTE_SIZE,
                 *crate::params::EMBEDDING_DEPTH,
                 entropy_filter,
+                chunk_byte_size_filter,
                 annotation,
                 no_value_node,
             );

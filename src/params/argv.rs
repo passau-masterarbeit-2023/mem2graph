@@ -39,6 +39,11 @@ pub struct Argv {
     #[arg(short = 'e', long, default_value = "none")]
     pub entropy_filter : EntropyFilter,
 
+    /// If the embedding is filtered with the size of the user data of each chunk
+    /// NOTE : only used in the embedding pipeline
+    #[arg(short = 's', long, default_value = "none")]
+    pub chunk_byte_size_filter : ChunkByteSizeFilter,
+
     /// if their is no value node or pointer node in the graph
     /// 
     /// NOTE : By default the graph contains value node and pointer node, 
@@ -79,6 +84,15 @@ pub enum EntropyFilter {
     MinOfChunkTresholdEntropy,
 }
 
+/// Filter the embedding with the size of the user data of each chunk
+/// NOTE : the annotated blocks are not filtered
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+pub enum ChunkByteSizeFilter {
+    /// don't filter the embedding
+    None,
+    /// filter the graph, keeping only the chunk with the size of the user data in CHUNK_BYTES_SIZE_TO_KEEP_FILTER
+    Activate,
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Pipeline {

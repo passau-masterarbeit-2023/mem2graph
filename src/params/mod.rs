@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use dotenv::dotenv;
 use std::sync::Once;
@@ -121,6 +122,20 @@ lazy_static! {
     /// WARN : This vector must be sorted in ascending order.
     pub static ref N_GRAM: Vec<usize> = {
         get_n_gram_from_env()
+    };
+
+    pub static ref CHUNK_BYTES_SIZE_TO_KEEP_FILTER : HashSet<usize> = {
+        let chunk_bytes_size_to_keep_filter = std::env::var("CHUNK_BYTES_SIZE_TO_KEEP_FILTER");
+        match chunk_bytes_size_to_keep_filter {
+            Ok(filter) => {
+                let filter: HashSet<usize> = string_to_usize_vec(filter.as_str()).into_iter().collect();
+                filter
+            },
+            Err(_) => {
+                println!("CHUNK_BYTES_SIZE_TO_KEEP_FILTER environment variable not set. Defaulting to '32'.");
+                return vec![32].into_iter().collect();
+            },
+        }
     };
 
     pub static ref TEST_CSV_EMBEDDING_FILE_PATH: PathBuf = {

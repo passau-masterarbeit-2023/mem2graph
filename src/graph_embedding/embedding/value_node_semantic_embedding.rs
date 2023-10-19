@@ -16,7 +16,7 @@ pub fn generate_value_node_semantic_embedding(graph_embedding : &GraphEmbedding)
     let mut labels = Vec::new();
 
     for addr in graph_embedding.graph_annotate.graph_data.value_node_addrs.iter() {
-        if graph_embedding.is_entropy_filtered_addr(addr) {
+        if graph_embedding.is_filtered_addr(addr) {
             continue;
         }
 

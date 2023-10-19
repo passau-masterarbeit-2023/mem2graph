@@ -14,7 +14,7 @@ pub fn generate_chunk_extract(
     let mut samples = Vec::new();
     let mut labels = Vec::new();
     for chn_addr in graph_embedding.graph_annotate.graph_data.chn_addrs.iter() {
-        if graph_embedding.is_entropy_filtered_addr(chn_addr) {
+        if graph_embedding.is_filtered_addr(chn_addr) {
             continue;
         }
 
