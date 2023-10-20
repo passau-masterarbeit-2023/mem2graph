@@ -4,16 +4,17 @@ import tqdm
 
 INPUT_FILE_DIR_PATH = "/home/onyr/code/phdtrack/phdtrack_data_clean"
 
-PIPELINES_NAMES_TO_ADDITIONAL_ARGS_ENTROPY: list[tuple[str, list[str]]] = [
+PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER: list[tuple[str, list[str]]] = [
     ("value-node-embedding", []),
     ("chunk-top-vn-semantic-embedding", []),
     ("chunk-semantic-embedding", ["-v", "-a", "chunk-header-node"]),
+    ("chunk-semantic-embedding", ["-a", "chunk-header-node"]),
     ("chunk-statistic-embedding", ["-a", "chunk-header-node"]),
     ("chunk-start-bytes-embedding", ["-a", "chunk-header-node"]),
     ("chunk-extraction", ["-a", "chunk-header-node"]),
 ]
 
-PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_ENTROPY: list[tuple[str, list[str]]] = [
+PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER: list[tuple[str, list[str]]] = [
     ("graph", []),
     ("graph", ["-a", "none"]),
     ("graph", ["-v", "-a", "chunk-header-node"]),
@@ -21,7 +22,6 @@ PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_ENTROPY: list[tuple[str, list[str]]] = [
     ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node"]),
     ("graph-with-embedding-comments", ["-v", "-a", "none"]),
     ("graph-with-embedding-comments", ["-a", "chunk-header-node"]),
-    ("graph-with-embedding-comments", ["-a", "-a", "none"]),
     ("graph-with-embedding-comments", []),
 ]
 
@@ -29,6 +29,11 @@ LIST_ENTROPY_FILTERING_FLAGS = [
     "none",
     "only-max-entropy",
     "min-of-chunk-treshold-entropy",
+]
+
+LIST_BYTE_SIZE_FILTERING_FLAGS = [
+    "none",
+    "activate",
 ]
 
 # -------------------- CLI arguments -------------------- #
@@ -128,32 +133,47 @@ def build_arg_compute_instances(cli: CLIArguments) -> list[list[str]]:
     arg_compute_instances: list[list[str]] = []
 
     # create args with entropy
-    for (pipeline_name, additional_agrs) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_ENTROPY:
-        for entropy_filtering_flag in LIST_ENTROPY_FILTERING_FLAGS:      
-            # output dir preparation
-            current_dir = os.getcwd()
-            compute_instance_index = len(arg_compute_instances)
-            output_dir_path = current_dir + "/data/" + str(compute_instance_index) + "_" + pipeline_name.replace("-", "_") + "_-e_" + entropy_filtering_flag
-            
-            create_or_clear_output_dir(output_dir_path, not cli.args.keep_old_output)
-            
-            # prepare arguments
-            args = [
-                "cargo", "run", "--",
-                "-d", INPUT_FILE_DIR_PATH,
-                "-o", output_dir_path, 
-                "-p", pipeline_name,
-                "-e", entropy_filtering_flag,
-            ]
+    for (pipeline_name, additional_agrs) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER:
+        for entropy_filtering_flag in LIST_ENTROPY_FILTERING_FLAGS:  
+            for byte_size_filter in LIST_BYTE_SIZE_FILTERING_FLAGS:    
+                # output dir preparation
+                current_dir = os.getcwd()
 
-            # append additional arguments
-            if len(additional_agrs) > 0:
-                args.extend(additional_agrs)
+                # add the filtering if it is not none (easy to activate or not the sampling)
+                filtering_tag = ""
+                if entropy_filtering_flag != "none" or byte_size_filter != "none":
+                    filtering_tag = "filtered_"
+                    
 
-            arg_compute_instances.append(args)
-    
+                compute_instance_index = len(arg_compute_instances)
+                output_dir_path = (
+                    current_dir + "/data/" + str(compute_instance_index) + 
+                    "_" + filtering_tag + 
+                    pipeline_name.replace("-", "_") + 
+                    "_-e_" + entropy_filtering_flag +
+                    "_-s_" + byte_size_filter
+                )
+                
+                create_or_clear_output_dir(output_dir_path, not cli.args.keep_old_output)
+                
+                # prepare arguments
+                args = [
+                    "cargo", "run", "--",
+                    "-d", INPUT_FILE_DIR_PATH,
+                    "-o", output_dir_path, 
+                    "-p", pipeline_name,
+                    "-e", entropy_filtering_flag,
+                    "-s", byte_size_filter,
+                ]
+
+                # append additional arguments
+                if len(additional_agrs) > 0:
+                    args.extend(additional_agrs)
+
+                arg_compute_instances.append(args)
+        
     # create args without entropy
-    for (pipeline_name, additional_agrs) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_ENTROPY:
+    for (pipeline_name, additional_agrs) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER:
         # output dir preparation
         current_dir = os.getcwd()
         additional_param_list_as_str = "_".join(
