@@ -48,10 +48,10 @@ pub fn save_embedding(samples: Vec<HashMap<String, usize>>, labels: Vec<usize>, 
     );
 
     // Assuming all HashMaps have the same set of keys
-    let headers: Vec<String> = samples[0].keys().cloned().collect();
+    let mut headers: Vec<String> = samples[0].keys().cloned().collect();
+    headers.sort();
     
     let mut all_headers = headers.clone();
-    all_headers.sort();
     all_headers.push("label".to_string());
 
     csv_writer.write_record(&all_headers).unwrap();
@@ -85,10 +85,10 @@ pub fn save_embedding_with_string(samples: Vec<HashMap<String, String>>, labels:
     );
 
     // Assuming all HashMaps have the same set of keys
-    let headers: Vec<String> = samples[0].keys().cloned().collect();
+    let mut headers: Vec<String> = samples[0].keys().cloned().collect();
+    headers.sort();
     
     let mut all_headers = headers.clone();
-    all_headers.sort();
     all_headers.push("label".to_string());
 
     csv_writer.write_record(&all_headers).unwrap();
@@ -127,12 +127,13 @@ pub fn save_embedding_with_f64(
     );
 
     // Assuming all HashMaps have the same set of keys
-    let usize_headers: Vec<String> = samples[0].0.keys().cloned().collect();
-    let f64_headers: Vec<String> = samples[0].1.keys().cloned().collect();
+    let mut usize_headers: Vec<String> = samples[0].0.keys().cloned().collect();
+    usize_headers.sort();
+    let mut f64_headers: Vec<String> = samples[0].1.keys().cloned().collect();
+    f64_headers.sort();
     
     let mut all_headers = usize_headers.clone();
     all_headers.extend(f64_headers.iter().cloned());
-    all_headers.sort();
     all_headers.push("label".to_string());
 
     csv_writer.write_record(&all_headers).unwrap();
