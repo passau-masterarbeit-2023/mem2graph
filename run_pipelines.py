@@ -1,8 +1,13 @@
 import os
 import subprocess
+import threading
 import tqdm
+import sys
+from datetime import datetime
+import threading
 
 INPUT_FILE_DIR_PATH = "/home/onyr/code/phdtrack/phdtrack_data_clean"
+COMPUTE_INSTANCE_TIMEOUT = 0 # timeout in seconds
 
 PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER: list[tuple[str, list[str]]] = [
     ("value-node-embedding", []),
@@ -12,6 +17,10 @@ PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER: list[tuple[str, list[str]]] = [
     ("chunk-statistic-embedding", ["-a", "chunk-header-node"]),
     ("chunk-start-bytes-embedding", ["-a", "chunk-header-node"]),
     ("chunk-extraction", ["-a", "chunk-header-node"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "none"]),
+    ("graph-with-embedding-comments", ["-a", "chunk-header-node"]),
+    ("graph-with-embedding-comments", []),
 ]
 
 PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER: list[tuple[str, list[str]]] = [
@@ -19,10 +28,6 @@ PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER: list[tuple[str, list[str]]] = [
     ("graph", ["-a", "none"]),
     ("graph", ["-v", "-a", "chunk-header-node"]),
     ("graph", ["-v", "-a", "none"]),
-    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node"]),
-    ("graph-with-embedding-comments", ["-v", "-a", "none"]),
-    ("graph-with-embedding-comments", ["-a", "chunk-header-node"]),
-    ("graph-with-embedding-comments", []),
 ]
 
 LIST_ENTROPY_FILTERING_FLAGS = [
@@ -67,21 +72,32 @@ class CLIArguments:
         )
         # no delete old output files
         parser.add_argument(
+            '-k',
             '--keep-old-output',
             action='store_true',
             help="Keep old output files."
         )
         # add file path or directory path argument
         parser.add_argument(
+            '-i',
             '--input',
             type=str,
             help="Input as file path or directory path"
         )
-        # select only a single compute instance
+        # select only a list of selected compute instance
         parser.add_argument(
+            '-r',
             '--run-selected',
             type=int,
-            help="Run selected compute instance only"
+            nargs='+',
+            help="List of one or more integers."
+        )
+        # timeout for each compute instance
+        parser.add_argument(
+            '-t',
+            '--timeout',
+            type=int,
+            help="Timeout in seconds for each compute instance."
         )
 
         # save parsed arguments
@@ -90,6 +106,11 @@ class CLIArguments:
         # overwrite debug flag
         global DRY_RUN
         DRY_RUN = True if self.args.dry_run else False
+
+        global COMPUTE_INSTANCE_TIMEOUT
+        if self.args.timeout is not None:
+            COMPUTE_INSTANCE_TIMEOUT = self.args.timeout
+            print(f"🔷 Compute instance timeout: {COMPUTE_INSTANCE_TIMEOUT} seconds")
 
         # overwrite input dir path
         global INPUT_FILE_DIR_PATH
@@ -202,6 +223,17 @@ def build_arg_compute_instances(cli: CLIArguments) -> list[list[str]]:
     return arg_compute_instances
 
 
+# Global flag to indicate whether to stop reading from stdout
+STOP_READING = False
+
+def read_stdout(pipe):
+    global STOP_READING
+    if pipe.stdout is not None:
+        for line in iter(pipe.stdout.readline, ''):
+            if STOP_READING:
+                break
+            print(line.strip())
+
 # -------------------- run the executables -------------------- #
 def run_executables(cli: CLIArguments, arg_compute_instances: list[list[str]]) -> None:
     """
@@ -210,15 +242,20 @@ def run_executables(cli: CLIArguments, arg_compute_instances: list[list[str]]) -
 
     # CLI: run only the selected compute instance   
     if cli.args.run_selected is not None:
-        # check if the selected compute instance exists
-        if cli.args.run_selected < 0 or cli.args.run_selected >= len(arg_compute_instances):
-            print(f"🔴 Selected compute instance {cli.args.run_selected} does not exist.")
-            exit()
+        # check if the selected compute instances exist
+        for selected in cli.args.run_selected:
+            if selected < 0 or selected >= len(arg_compute_instances):
+                print(f"🔴 Selected compute instance {cli.args.run_selected} does not exist.")
+                exit()
 
         # run only the selected compute instance
-        selected_arg_compute_instances = arg_compute_instances[cli.args.run_selected]
-        print(f"🔷 Selected compute instance: {selected_arg_compute_instances}")
-        arg_compute_instances = [selected_arg_compute_instances]
+        selected_arg_compute_instances = []
+        for selected in cli.args.run_selected:
+            selected_compt_inst = arg_compute_instances[selected]
+            selected_arg_compute_instances.append(selected_compt_inst)
+            print(f"🔷 Selected compute instance: {selected_compt_inst}")
+    
+        arg_compute_instances = selected_arg_compute_instances
 
     if DRY_RUN:
         print("🔶 Dry run, not running the executables.")
@@ -235,18 +272,42 @@ def run_executables(cli: CLIArguments, arg_compute_instances: list[list[str]]) -
         start_time = time.time()
 
         # run compute instances
-        for args in tqdm.tqdm(arg_compute_instances):
-            with subprocess.Popen(args, stdout=subprocess.PIPE) as popen:
+
+
+        COMPUTE_INSTANCE_TIMEOUT = 10  # Your timeout value in seconds
+
+        # def read_stdout(pipe):
+        #     if pipe.stdout is not None:
+        #         for line in iter(pipe.stdout.readline, b''):
+        #             print(line.strip())
+
+        for args in tqdm.tqdm(arg_compute_instances):  # Replace arg_compute_instances with your own list
+            with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True) as popen:
                 if popen.stdout is not None:
-                    for line in iter(popen.stdout.readline, b''):
-                        print(line.decode().strip())
-                    popen.wait()
+                    thread = threading.Thread(target=read_stdout, args=(popen,))
+                    thread.start()
+
+                    try:
+                        if COMPUTE_INSTANCE_TIMEOUT > 0:
+                            thread.join(timeout=COMPUTE_INSTANCE_TIMEOUT)
+                            if thread.is_alive():
+                                print(f"🟣 Timeout reached for compute instance: {args}")
+                                STOP_READING = True  # Set the flag to stop the thread
+                                popen.terminate()
+                                thread.join()  # Make sure to join the thread even after termination
+                                STOP_READING = False  # Reset the flag
+                        else:
+                            thread.join()
+                    except Exception as e:
+                        print(f"🔴 An error occurred: {e}")
+                        STOP_READING = True  # Set the flag to stop the thread
+                        popen.terminate()
+                        thread.join()
+                        STOP_READING = False  # Reset the flag
                 else:
                     print(f"🔴 Failed compute instance: {args}")
-                    exit()
+                    sys.exit(1)
 
-                args_str = " ".join(args)
-                print(f"🟢 Finished compute instance: {args_str}")
 
         # end time
         end_time = time.time()
@@ -259,6 +320,8 @@ def run_executables(cli: CLIArguments, arg_compute_instances: list[list[str]]) -
         ))
 
 if __name__ == "__main__":
+    start = datetime.now()
+
     cli = CLIArguments()
 
     arg_compute_instances = build_arg_compute_instances(cli)
@@ -270,3 +333,12 @@ if __name__ == "__main__":
         print(f" + [Compute instance: {i}] {arg_str}")
 
     run_executables(cli, arg_compute_instances)
+
+    end = datetime.now()
+    duration = end - start
+    human_readable_duration = "hours: {0}, minutes: {1}, seconds: {2}".format(
+        duration.seconds // 3600,
+        (duration.seconds // 60) % 60,
+        duration.seconds % 60
+    )
+    print(f"🏁 Finished! Total time: {human_readable_duration}")

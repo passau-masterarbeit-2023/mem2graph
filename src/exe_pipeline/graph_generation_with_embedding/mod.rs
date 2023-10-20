@@ -6,6 +6,65 @@ use crate::graph_embedding::embedding::value_node_semantic_embedding::generate_v
 use crate::graph_structs::Node;
 use crate::params::argv::SelectAnnotationLocation;
 
+/// Generate a string representing the header of the embedding.
+/// It is composed of the names of the fields of the embedding, 
+/// separated by commas.
+fn generate_embedding_header_and_embedding_length(
+    graph_embedding: &GraphEmbedding,
+    embedding_fields: &Vec<String>,
+) -> String {
+    let optional_filtering = {
+        if graph_embedding.is_filtering_active() {
+            ",filtered"
+        } else {
+            ""
+        }
+    };
+
+    let header_embedding_fields = 
+        embedding_fields.join(",") 
+        + ",entropy" 
+        + optional_filtering;
+
+    header_embedding_fields
+}
+
+/// A list as a string is a string of the form "[a,b,c,d]"
+/// This function returns the number of elements in the list
+fn get_len_of_str_list(list_as_str: &String) -> usize {
+    let mut nb_of_elements = 0;
+    let mut is_inside_list = false;
+    let mut is_inside_element = false;
+
+    for c in list_as_str.chars() {
+        match c {
+            '[' => {
+                is_inside_list = true;
+                is_inside_element = false;
+            }
+            ']' => {
+                is_inside_list = false;
+                if is_inside_element {
+                    nb_of_elements += 1;
+                }
+            }
+            ',' => {
+                if is_inside_list && is_inside_element {
+                    nb_of_elements += 1;
+                }
+                is_inside_element = false;
+            }
+            ' ' => {}
+            _ => {
+                if is_inside_list {
+                    is_inside_element = true;
+                }
+            }
+        }
+    }
+    nb_of_elements
+}
+
 /// Generate a graph to dot file for the given file.
 pub fn gen_and_save_memory_graph_with_embedding_comments(
     output_file_path: PathBuf, 
@@ -61,11 +120,21 @@ pub fn gen_and_save_memory_graph_with_embedding_comments(
     let mut embedding_fields = first_embedding.keys().cloned().collect::<Vec<String>>();
     embedding_fields.sort();
 
-    let embedding_fields_str = embedding_fields.join(",") + ",entropy";
+    // header of the embedding
+    let header_embedding_fields = format!("[{}]",
+        generate_embedding_header_and_embedding_length(
+            graph_embedding, 
+            &embedding_fields
+        )
+    );
+    let header_embedding_length = get_len_of_str_list(&header_embedding_fields);
+    
     let mut node_addr_to_embedding_str = HashMap::new();
 
     for (node_addr, node_embedding, entropy) in node_embeddings {
         let mut node_embedding_str = String::new();
+
+        // convert the embedding to a string
         for i in 0..embedding_fields.len() {
             let field = embedding_fields.get(i).unwrap();
             node_embedding_str.push_str(&node_embedding.get(field).unwrap().to_string());
@@ -74,12 +143,33 @@ pub fn gen_and_save_memory_graph_with_embedding_comments(
             }
         }
 
-        // add entropy as a last field
+        // add entropy as additional field
         node_embedding_str.push_str(&format!(",{}", entropy));
+
+        // add optional filtering as additional field
+        if graph_embedding.is_filtering_active() {
+            if graph_embedding.is_filtered_addr(node_addr) {
+                node_embedding_str.push_str(",1")
+            } else {
+                node_embedding_str.push_str(",0")
+            }
+        }
         
+        let embedding_list_as_str = format!("[{}]", node_embedding_str);
+
+        // check that the length of the embedding is correct
+        let embedding_length = get_len_of_str_list(&embedding_list_as_str);
+        if embedding_length != header_embedding_length {
+            panic!(
+                "The length of the node embedding is not correct: {} != {}",
+                embedding_length,
+                header_embedding_length
+            );
+        }
+
         node_addr_to_embedding_str.insert(
             *node_addr, 
-            format!("[{}]", node_embedding_str).to_string(),
+            embedding_list_as_str,
         );
     }
 
@@ -88,7 +178,7 @@ pub fn gen_and_save_memory_graph_with_embedding_comments(
     
     let dot_graph_with_comments = format!("{}", 
         graph.stringify_with_comment_hashmap( 
-            embedding_fields_str, 
+            header_embedding_fields, 
             &node_addr_to_embedding_str
         )
     );

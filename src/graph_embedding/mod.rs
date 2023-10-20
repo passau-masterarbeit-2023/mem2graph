@@ -200,6 +200,10 @@ impl GraphEmbedding {
         self.is_entropy_filtered(addr) || self.is_byte_size_filtered(addr)
     }
 
+    pub fn is_filtering_active(&self) -> bool {
+        self.entropy_treshold.is_some() || self.chunk_bytes_size_to_keep_filter.is_some()
+    }
+
     // ----------------------------------------- test   -----------------------------------------------//
 
     #[cfg(test)]

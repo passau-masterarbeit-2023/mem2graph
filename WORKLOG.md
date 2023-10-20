@@ -1,5 +1,10 @@
 # Work logs
 
+### Fri 20 Oct 2023
+
+* [X] Added filtering based embedding field to `graph-with-embedding-comment` pipeline.
+* [X] Modified script launcher to support timeout and multiple pipeline selection.
+
 ### Sun 15 Oct 2023
 
 * [X] Fixed error with output file naming. It was keeping the filepath of the input, and not the real one from files.
