@@ -168,7 +168,18 @@ lazy_static! {
             Ok(nb) => nb.parse::<usize>().unwrap(),
             Err(_) => {
                 println!("CHUNK_NB_OF_START_BYTES_FOR_CHUNK_ENTROPY environment variable not set. Defaulting to 10.");
-                return 0;
+                return 10;
+            },
+        }
+    };
+
+    pub static ref CHUNK_NB_OF_START_BYTES_FOR_CHUNK_EMBEDDING: usize = {
+        let val = std::env::var("CHUNK_NB_OF_START_BYTES_FOR_CHUNK_EMBEDDING");
+        match val {
+            Ok(nb) => nb.parse::<usize>().unwrap(),
+            Err(_) => {
+                println!("CHUNK_NB_OF_START_BYTES_FOR_CHUNK_EMBEDDING environment variable not set. Defaulting to 10.");
+                return 10;
             },
         }
     };
