@@ -1,18 +1,27 @@
 use std::collections::HashMap;
 use std::{path::PathBuf, fs::File, io::Write};
+
 use crate::graph_embedding::GraphEmbedding;
 use crate::graph_embedding::embedding::chunk_semantic_embedding::generate_semantic_samples_of_a_chunk;
-use crate::graph_embedding::embedding::value_node_semantic_embedding::generate_value_sample;
+use crate::graph_embedding::embedding::chunk_start_bytes_embedding::generate_chunk_start_bytes_sample;
+use crate::graph_embedding::embedding::chunk_statistic_embedding::generate_chunk_statistic_samples;
 use crate::graph_structs::Node;
-use crate::params::argv::SelectAnnotationLocation;
+use crate::params::{N_GRAM, BLOCK_BYTE_SIZE, self};
+use crate::params::argv::{SelectAnnotationLocation, Pipeline};
 
 /// Generate a string representing the header of the embedding.
 /// It is composed of the names of the fields of the embedding, 
 /// separated by commas.
-fn generate_embedding_header_and_embedding_length(
+fn generate_embedding_header(
     graph_embedding: &GraphEmbedding,
-    embedding_fields: &Vec<String>,
+    node_embeddings: &Vec<(&u64, HashMap<String, String>, f64)>,
 ) -> String {
+    // sorted header of the embedding
+    let (_, first_embedding, _) = node_embeddings.get(0).unwrap();
+
+    let mut embedding_fields = first_embedding.keys().cloned().collect::<Vec<String>>();
+    embedding_fields.sort();
+
     let optional_filtering = {
         if graph_embedding.is_filtering_active() {
             ",filtered"
@@ -65,83 +74,96 @@ fn get_len_of_str_list(list_as_str: &String) -> usize {
     nb_of_elements
 }
 
-/// Generate a graph to dot file for the given file.
-pub fn gen_and_save_memory_graph_with_embedding_comments(
-    output_file_path: PathBuf, 
+/// Parse each node of the graph to generate its embedding
+/// Returns a list of tuples (node_addr, node_embedding, entropy)
+fn generate_base_nodes_embedding(
     graph_embedding: &GraphEmbedding,
-) -> usize {
+) ->  Vec<(&u64, HashMap<String, String>, f64)>{
     // parse each node of the graph to generate its embedding
     let graph =  &graph_embedding.graph_annotate.graph_data;
 
     // generate the node embeddings
-    let mut node_embeddings = Vec::new();
-    for (node_addr, node) in graph.addr_to_node.iter() {
-        match node {
-            Node::ValueNode(vn) => {
-                if graph_embedding.graph_annotate.annotation != SelectAnnotationLocation::ValueNode {
-                    continue;
+    let mut node_embeddings: Vec<(&u64, HashMap<String, String>, f64)> = Vec::new();
+    for chn_addr in graph.chn_addrs.iter() {
+        let chn = match graph.addr_to_node.get(chn_addr) {
+            Some(chn) => chn,
+            None => {
+                panic!("🚩 The CHN node [addr: {:?}] doesn't exist", chn_addr);
+            }
+        };
+        match chn {
+            Node::ChunkHeaderNode(chn) => {
+
+                if graph_embedding.graph_annotate.annotation != SelectAnnotationLocation::ChunkHeaderNode {
+                    panic!("🚩 For chunk embedding, the annotation must be ChunkHeaderNode");
                 }
                 
                 // compute embedding
-                let node_embedding = generate_value_sample(
-                    graph_embedding, *node_addr
-                );
-
-                // add entropy of parent chunk
-                let chunk_parent_node = graph.addr_to_node.get(&vn.chn_addr).unwrap();
-                let entropy = match chunk_parent_node {
-                    Node::ChunkHeaderNode(chn) => {
-                        chn.start_data_bytes_entropy
-                    },
+                let node_embedding: HashMap<String, String> = match params::ARGV.graph_comment_embedding_type {
+                    Pipeline::ChunkSemanticEmbedding => {
+                        let features = generate_semantic_samples_of_a_chunk(
+                            graph_embedding, *chn_addr
+                        )
+                        // convert the features to string
+                        .iter().map(|(k, v)| {
+                            (k.clone(), v.to_string())
+                        }).collect::<HashMap<String, String>>();
+                        features
+                    }, 
+                    Pipeline::ChunkStatisticEmbedding => {
+                        let (feature_usize, feature_f64) = generate_chunk_statistic_samples(
+                            graph_embedding, *chn_addr, &*N_GRAM, BLOCK_BYTE_SIZE
+                        );
+                        // combines the two hashmaps into one of string
+                        let mut features = feature_usize
+                            .iter().map(|(k, v)| {
+                                (k.clone(), v.to_string())
+                            }).collect::<HashMap<String, String>>();
+                        features.extend(
+                            feature_f64.iter().map(|(k, v)| {
+                                (k.clone(), v.to_string())
+                            }).collect::<HashMap<String, String>>()
+                        );
+                        features
+                    }
+                    Pipeline::ChunkStartBytesEmbedding => {
+                        let features = generate_chunk_start_bytes_sample(
+                            graph_embedding, *chn_addr
+                        ).iter().map(|(k, v)| {
+                            (k.clone(), v.to_string())
+                        }).collect::<HashMap<String, String>>();
+                        features
+                    }
                     _ => {
-                        panic!("Value node parent is not a chunk header node");
+                        panic!("🚩 {:?} not supported for graph generation with embedding comments",
+                            params::ARGV.graph_comment_embedding_type
+                        );
                     }
                 };
 
-                node_embeddings.push((node_addr, node_embedding, entropy));
+                node_embeddings.push((chn_addr, node_embedding, chn.start_data_bytes_entropy));
             },
-            Node::ChunkHeaderNode(chn) => {
-                if graph_embedding.graph_annotate.annotation != SelectAnnotationLocation::ChunkHeaderNode {
-                    continue;
-                }
-                let node_embedding = generate_semantic_samples_of_a_chunk(
-                    graph_embedding, *node_addr
-                );
-                node_embeddings.push((node_addr, node_embedding, chn.start_data_bytes_entropy));
-            },
-            Node::PointerNode(_) => {continue;},
-            Node::FooterNode(_) => {continue;},
+            _ => {
+                panic!("🚩 Only ChunkHeaderNode is supported for graph generation with embedding comments");
+            }
         }
     }
+    node_embeddings
+}
 
-    // transform the node embeddings to vectors then to string
-    let (_, first_embedding, _) = node_embeddings.get(0).unwrap();
-
-    let mut embedding_fields = first_embedding.keys().cloned().collect::<Vec<String>>();
-    embedding_fields.sort();
-
-    // header of the embedding
-    let header_embedding_fields = format!("[{}]",
-        generate_embedding_header_and_embedding_length(
-            graph_embedding, 
-            &embedding_fields
-        )
-    );
-    let header_embedding_length = get_len_of_str_list(&header_embedding_fields);
-    
-    let mut node_addr_to_embedding_str = HashMap::new();
-
+fn convert_nodes_embedding_to_comment_hashmap(
+    graph_embedding: &GraphEmbedding,
+    node_embeddings: &Vec<(&u64, HashMap<String, String>, f64)>,
+    header_embedding_length: usize,
+) -> HashMap<u64, String> {
+    let mut node_addr_to_embedding_comment = HashMap::new();
     for (node_addr, node_embedding, entropy) in node_embeddings {
         let mut node_embedding_str = String::new();
 
         // convert the embedding to a string
-        for i in 0..embedding_fields.len() {
-            let field = embedding_fields.get(i).unwrap();
-            node_embedding_str.push_str(&node_embedding.get(field).unwrap().to_string());
-            if i < embedding_fields.len() - 1 {
-                node_embedding_str.push_str(",");
-            }
-        }
+        node_embedding_str.push_str(
+            &node_embedding.values().cloned().collect::<Vec<String>>().join(",")
+        );
 
         // add entropy as additional field
         node_embedding_str.push_str(&format!(",{}", entropy));
@@ -161,25 +183,67 @@ pub fn gen_and_save_memory_graph_with_embedding_comments(
         let embedding_length = get_len_of_str_list(&embedding_list_as_str);
         if embedding_length != header_embedding_length {
             panic!(
-                "The length of the node embedding is not correct: {} != {}",
+                "🚩 The length of the node embedding is not correct: {} != {}",
                 embedding_length,
                 header_embedding_length
             );
         }
 
-        node_addr_to_embedding_str.insert(
-            *node_addr, 
+        node_addr_to_embedding_comment.insert(
+            **node_addr, 
             embedding_list_as_str,
         );
     }
+    node_addr_to_embedding_comment
+}
+
+/// Generate a graph to dot file for the given file.
+pub fn gen_and_save_memory_graph_with_embedding_comments(
+    output_file_path: PathBuf, 
+    graph_embedding: &GraphEmbedding,
+) -> usize {
+    let graph =  &graph_embedding.graph_annotate.graph_data;
+
+    // generate the node embeddings
+    let node_embeddings = generate_base_nodes_embedding(graph_embedding);
+
+    // generate the header of the embedding, and its length
+    let header_embedding_fields = format!("[{}]",
+        generate_embedding_header(
+            graph_embedding, 
+            &node_embeddings
+        )
+    );
+    let header_embedding_length = get_len_of_str_list(&header_embedding_fields);
+    
+    // convert the node embeddings to a hashmap of comments
+    let node_addr_to_embedding_comment = convert_nodes_embedding_to_comment_hashmap(
+        graph_embedding, 
+        &node_embeddings, 
+        header_embedding_length
+    );
 
     // save the graph to dot file
     let mut dot_file = File::create(output_file_path).unwrap();
     
+    let used_embedding_type = match params::ARGV.graph_comment_embedding_type {
+        Pipeline::ChunkSemanticEmbedding => "chunk-semantic-embedding",
+        Pipeline::ChunkStatisticEmbedding => "chunk-statistic-embedding",
+        Pipeline::ChunkStartBytesEmbedding => "chunk-start-bytes-embedding",
+        _ => {
+            panic!("🚩 {:?} not supported for graph generation with embedding comments",
+                params::ARGV.graph_comment_embedding_type
+            );
+        }
+    };
+    let graph_comment = format!(
+        "{{ \"embedding-type\": {}, \"embedding-fields\": {} }}", 
+        used_embedding_type, header_embedding_fields
+    );
     let dot_graph_with_comments = format!("{}", 
         graph.stringify_with_comment_hashmap( 
-            header_embedding_fields, 
-            &node_addr_to_embedding_str
+            graph_comment, 
+            &node_addr_to_embedding_comment
         )
     );
 

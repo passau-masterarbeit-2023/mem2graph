@@ -9,6 +9,7 @@ import threading
 INPUT_FILE_DIR_PATH = "/home/onyr/code/phdtrack/phdtrack_data_clean"
 COMPUTE_INSTANCE_TIMEOUT = 0 # timeout in seconds
 
+# -------------------- possible pipelines (filtering) -------------------- #
 PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER: list[tuple[str, list[str]]] = [
     ("value-node-embedding", []),
     ("chunk-top-vn-semantic-embedding", []),
@@ -17,18 +18,24 @@ PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER: list[tuple[str, list[str]]] = [
     ("chunk-statistic-embedding", ["-a", "chunk-header-node"]),
     ("chunk-start-bytes-embedding", ["-a", "chunk-header-node"]),
     ("chunk-extraction", ["-a", "chunk-header-node"]),
-    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node"]),
-    ("graph-with-embedding-comments", ["-v", "-a", "none"]),
-    ("graph-with-embedding-comments", ["-a", "chunk-header-node"]),
-    ("graph-with-embedding-comments", []),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-semantic-embedding"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-statistic-embedding"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-start-bytes-embedding"]),
 ]
 
+# -------------------- possible pipelines (no filtering) -------------------- #
 PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER: list[tuple[str, list[str]]] = [
     ("graph", []),
     ("graph", ["-a", "none"]),
     ("graph", ["-v", "-a", "chunk-header-node"]),
     ("graph", ["-v", "-a", "none"]),
 ]
+
+PIPELINE_NAMES: set[str] = set()
+for (pipeline_name, _) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER:
+    PIPELINE_NAMES.add(pipeline_name)
+for (pipeline_name, _) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER:
+    PIPELINE_NAMES.add(pipeline_name)
 
 LIST_ENTROPY_FILTERING_FLAGS = [
     "none",
@@ -99,6 +106,13 @@ class CLIArguments:
             type=int,
             help="Timeout in seconds for each compute instance."
         )
+        # Only pipelines with selected name
+        parser.add_argument(
+            '-p',
+            '--pipeline',
+            type=str,
+            help=f"Consider only pipelines with selected name. Possible values: [{', '.join(PIPELINE_NAMES)}]"
+        )
 
         # save parsed arguments
         self.args = parser.parse_args()
@@ -121,6 +135,18 @@ class CLIArguments:
         if not os.path.exists(INPUT_FILE_DIR_PATH):
             print(f"🔴 Input path {INPUT_FILE_DIR_PATH} does not exist. Abort processing.")
             exit()
+        
+        # pipeline name filtering
+        if self.args.pipeline is not None:
+            global PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER
+            global PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER
+            PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER = [
+                (name, args) for (name, args) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER if name == self.args.pipeline
+            ]
+            PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER = [
+                (name, args) for (name, args) in PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER if name == self.args.pipeline
+            ]
+            print(f"🔷 Pipeline name filtering: {self.args.pipeline}")
 
         # log parsed arguments
         print("Parsed program params:")
@@ -171,6 +197,7 @@ def build_arg_compute_instances(cli: CLIArguments) -> list[list[str]]:
                     current_dir + "/data/" + str(compute_instance_index) + 
                     "_" + filtering_tag + 
                     pipeline_name.replace("-", "_") + 
+                    "_" + "_".join(additional_agrs) +
                     "_-e_" + entropy_filtering_flag +
                     "_-s_" + byte_size_filter
                 )
@@ -264,23 +291,6 @@ def run_executables(cli: CLIArguments, arg_compute_instances: list[list[str]]) -
         print("Running the executables...")
 
         # run the executables
-        from asyncio import sleep
-        import time
-        import tqdm
-
-        # get time
-        start_time = time.time()
-
-        # run compute instances
-
-
-        COMPUTE_INSTANCE_TIMEOUT = 10  # Your timeout value in seconds
-
-        # def read_stdout(pipe):
-        #     if pipe.stdout is not None:
-        #         for line in iter(pipe.stdout.readline, b''):
-        #             print(line.strip())
-
         for args in tqdm.tqdm(arg_compute_instances):  # Replace arg_compute_instances with your own list
             with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True) as popen:
                 if popen.stdout is not None:
@@ -308,16 +318,6 @@ def run_executables(cli: CLIArguments, arg_compute_instances: list[list[str]]) -
                     print(f"🔴 Failed compute instance: {args}")
                     sys.exit(1)
 
-
-        # end time
-        end_time = time.time()
-
-        # print time in hours and minutes and seconds
-        print("Total time: {} hours, {} minutes, {} seconds".format(
-            int((end_time - start_time) // 3600),
-            int((end_time - start_time) // 60),
-            int((end_time - start_time) % 60)
-        ))
 
 if __name__ == "__main__":
     start = datetime.now()

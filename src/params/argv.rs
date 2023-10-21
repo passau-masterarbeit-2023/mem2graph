@@ -1,4 +1,5 @@
 use clap::{Parser, ValueEnum};
+use serde_derive::Deserialize;
 
 // NOTE: 'group = "file_input_group"' means that only one of the options in the group can be used
 // the result is stored always in 'files_input', and on the option used (the other is None)
@@ -24,6 +25,12 @@ pub struct Argv {
     /// The pipeline to run
     #[arg(value_enum, short, long, default_value = "value-node-embedding")]
     pub pipeline: Pipeline,
+
+    /// A flag that's only relevant when pipeline is set to 'graph-with-embedding'
+    /// Specifies the type of embedding to use for the graph node comments
+    /// Supported values: 'chunk-semantic-embedding', 'chunk-statistic-embedding', 'chunk-start-bytes-embedding'
+    #[arg(short = 'c', long, required = false, requires = "pipeline", default_value = "chunk-semantic-embedding", hide_possible_values = true)]
+    pub graph_comment_embedding_type: Pipeline,
 
     /// The directory to output the results
     #[arg(short, long, required = false)]
@@ -94,7 +101,7 @@ pub enum ChunkByteSizeFilter {
     Activate,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug, Deserialize)]
 pub enum Pipeline {
     /// make the value embedding
     ValueNodeEmbedding,

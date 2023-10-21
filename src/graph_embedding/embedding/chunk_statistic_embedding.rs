@@ -33,7 +33,7 @@ pub fn generate_chunk_statistic_embedding(
 }
 
 /// generate statistic embedding of a chunk
-fn generate_chunk_statistic_samples(graph_embedding : &GraphEmbedding, chn_addr: u64, n_gram : &Vec<usize>, block_size : usize) -> 
+pub fn generate_chunk_statistic_samples(graph_embedding : &GraphEmbedding, chn_addr: u64, n_gram : &Vec<usize>, block_size : usize) -> 
     (HashMap<String, usize>, HashMap<String, f64>) {
     let mut feature_usize = get_chunk_basics_informations(graph_embedding, chn_addr);
     let mut feature_f64 = HashMap::new();

@@ -18,18 +18,8 @@ pub fn generate_chunk_start_bytes_embedding(graph_embedding : &GraphEmbedding) -
         if graph_embedding.is_filtered_addr(addr) {
             continue;
         }
-        let mut sample = get_chunk_basics_informations(graph_embedding, *addr);
-
-        let bytes = extract_chunk_data_as_bytes(graph_embedding, *addr, BLOCK_BYTE_SIZE);
-
-        for (index, &byte) in bytes.iter().take(*CHUNK_NB_OF_START_BYTES_FOR_CHUNK_EMBEDDING).enumerate() {
-            sample.insert(format!("byte_{}", index), byte as usize);
-        }
-        // insert missing 0
-        for index in bytes.len()..*CHUNK_NB_OF_START_BYTES_FOR_CHUNK_EMBEDDING {
-            sample.insert(format!("byte_{}", index), 0);
-        }
-
+        
+        let sample = generate_chunk_start_bytes_sample(graph_embedding, *addr);
         let label = get_node_label(graph_embedding, *addr);
 
         samples.push(sample);
@@ -37,4 +27,20 @@ pub fn generate_chunk_start_bytes_embedding(graph_embedding : &GraphEmbedding) -
     }
     
     (samples, labels)
+}
+
+pub fn generate_chunk_start_bytes_sample(graph_embedding : &GraphEmbedding, addr: u64) -> HashMap<String, usize> {
+    let mut sample = get_chunk_basics_informations(graph_embedding, addr);
+
+    let bytes = extract_chunk_data_as_bytes(graph_embedding, addr, BLOCK_BYTE_SIZE);
+
+    for (index, &byte) in bytes.iter().take(*CHUNK_NB_OF_START_BYTES_FOR_CHUNK_EMBEDDING).enumerate() {
+        sample.insert(format!("byte_{}", index), byte as usize);
+    }
+    // insert missing 0
+    for index in bytes.len()..*CHUNK_NB_OF_START_BYTES_FOR_CHUNK_EMBEDDING {
+        sample.insert(format!("byte_{}", index), 0);
+    }
+
+    sample
 }
