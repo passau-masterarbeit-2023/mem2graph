@@ -24,16 +24,17 @@ fn generate_embedding_header(
 
     let optional_filtering = {
         if graph_embedding.is_filtering_active() {
-            ",filtered"
+            ",'filtered'"
         } else {
             ""
         }
     };
 
-    let header_embedding_fields = 
-        embedding_fields.join(",") 
-        + ",entropy" 
-        + optional_filtering;
+    let header_embedding_fields = format!(
+        "'{}','entropy'{}", 
+        embedding_fields.join("','"), 
+        optional_filtering
+    );
 
     header_embedding_fields
 }
@@ -226,6 +227,7 @@ pub fn gen_and_save_memory_graph_with_embedding_comments(
     // save the graph to dot file
     let mut dot_file = File::create(output_file_path).unwrap();
     
+    // WARN: Using the char '-' in the comment field is not supported by the dot format (tested on sfdp)
     let used_embedding_type = match params::ARGV.graph_comment_embedding_type {
         Pipeline::ChunkSemanticEmbedding => "chunk-semantic-embedding",
         Pipeline::ChunkStatisticEmbedding => "chunk-statistic-embedding",
@@ -237,7 +239,7 @@ pub fn gen_and_save_memory_graph_with_embedding_comments(
         }
     };
     let graph_comment = format!(
-        "{{ \"embedding-type\": {}, \"embedding-fields\": {} }}", 
+        "{{ 'embedding-type': '{}', 'embedding-fields': {} }}", 
         used_embedding_type, header_embedding_fields
     );
     let dot_graph_with_comments = format!("{}", 
