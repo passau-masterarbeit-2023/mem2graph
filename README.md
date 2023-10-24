@@ -4,6 +4,10 @@
 
 ## Notes
 
+## Embeddings
+
+**statistical-embedding**: WARN: This can generate NaN values !!! In that case, this means that the chunk is constant, and not a key. So you can safely remove it.
+
 ## run
 
 `cargo run -- -h`: display help on program arguments, display available command flags.

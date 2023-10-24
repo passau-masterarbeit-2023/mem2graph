@@ -18,9 +18,9 @@ PIPELINES_NAMES_TO_ADDITIONAL_ARGS_FILTER: list[tuple[str, list[str]]] = [
     ("chunk-statistic-embedding", ["-a", "chunk-header-node"]),
     ("chunk-start-bytes-embedding", ["-a", "chunk-header-node"]),
     ("chunk-extraction", ["-a", "chunk-header-node"]),
-    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-semantic-embedding"]),
-    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-statistic-embedding"]),
-    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-start-bytes-embedding"]),
+    # ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-semantic-embedding"]),
+    # ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-statistic-embedding"]),
+    # ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-start-bytes-embedding"]),
 ]
 
 # -------------------- possible pipelines (no filtering) -------------------- #
@@ -29,6 +29,13 @@ PIPELINES_NAMES_TO_ADDITIONAL_ARGS_NO_FILTER: list[tuple[str, list[str]]] = [
     ("graph", ["-a", "none"]),
     ("graph", ["-v", "-a", "chunk-header-node"]),
     ("graph", ["-v", "-a", "none"]),
+    # setting manually filtering, so as to limit the number of combinations
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-semantic-embedding", "-e", "none", "-s", "none"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-statistic-embedding", "-e", "none", "-s", "none"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-start-bytes-embedding", "-e", "none", "-s", "none"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-semantic-embedding", "-e", "only-max-entropy", "-s", "activate"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-statistic-embedding", "-e", "only-max-entropy", "-s", "activate"]),
+    ("graph-with-embedding-comments", ["-v", "-a", "chunk-header-node", "-c", "chunk-start-bytes-embedding", "-e", "only-max-entropy", "-s", "activate"]),
 ]
 
 PIPELINE_NAMES: set[str] = set()
@@ -238,7 +245,6 @@ def build_arg_compute_instances(cli: CLIArguments) -> list[list[str]]:
             "-d", INPUT_FILE_DIR_PATH,
             "-o", output_dir_path, 
             "-p", pipeline_name,
-            "-e", "none",
         ]
 
         # append additional arguments
