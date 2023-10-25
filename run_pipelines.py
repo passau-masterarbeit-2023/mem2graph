@@ -235,7 +235,7 @@ def build_arg_compute_instances(cli: CLIArguments) -> list[list[str]]:
             additional_agrs
         )
         compute_instance_index = len(arg_compute_instances)
-        output_dir_path = current_dir + "/data/" + str(compute_instance_index) + "_" + pipeline_name.replace("-", "_") + "_-e_none_" + additional_param_list_as_str
+        output_dir_path = current_dir + "/data/" + str(compute_instance_index) + "_" + pipeline_name.replace("-", "_") + additional_param_list_as_str
         
         create_or_clear_output_dir(output_dir_path, not cli.args.keep_old_output)
         
