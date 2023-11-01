@@ -1,5 +1,13 @@
 # Work logs
 
+## Improvements
+
+* [ ] Add CLI command to filter out free chunks.
+
+
+
+## Logs
+
 ### Fri 20 Oct 2023
 
 * [X] Added filtering based embedding field to `graph-with-embedding-comment` pipeline.
